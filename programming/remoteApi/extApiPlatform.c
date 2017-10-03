@@ -27,9 +27,7 @@
 // This file was automatically created for V-REP release V3.4.0 rev. 1 on April 5th 2017
 
 #include "extApiPlatform.h"
-#include "stdafx.h"
 #include <stdio.h>
-#define MAX_EXT_API_CONNECTIONS 255
 
 #ifdef _WIN32
     #include <Windows.h>
