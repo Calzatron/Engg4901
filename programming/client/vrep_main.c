@@ -331,7 +331,7 @@ void define_classic_parameters(move* move_ptr, info* info_ptr) {
 void fk_classic(move* move_ptr) {
 
 	/* Get current angles*/
-	double q1, q2, q3, q4, q5, q6;
+		double q1, q2, q3, q4, q5, q6;
 	q1 = move_ptr->currAng[0];
 	q2 = move_ptr->currAng[1];
 	q3 = move_ptr->currAng[2];
@@ -360,6 +360,63 @@ void fk_classic(move* move_ptr) {
 	T[3 - 1][2 - 1] = 0.67101*cos(q4)*cos(q6) + 0.57358*cos(q4)*sin(q5)*sin(q6) + cos(q5)*sin(q4)*sin(q6) + 0.57358*cos(q6)*sin(q4)*sin(q5);
 	T[3 - 1][3 - 1] = 0.46985*cos(q4) + 0.46985*cos(q4)*cos(q5);
 	T[3 - 1][4 - 1] = 167.55713*cos(q4) + 98.94129*cos(q4)*cos(q5);
+	T[4 - 1][1 - 1] = 0.0;
+	T[4 - 1][2 - 1] = 0.0;
+	T[4 - 1][3 - 1] = 0.0;
+	T[4 - 1][4 - 1] = 1.0;
+
+	/* define the current position*/
+	double ret[4][1];
+	ret[0][0] = 0.0;
+	ret[1][0] = 0.0;
+	ret[2][0] = 0.0;
+	ret[3][0] = 0.0;
+
+	/* Compute the position*/
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 1; j++) {
+			for (int k = 0; k < 4; k++) {
+				ret[i][j] += T[i][k] * pt[k][j];
+			}
+
+		}
+	}
+
+}
+
+
+void fk_mod(move* move_ptr) {
+
+	/* Get current angles*/
+	double q1, q2, q3, q4, q5, q6;
+	q1 = move_ptr->currAng[0];
+	q2 = move_ptr->currAng[1];
+	q3 = move_ptr->currAng[2];
+	q4 = move_ptr->currAng[3];
+	q5 = move_ptr->currAng[4];
+	q6 = move_ptr->currAng[5];
+	/* Define a reference position	*/
+	double pt[4][1];
+	pt[0][0] = 0.0;
+	pt[1][0] = 0.0;
+	pt[2][0] = 1126.9;
+	pt[3][0] = 0.0;
+
+	/* Compute the transform matrix given angles*/
+	double T[4][4];
+
+	T[1 - 1][1 - 1] = cos(q6);
+	T[1 - 1][2 - 1] = 0.0;
+	T[1 - 1][3 - 1] = 0.81915204428899*sin(q6);
+	T[1 - 1][4 - 1] = 0;
+	T[2 - 1][1 - 1] = sin(q6);
+	T[2 - 1][2 - 1] = 0.5735764363510465*cos(q6);
+	T[2 - 1][3 - 1] = 0.0;
+	T[2 - 1][4 - 1] = 0;
+	T[3 - 1][1 - 1] = 0.0;
+	T[3 - 1][2 - 1] = 0.8191520442889918;
+	T[3 - 1][3 - 1] = 0.57357643635104;
+	T[3 - 1][4 - 1] = 211.597125000789;
 	T[4 - 1][1 - 1] = 0.0;
 	T[4 - 1][2 - 1] = 0.0;
 	T[4 - 1][3 - 1] = 0.0;
@@ -430,9 +487,3 @@ int forward_xy_a(move* move_ptr) {
 	return 0;
 
 }
-
-
-
-
-
-
