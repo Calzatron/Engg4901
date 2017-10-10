@@ -7,83 +7,68 @@
 
 typedef struct info {
 
+    int clientID;
     int objectCount;
     int* objectHandles;
+    int* isJoint;
     char** objectNames;
+    
+    char* response;
+
 } info;
 
 
-info* makeInfo(void);
 
-int main(int argc, char* argv[]){
-printf("getting client\n");
+
+
+info* makeInfo(void);
+void get_object_names_vrep(info* info_ptr);
+void write_object_info(info* info_ptr, char* filename);
+void get_command(info* info_ptr);
+
+
+int main(int argc, char** argv){
+    
+    printf("getting client\n");
     simxFinish(-1);
-    int clientID = simxStart((simxChar*)"10.89.198.90",19999,true,true,5000,5);
-printf("got client\n");
-    if (clientID != -1) {
-        info* info_ptr = makeInfo();
+    info* info_ptr = makeInfo();
+    info_ptr->response = malloc(sizeof(char)*128);
+    //while(1){
+    //}
+    info_ptr->clientID = simxStart((simxChar*)"10.89.196.83",19999,true,true,5000,5);
+    printf("got client\n");
+    if (info_ptr->clientID != -1) {
         printf("Successfully connected to Vrep\n");
         // retrieve data in a blocking fashion - ensure response from vrep
         int objectCount;        // integer variable
         int* objectHandles;     //array of ints of unknown size
         
-        int ret = simxGetObjects(clientID, sim_handle_all, &objectCount, 
+        int ret = simxGetObjects(info_ptr->clientID, sim_handle_all, &objectCount, 
                 &objectHandles, simx_opmode_blocking);
         if (ret == simx_return_ok){
             printf("Number of objects in scene: %d \n", objectCount);
             /*  store all object handles  */;
             info_ptr->objectCount = objectCount;
             info_ptr->objectHandles = malloc(sizeof(int)*info_ptr->objectCount);
-            info_ptr->objectNames = malloc(sizeof(char*)*info_ptr->objectCount);
+            info_ptr->isJoint = malloc(sizeof(int)*info_ptr->objectCount);
             info_ptr->objectHandles = objectHandles;
-            for (int x = 0; x < info_ptr->objectCount; x++){
-                printf("Handle %d\n", info_ptr->objectHandles[x]);
-            }
-                //int stringCount;
-                //simxChar* string;
-                printf("here\n");
-            simxChar* string2;
+            printf(">> %d\n", info_ptr->objectHandles[40]);
+            /*  retrieve all object names from custom function in VRep Main */
 
-            int handlesCount;
-            int* handles;
-            int stringCount;
-            simxChar* stringData;
-// simx_opmode_oneshot_wait
-            simxGetObjectGroupData(clientID,sim_appobj_object_type,0,
-                &handlesCount,&handles,NULL,NULL,NULL,NULL,&stringCount,
-                &stringData,simx_opmode_blocking);
+            get_object_names_vrep(info_ptr);
 
-            simxGetObjectGroupData(clientID,sim_appobj_object_type,0,
-                &handlesCount,&handles,NULL,NULL,NULL,NULL,&stringCount,
-                &string2,simx_opmode_blocking);
-
-
-
-                //int ret = simxGetObjectGroupData(clientID, sim_object_joint_type, 0, NULL, NULL, NULL, NULL,
-                //        NULL, NULL, NULL, NULL, simx_opmode_blocking);
-                printf("returned\n");
-                printf("returned string: %s %d %s\n", stringData, stringCount, string2);
-                printf("complete\n");
-            for(int i = 0; i < info_ptr->objectCount; i++){
-                simxChar* replyData;
-                int replySize[1] = {1};
-                int bufferSize = 0;
-                int replySize1 = 1;
-                simxChar* buffer;
-                simxInt num = i;
-                ret = simxCallScriptFunction(clientID, "", sim_scripttype_mainscript,
-                        "get_object_names", 1, &num, 0, NULL, 0, NULL, 0, NULL, 
-                        NULL, NULL, NULL, NULL, &replySize, &replyData, NULL, NULL,
-                        simx_opmode_blocking);
-                //printf("lll");fflush(stdout); 
-          /*      ret = simxQuery(clientID, "request", "send me the collidable handles", 256,
-                        "reply", &replyData, &replySize, 5000);
-          */    //printf("this is data: %s\n", replyData);
-                info_ptr->objectNames[i] = malloc(sizeof(char)*(strlen(replyData)+1i));
-                strcpy(info_ptr->objectNames[i], replyData);
-            }
-            printf("finidhed\n");
+            /*  Print a sample name to check */
             printf("aa: %s\n", info_ptr->objectNames[40]);
+
+            /*  write information to a file */
+            if (argc == 2){
+                /* filename specified */
+                write_object_info(info_ptr, argv[1]);
+            } else if (argc == 1){
+                write_object_info(info_ptr, "objects");   
+            }
+            printf("Written to file\n");
+            get_command(info_ptr);
         } else {
             printf("Remote API function call returned with error: %d\n", ret);
         }
@@ -93,10 +78,7 @@ printf("got client\n");
         simxFinish(-1); // close all open connections
     } else {
 
-
-
-
-        printf("Connection failed %d\n", clientID);
+        printf("Connection failed %d\n", info_ptr->clientID);
         return 1;
     }
     return 0;
@@ -107,4 +89,104 @@ info* makeInfo(void){
     info* info_ptr = malloc(sizeof(info));
     return info_ptr;
 }
+
+
+void get_command(info* info_ptr){
+    
+    printf(">> ");
+    int c;
+    int i = 0;;
+    
+    char response[128];
+    while((c = getchar()) != '\n'){
+        response[i] = c;
+        ++i;
+    }
+    response[i] = '\0';
+    strcpy(info_ptr->response, response);
+    printf("received: %s\n", info_ptr->response);
+}
+
+
+void get_object_names_vrep(info* info_ptr){
+    /*  Retrieves object names for corresponding object handle,
+     *  stored in info struct
+     *
+     *  Calls a custom function in VRep main script, which takes in an
+     *  object handle and returns the object's name.
+    */
+    int replySize[1] = {1};
+    info_ptr->objectNames = malloc(sizeof(char*)*info_ptr->objectCount);
+
+    for(int i = 0; i < info_ptr->objectCount; i++){
+        int ret = 0;
+        simxChar* replyData;
+        simxInt num = i;
+        info_ptr->isJoint[i] = 0;
+        ret = simxCallScriptFunction(info_ptr->clientID, "", sim_scripttype_mainscript,
+                "get_object_names", 1, &num, 0, NULL, 0, NULL, 0, NULL, 
+                NULL, NULL, NULL, NULL, &replySize, &replyData, NULL, NULL,
+                simx_opmode_blocking);
+        if (ret != simx_return_ok){
+            printf("ret not ok\n");
+        }
+        info_ptr->objectNames[i] = malloc(sizeof(char)*(strlen(replyData)+1));
+        strcpy(info_ptr->objectNames[i], replyData);
+        char* underScore = "_";
+        char* name = malloc(sizeof(char)*(strlen(info_ptr->objectNames[i])+1));
+        strcpy(name, info_ptr->objectNames[i]);
+        char* token = strtok(name, underScore);
+        while (token != NULL){
+            char joint[5] = {'j', 'o', 'i', 'n', 't'};
+            char motor[5] = {'m', 'o', 't', 'o', 'r'};
+            int count = 0;
+            for (int c = 0; c < 5; c++){
+                if ((token[c] == joint[c]) || (token[c] == motor[c])){   
+                    ++count;
+                }
+            }
+            token = strtok(NULL, underScore);
+            if (count == 5){
+                info_ptr->isJoint[i] = 1;
+            }
+        }
+    }
+    printf("Got object names\n");
+}
+
+
+void write_object_info(info* info_ptr, char* filename){
+
+    /*  Writes all the object handles and corresponding names to filename
+     *  if filename already exists, it clears the file before writing
+     *  filename is either an input argument or by default called "objects"
+     */
+
+    FILE* object_fp = fopen(filename, "w+");
+    if (object_fp == NULL){
+        fprintf(stdout, "Failed to generate file\n");
+        exit(1);
+    }
+    
+    for (int i = 0; i < info_ptr->objectCount; i++){
+        if (info_ptr->isJoint[i]){ 
+            char line[256];
+            sprintf(line, "%d %s\n", i, info_ptr->objectNames[i]);
+            fputs(line, object_fp);
+        }
+
+    }
+    fflush(object_fp);
+    fclose(object_fp);
+
+}
+
+
+
+
+
+
+
+
+
 

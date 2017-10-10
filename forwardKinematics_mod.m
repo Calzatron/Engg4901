@@ -1,3 +1,4 @@
+clear all;
 %% Forward component
 D1 = 275.5;
 D2 = 410;
@@ -55,45 +56,54 @@ for i = 1:size(d,2)
     elseif i == 6
         A6 = A_i;
     end
-    if i == 1
-        A = A_i;
-    else
-        A = simplify(A*A_i);
-    end
+%     if i == 1
+%         A = A_i;
+%     else
+%         A = simplify(A*A_i);
+%     end
     
 end
-
+A = A1*A2*A3*A4*A5*A6;
 %% Simplify terms
-A_56 = A6;
-A_inv4_rhs = simplify((A5^(-1))*(A4^(-1))*(A3^(-1))*(A2^(-1))*(A1^(-1))*A);
-Diff_ = [];
+A_56 = A5*A6;
+A_56 = collect(A_56, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+
+A_inv4_rhs = A4^(-1)*A3^(-1)*A2^(-1)*A1^(-1)*A;
+A_inv4_rhs = collect(A_inv4_rhs, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+
+A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+
+
 for m = 1:4
     for n = 1:4
+        
         [C, T] = coeffs(vpa(A_56(m,n)));
         for x  = 1:size(C,2)
-            if C(x) < 0.000001
+            if abs(C(x)) < 0.000001
                 C(x) = 0;
             end
         end
         A_56(m,n) = dot(C, T);
         
-        
-        [C_, T_] = coeffs(simplify(vpa(A_inv4_rhs(m,n))));
+        %Simplify the RHS
+        [C_, T_] = coeffs(expand(vpa(A_inv4_rhs(m,n))));
         for x  = 1:size(C_,2)
-            if C_(x) < 0.000001;
+            if abs(C_(x)) < 0.000001
                 C_(x) = 0;
             end
         end
         A_inv4_rhs(m,n) = dot(C_, T_);
-        %Diff_(m,n) = simplify(A_inv4_rhs(m,n) - A_56(m,n))
         
-        [C__, T__] = coeffs(simplify(vpa(A(m,n))));
+        %Simplify the transformation matrix A.
+        A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+        [C__, T__] = coeffs(vpa(A_col(m,n)));
         for x  = 1:size(C__,2)
-            if C__(x) < 0.000001;
+            a = abs(C__(x));
+            if a < 0.0000000001
                 C__(x) = 0;
             end
         end
-        A(m,n) = dot(C_, T_);
+        A(m,n) = dot(C__, T__);
         
     end
 end
