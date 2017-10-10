@@ -25,7 +25,7 @@ typedef struct move {
 	double* d_i;
 	double* lengthD;
 	double currPos[3];
-	double nextPos[3];
+	double lastPos[3];
 	double currAng[6];
 	double nextAng[6];
 	double motorAng[6];
@@ -36,10 +36,11 @@ info* makeInfo(void);
 move* makeMove(void);
 void get_object_names_vrep(info* info_ptr);
 void write_object_info(info* info_ptr, char* filename);
-void get_command(info* info_ptr);
+void get_command(info* info_ptr, move* move_ptr);
 void get_joint_angles_vrep(info* info_ptr, move* move_ptr);
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr);
-
+void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
+void interpret_command(info* info_ptr, move* move_ptr);
 
 int main(int argc, char** argv){
     
@@ -47,7 +48,7 @@ int main(int argc, char** argv){
     simxFinish(-1);
     info* info_ptr = makeInfo();
 	move* move_ptr = makeMove();
-    info_ptr->response = malloc(sizeof(char)*128);
+    
     //while(1){
     //}
     info_ptr->clientID = simxStart((simxChar*)"127.0.0.1",19999,true,true,5000,5);
@@ -105,7 +106,7 @@ int main(int argc, char** argv){
 				}
 			}
             printf("Written to file\n");
-            get_command(info_ptr);
+            get_command(info_ptr, move_ptr);
         } else {
             printf("Remote API function call returned with error: %d\n", ret);
         }
@@ -133,11 +134,11 @@ move* makeMove(void) {
 	return move_ptr;
 }
 
-void get_command(info* info_ptr){
+void get_command(info* info_ptr, move* move_ptr){
     
     printf(">> ");
     int c;
-    int i = 0;;
+    int i = 0;
     
     char response[128];
     while((c = getchar()) != '\n'){
@@ -145,8 +146,66 @@ void get_command(info* info_ptr){
         ++i;
     }
     response[i] = '\0';
+	info_ptr->response = malloc(sizeof(char) * 128);
     strcpy(info_ptr->response, response);
     printf("received: %s\n", info_ptr->response);
+	interpret_command(info_ptr, move_ptr);
+	free(info_ptr->response);
+}
+
+
+void interpret_command(info* info_ptr, move* move_ptr) {
+
+	char joint[6] = { '1', '2', '3', '4', '5', '6' };
+	int check = 1;
+	for (int j = 0; j < 6; j++) {
+		if (info_ptr->response[0] == joint[j]) {
+			check = 0;
+		}
+	}
+	if ((strlen(info_ptr->response) > 3) && (info_ptr->response[1] == ' ')) { check = 0; }
+	if (check) { 
+		printf("invalid command %s\n", info_ptr->response); 
+		free(info_ptr->response);
+		get_command(info_ptr, move_ptr); 
+	}
+	char response[128];
+	char* token;
+	strcpy(response, info_ptr->response);
+	token = strtok(response, " ");
+	token = strtok(NULL, " ");
+	double ang;
+	char* ptr;
+	ang = strtol(token, &ptr, 10);
+	if ((ang < -360) || (ang > 360)) {
+		printf("invalid angle %f\n", ang);
+		free(info_ptr->response);
+		get_command(info_ptr, move_ptr);
+	}
+	int jointNum = 0;
+	if (info_ptr->response[0] == joint[0]) {
+		jointNum = 1;
+	}
+	else if (info_ptr->response[0] == joint[1]) {
+		jointNum = 2;
+	}
+	else if (info_ptr->response[0] == joint[2]) {
+		jointNum = 3;
+	}
+	else if (info_ptr->response[0] == joint[3]) {
+		jointNum = 4;
+	}
+	else if (info_ptr->response[0] == joint[4]) {
+		jointNum = 5;
+	}
+	else if (info_ptr->response[0] == joint[4]) {
+		jointNum = 6;
+	}
+
+	move_joint_angle_vrep(info_ptr, move_ptr, jointNum, ang);
+
+
+	free(info_ptr->response);
 }
 
 
@@ -222,6 +281,27 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 			++count;
 	}
 }
+
+
+void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang) {
+	/* takes in a joint number between 1 and 6, these are translated into
+	*  object handles, and the arm is moved via external command */
+
+	get_joint_angles_vrep(info_ptr, move_ptr);
+
+	double jointAngle = move_ptr->currAng[jointNum - 1] + (ang*3.141592/180.0);
+	if ((jointNum != 4) && (jointNum != 5)) {
+		jointAngle += 3.141592;
+	}
+	jointAngle = fmod(jointAngle, 2 * 3.141592);
+	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot_wait);
+	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
+	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
+	
+	get_command(info_ptr, move_ptr);
+}
+
 
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	/* puts the arm into a starting pos, straight up, by rotating joints 4 and 5
@@ -386,6 +466,9 @@ void fk_classic(move* move_ptr) {
 
 
 void fk_mod(move* move_ptr) {
+	/* Updates current position vector signing modified DH parameters
+	*  and forward kinematics */
+
 
 	/* Get current angles*/
 	double q1, q2, q3, q4, q5, q6;
@@ -397,26 +480,26 @@ void fk_mod(move* move_ptr) {
 	q6 = move_ptr->currAng[5];
 	/* Define a reference position	*/
 	double pt[4][1];
-	pt[0][0] = 0.0;
-	pt[1][0] = 0.0;
-	pt[2][0] = 1126.9;
+	pt[0][0] = move_ptr->currPos[0];
+	pt[1][0] = move_ptr->currPos[1];
+	pt[2][0] = move_ptr->currPos[3];
 	pt[3][0] = 0.0;
 
 	/* Compute the transform matrix given angles*/
 	double T[4][4];
 
-	T[1 - 1][1 - 1] = 0.25*cos(q1 + q2 + q3 + q4 - q5 - q6) + 0.5*cos(q1 + q2 - q5 - q6) + 0.24999999999999996938383002131617*cos(q1 + q2 - q3 - q4 + q5 - q6) + 0.25000000000000003061616997868383*cos(q1 + q2 + q3 + q4 + q5 - q6) + 0.25*cos(q1 + q2 - q3 - q4 - q5 - q6);
-	T[1 - 1][2 - 1] = (cos(q6)*(125000000000000000000000000000000.0*sin(q1)*sin(q2)*sin(q5) + 125000000000000000000000000000000.0*cos(q1)*cos(q3)*cos(q4)*cos(q5)*sin(q2) + 125000000000000000000000000000000.0*cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q1))) / 250000000000000000000000000000000.0;
-	T[1 - 1][3 - 1] = (sin(q6)*(433012701892219323381861585376466.0*cos(q1)*sin(q2)*sin(q5) + 433012701892219323381861585376466.0*cos(q2)*sin(q1)*sin(q5) + 433012701892219323381861585376477.0*cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q5) + 433012701892219323381861585376477.0*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4))) / 500000000000000000000000000000000.0;
-	T[1 - 1][4 - 1] = 259.99712500078917242179326058127*sin(q5);
-	T[2 - 1][1 - 1] = 0.43301270189221929686748061725379*sin(q1 + q2 - q3 - q4 - q6) + 0.125*sin(q1 + q2 + q3 + q4 - q5 - q6) + 0.25*sin(q1 + q2 - q5 - q6) + 0.25*sin(q1 + q2 + q5 - q6) + 0.125*sin(q1 + q2 - q3 - q4 - q5 - q6);
-	T[2 - 1][2 - 1] = 0.74999999999999999999999999999999*sin(q3)*sin(q4) + 0.43301270189221932338186158537647*cos(q3)*sin(q4)*sin(q5) + 0.43301270189221932338186158537647*cos(q4)*sin(q3)*sin(q5) + 0.25*cos(q5)*cos(q6)*sin(q1)*sin(q2) + 0.25*cos(q1)*cos(q6)*sin(q2)*sin(q3)*sin(q4)*sin(q5) + 0.25*cos(q2)*cos(q6)*sin(q1)*sin(q3)*sin(q4)*sin(q5);
-	T[2 - 1][3 - 1] = 0.43301270189221932338186158537646*sin(q3)*sin(q4) + 0.25*cos(q3)*sin(q4)*sin(q5) + 0.25*cos(q4)*sin(q3)*sin(q5) + 0.43301270189221932338186158537646*cos(q1)*cos(q5)*sin(q2)*sin(q6) + 0.43301270189221932338186158537646*cos(q2)*cos(q5)*sin(q1)*sin(q6) + 0.75*cos(q3)*sin(q1)*sin(q2)*sin(q4)*sin(q6) + 0.75*cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6) + 0.43301270189221932338186158537647*cos(q3)*cos(q4)*sin(q1)*sin(q2)*sin(q5)*sin(q6);
-	T[2 - 1][4 - 1] = 52.899281250197287421106429064516*cos(q3 + q4 - q5) + 102.50000000000000627631484563018*sin(q4 + q5) + 129.99856250039458621089663029063*cos(q5) + 355.0704155516198451731265000087*sin(q4);
-	T[3 - 1][1 - 1] = 0.24999999999999998469191501065808*sin(q1 + q2 - q3 - q4 - q6) + 0.21650635094610963517654982456556*sin(q1 + q2 - q3 - q4 + q5 - q6) + 0.21650635094610968820531176081091*sin(q1 + q2 + q3 + q4 + q5 - q6);
-	T[3 - 1][2 - 1] = 0.43301270189221932338186158537646*sin(q3)*sin(q4) + 0.43301270189221932338186158537646*cos(q1)*cos(q2)*cos(q5)*cos(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q4)*cos(q6)*sin(q2)*sin(q5) + 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q1)*sin(q5);
-	T[3 - 1][3 - 1] = 0.25*sin(q3)*sin(q4) + 0.43301270189221932338186158537647*cos(q3)*sin(q1)*sin(q2)*sin(q4)*sin(q6) + 0.43301270189221932338186158537647*cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q6) + 0.75*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5)*sin(q6) + 0.75*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6);
-	T[3 - 1][4 - 1] = 177.53520777580991171566705307406*sin(q4 - q5) + 91.624242809217391754831328302648*cos(q3 + q4 + q5) + 205.0*sin(q4);
+	T[1 - 1][1 - 1] = 0.5*cos(q1)*cos(q5)*sin(q2)*sin(q6) + cos(q1)*cos(q6)*sin(q2)*sin(q5) + 0.5*cos(q2)*cos(q5)*sin(q1)*sin(q6) + cos(q2)*cos(q6)*sin(q1)*sin(q5) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*cos(q3)*sin(q4)*sin(q6) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*cos(q4)*sin(q3)*sin(q6) + 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)*sin(q4)*sin(q6) + 0.86602540378443864676372317075294*cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q6) + cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q5)*cos(q6) - 0.5*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5)*sin(q6) - 1.0*cos(q1)*cos(q2)*cos(q5)*cos(q6)*sin(q3)*sin(q4) - 1.0*cos(q3)*cos(q4)*cos(q5)*cos(q6)*sin(q1)*sin(q2) + 0.5*cos(q1)*cos(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6) + 0.5*cos(q3)*cos(q4)*sin(q1)*sin(q2)*sin(q5)*sin(q6) + cos(q5)*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q4) - 0.5*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6);
+	T[1 - 1][2 - 1] = 0.25*cos(q1)*cos(q5)*cos(q6)*sin(q2) - 0.75*cos(q2)*cos(q5)*sin(q1) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q3)*sin(q4) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q4)*sin(q3) - 0.75*cos(q1)*cos(q5)*sin(q2) + 0.25*cos(q2)*cos(q5)*cos(q6)*sin(q1) + 0.43301270189221932338186158537647*cos(q3)*sin(q1)*sin(q2)*sin(q4) + 0.43301270189221932338186158537647*cos(q4)*sin(q1)*sin(q2)*sin(q3) - 0.5*cos(q1)*sin(q2)*sin(q5)*sin(q6) - 0.5*cos(q2)*sin(q1)*sin(q5)*sin(q6) + 0.75*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q3)*cos(q6)*sin(q4) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q4)*cos(q6)*sin(q3) - 0.75*cos(q1)*cos(q2)*sin(q3)*sin(q4)*sin(q5) - 0.75*cos(q3)*cos(q4)*sin(q1)*sin(q2)*sin(q5) + 0.43301270189221932338186158537647*cos(q3)*cos(q6)*sin(q1)*sin(q2)*sin(q4) + 0.43301270189221932338186158537647*cos(q4)*cos(q6)*sin(q1)*sin(q2)*sin(q3) + 0.75*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5) - 0.5*cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q6) - 0.25*cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q5) + 0.5*cos(q1)*cos(q2)*cos(q5)*sin(q3)*sin(q4)*sin(q6) + 0.25*cos(q1)*cos(q2)*cos(q6)*sin(q3)*sin(q4)*sin(q5) + 0.5*cos(q3)*cos(q4)*cos(q5)*sin(q1)*sin(q2)*sin(q6) + 0.25*cos(q3)*cos(q4)*cos(q6)*sin(q1)*sin(q2)*sin(q5) - 0.5*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q6) - 0.25*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5);
+	T[1 - 1][3 - 1] = 0.25*cos(q3)*sin(q1)*sin(q2)*sin(q4) - 0.43301270189221932338186158537647*cos(q2)*cos(q5)*sin(q1) - 0.25*cos(q1)*cos(q2)*cos(q3)*sin(q4) - 0.25*cos(q1)*cos(q2)*cos(q4)*sin(q3) - 0.43301270189221932338186158537647*cos(q1)*cos(q5)*cos(q6)*sin(q2) - 0.43301270189221932338186158537647*cos(q2)*cos(q5)*cos(q6)*sin(q1) - 0.43301270189221932338186158537647*cos(q1)*cos(q5)*sin(q2) + 0.25*cos(q4)*sin(q1)*sin(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*sin(q2)*sin(q5)*sin(q6) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q5)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5) + 0.75*cos(q1)*cos(q2)*cos(q3)*cos(q6)*sin(q4) + 0.75*cos(q1)*cos(q2)*cos(q4)*cos(q6)*sin(q3) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*sin(q3)*sin(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q3)*cos(q4)*sin(q1)*sin(q2)*sin(q5) - 0.75*cos(q3)*cos(q6)*sin(q1)*sin(q2)*sin(q4) - 0.75*cos(q4)*cos(q6)*sin(q1)*sin(q2)*sin(q3) + 0.43301270189221932338186158537647*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5) + 0.86602540378443864676372317075294*cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q5) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*cos(q5)*sin(q3)*sin(q4)*sin(q6) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q6)*sin(q3)*sin(q4)*sin(q5) - 0.86602540378443864676372317075294*cos(q3)*cos(q4)*cos(q5)*sin(q1)*sin(q2)*sin(q6) - 0.43301270189221932338186158537647*cos(q3)*cos(q4)*cos(q6)*sin(q1)*sin(q2)*sin(q5) + 0.86602540378443864676372317075294*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q6) + 0.43301270189221932338186158537647*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5);
+	T[1 - 1][4 - 1] = 410.0*cos(q1)*cos(q2)*cos(q3) - 259.99712500078919711005658114022*cos(q2)*sin(q1) - 259.99712500078919711005658114022*cos(q1)*sin(q2) - 183.2484856184347722889290885445*cos(q1)*cos(q5)*sin(q2) - 183.2484856184347722889290885445*cos(q2)*cos(q5)*sin(q1) - 410.0*cos(q3)*sin(q1)*sin(q2) - 191.59281250197295776160899549723*cos(q1)*cos(q2)*cos(q3)*sin(q4) - 191.59281250197295776160899549723*cos(q1)*cos(q2)*cos(q4)*sin(q3) + 191.59281250197295776160899549723*cos(q3)*sin(q1)*sin(q2)*sin(q4) + 191.59281250197295776160899549723*cos(q4)*sin(q1)*sin(q2)*sin(q3) + 183.2484856184347722889290885445*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5) - 183.2484856184347722889290885445*cos(q1)*cos(q2)*sin(q3)*sin(q4)*sin(q5) - 183.2484856184347722889290885445*cos(q3)*cos(q4)*sin(q1)*sin(q2)*sin(q5) + 183.2484856184347722889290885445*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5);
+	T[2 - 1][1 - 1] = 0.5*cos(q5)*sin(q1)*sin(q2)*sin(q6) - 1.0*cos(q1)*cos(q2)*cos(q6)*sin(q5) - 0.5*cos(q1)*cos(q2)*cos(q5)*sin(q6) + cos(q6)*sin(q1)*sin(q2)*sin(q5) - 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)*sin(q4)*sin(q6) - 0.86602540378443864676372317075294*cos(q1)*cos(q4)*sin(q2)*sin(q3)*sin(q6) - 0.86602540378443864676372317075294*cos(q2)*cos(q3)*sin(q1)*sin(q4)*sin(q6) - 0.86602540378443864676372317075294*cos(q2)*cos(q4)*sin(q1)*sin(q3)*sin(q6) + cos(q1)*cos(q3)*cos(q4)*cos(q5)*cos(q6)*sin(q2) + cos(q2)*cos(q3)*cos(q4)*cos(q5)*cos(q6)*sin(q1) - 0.5*cos(q1)*cos(q3)*cos(q4)*sin(q2)*sin(q5)*sin(q6) - 1.0*cos(q1)*cos(q5)*cos(q6)*sin(q2)*sin(q3)*sin(q4) - 0.5*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5)*sin(q6) - 1.0*cos(q2)*cos(q5)*cos(q6)*sin(q1)*sin(q3)*sin(q4) + 0.5*cos(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6) + 0.5*cos(q2)*sin(q1)*sin(q3)*sin(q4)*sin(q5)*sin(q6);
+	T[2 - 1][2 - 1] = 0.75*cos(q1)*cos(q2)*cos(q5) - 0.75*cos(q5)*sin(q1)*sin(q2) - 0.25*cos(q1)*cos(q2)*cos(q5)*cos(q6) - 0.43301270189221932338186158537647*cos(q1)*cos(q3)*sin(q2)*sin(q4) - 0.43301270189221932338186158537647*cos(q1)*cos(q4)*sin(q2)*sin(q3) - 0.43301270189221932338186158537647*cos(q2)*cos(q3)*sin(q1)*sin(q4) - 0.43301270189221932338186158537647*cos(q2)*cos(q4)*sin(q1)*sin(q3) + 0.5*cos(q1)*cos(q2)*sin(q5)*sin(q6) + 0.25*cos(q5)*cos(q6)*sin(q1)*sin(q2) - 0.5*sin(q1)*sin(q2)*sin(q5)*sin(q6) + 0.75*cos(q1)*cos(q3)*cos(q4)*sin(q2)*sin(q5) + 0.75*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5) - 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q6)*sin(q2)*sin(q4) - 0.43301270189221932338186158537647*cos(q1)*cos(q4)*cos(q6)*sin(q2)*sin(q3) - 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q6)*sin(q1)*sin(q4) - 0.43301270189221932338186158537647*cos(q2)*cos(q4)*cos(q6)*sin(q1)*sin(q3) - 0.75*cos(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5) - 0.75*cos(q2)*sin(q1)*sin(q3)*sin(q4)*sin(q5) - 0.5*cos(q1)*cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q6) - 0.25*cos(q1)*cos(q3)*cos(q4)*cos(q6)*sin(q2)*sin(q5) - 0.5*cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q1)*sin(q6) - 0.25*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q1)*sin(q5) + 0.5*cos(q1)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q6) + 0.25*cos(q1)*cos(q6)*sin(q2)*sin(q3)*sin(q4)*sin(q5) + 0.5*cos(q2)*cos(q5)*sin(q1)*sin(q3)*sin(q4)*sin(q6) + 0.25*cos(q2)*cos(q6)*sin(q1)*sin(q3)*sin(q4)*sin(q5);
+	T[2 - 1][3 - 1] = 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q5) - 0.43301270189221932338186158537647*cos(q5)*sin(q1)*sin(q2) + 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q5)*cos(q6) - 0.25*cos(q1)*cos(q3)*sin(q2)*sin(q4) - 0.25*cos(q1)*cos(q4)*sin(q2)*sin(q3) - 0.25*cos(q2)*cos(q3)*sin(q1)*sin(q4) - 0.25*cos(q2)*cos(q4)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q5)*sin(q6) - 0.43301270189221932338186158537647*cos(q5)*cos(q6)*sin(q1)*sin(q2) + 0.86602540378443864676372317075294*sin(q1)*sin(q2)*sin(q5)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q4)*sin(q2)*sin(q5) + 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5) + 0.75*cos(q1)*cos(q3)*cos(q6)*sin(q2)*sin(q4) + 0.75*cos(q1)*cos(q4)*cos(q6)*sin(q2)*sin(q3) + 0.75*cos(q2)*cos(q3)*cos(q6)*sin(q1)*sin(q4) + 0.75*cos(q2)*cos(q4)*cos(q6)*sin(q1)*sin(q3) - 0.43301270189221932338186158537647*cos(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q2)*sin(q1)*sin(q3)*sin(q4)*sin(q5) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q4)*cos(q6)*sin(q2)*sin(q5) + 0.86602540378443864676372317075294*cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q1)*sin(q6) + 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q1)*sin(q5) - 0.86602540378443864676372317075294*cos(q1)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q6) - 0.43301270189221932338186158537647*cos(q1)*cos(q6)*sin(q2)*sin(q3)*sin(q4)*sin(q5) - 0.86602540378443864676372317075294*cos(q2)*cos(q5)*sin(q1)*sin(q3)*sin(q4)*sin(q6) - 0.43301270189221932338186158537647*cos(q2)*cos(q6)*sin(q1)*sin(q3)*sin(q4)*sin(q5);
+	T[2 - 1][4 - 1] = 259.99712500078919711005658114022*cos(q1)*cos(q2) - 259.99712500078919711005658114022*sin(q1)*sin(q2) + 183.2484856184347722889290885445*cos(q1)*cos(q2)*cos(q5) + 410.0*cos(q1)*cos(q3)*sin(q2) + 410.0*cos(q2)*cos(q3)*sin(q1) - 183.2484856184347722889290885445*cos(q5)*sin(q1)*sin(q2) - 191.59281250197295776160899549723*cos(q1)*cos(q3)*sin(q2)*sin(q4) - 191.59281250197295776160899549723*cos(q1)*cos(q4)*sin(q2)*sin(q3) - 191.59281250197295776160899549723*cos(q2)*cos(q3)*sin(q1)*sin(q4) - 191.59281250197295776160899549723*cos(q2)*cos(q4)*sin(q1)*sin(q3) + 183.2484856184347722889290885445*cos(q1)*cos(q3)*cos(q4)*sin(q2)*sin(q5) + 183.2484856184347722889290885445*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5) - 183.2484856184347722889290885445*cos(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5) - 183.2484856184347722889290885445*cos(q2)*sin(q1)*sin(q3)*sin(q4)*sin(q5);
+	T[3 - 1][1 - 1] = 0.86602540378443864676372317075294*sin(q3)*sin(q4)*sin(q6) - 0.86602540378443864676372317075294*cos(q3)*cos(q4)*sin(q6) - 1.0*cos(q3)*cos(q5)*cos(q6)*sin(q4) - 1.0*cos(q4)*cos(q5)*cos(q6)*sin(q3) + 0.5*cos(q3)*sin(q4)*sin(q5)*sin(q6) + 0.5*cos(q4)*sin(q3)*sin(q5)*sin(q6);
+	T[3 - 1][2 - 1] = 0.43301270189221932338186158537647*sin(q3)*sin(q4) - 0.43301270189221932338186158537647*cos(q3)*cos(q4) - 0.43301270189221932338186158537647*cos(q3)*cos(q4)*cos(q6) - 0.75*cos(q3)*sin(q4)*sin(q5) - 0.75*cos(q4)*sin(q3)*sin(q5) + 0.43301270189221932338186158537647*cos(q6)*sin(q3)*sin(q4) + 0.5*cos(q3)*cos(q5)*sin(q4)*sin(q6) + 0.25*cos(q3)*cos(q6)*sin(q4)*sin(q5) + 0.5*cos(q4)*cos(q5)*sin(q3)*sin(q6) + 0.25*cos(q4)*cos(q6)*sin(q3)*sin(q5);
+	T[3 - 1][3 - 1] = 0.25*sin(q3)*sin(q4) - 0.25*cos(q3)*cos(q4) + 0.75*cos(q3)*cos(q4)*cos(q6) - 0.43301270189221932338186158537647*cos(q3)*sin(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q4)*sin(q3)*sin(q5) - 0.75*cos(q6)*sin(q3)*sin(q4) - 0.86602540378443864676372317075294*cos(q3)*cos(q5)*sin(q4)*sin(q6) - 0.43301270189221932338186158537647*cos(q3)*cos(q6)*sin(q4)*sin(q5) - 0.86602540378443864676372317075294*cos(q4)*cos(q5)*sin(q3)*sin(q6) - 0.43301270189221932338186158537647*cos(q4)*cos(q6)*sin(q3)*sin(q5);
+	T[3 - 1][4 - 1] = 191.59281250197295776160899549723*sin(q3)*sin(q4) - 191.59281250197295776160899549723*cos(q3)*cos(q4) - 410.0*sin(q3) - 183.2484856184347722889290885445*cos(q3)*sin(q4)*sin(q5) - 183.2484856184347722889290885445*cos(q4)*sin(q3)*sin(q5);
 	T[4 - 1][1 - 1] = 0.0;
 	T[4 - 1][2 - 1] = 0.0;
 	T[4 - 1][3 - 1] = 0.0;
@@ -438,6 +521,9 @@ void fk_mod(move* move_ptr) {
 
 		}
 	}
+	ret[0][0] = move_ptr->currPos[0];
+	ret[1][0] = move_ptr->currPos[1];
+	ret[2][0] = move_ptr->currPos[2];
 
 }
 

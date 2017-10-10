@@ -8,7 +8,7 @@ D6 = 168.7;
 e2 = 9.8;
 aa = 60*pi/360;
 
-alpha = [pi/2 pi pi/2 (55*pi/180) (55*pi/180) pi];
+alpha = [pi/2 pi pi/2 (60*pi/180) (60*pi/180) pi];
 a = [0 D2 0 0 0 0];
 d = [D1, 0, -e2, -(D3 + D4*sin(aa)/sin(2*aa)), -(D4*sin(aa)/sin(2*aa) + D5*sin(aa)/sin(2*aa)), -(D5*sin(aa)/sin(2*aa) + D6)];
 
@@ -61,12 +61,12 @@ end
 A = A1*A2*A3*A4*A5*A6;
 %% Simplify terms
 A_56 = A2*A3*A4*A5*A6;
-A_56 = collect(A_56, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+A_56 = collect(A_56, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)]);
 
 A_inv4_rhs = A1^(-1)*A;
-A_inv4_rhs = collect(A_inv4_rhs, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+A_inv4_rhs = collect(A_inv4_rhs, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)]);
 
-A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
+A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)]);
 
 
 for m = 1:4
@@ -90,7 +90,6 @@ for m = 1:4
         A_inv4_rhs(m,n) = dot(C_, T_);
         
         %Simplify the transformation matrix A.
-        A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1), sin(q2), sin(q3), sin(q4), sin(q5), sin(q6)])
         [C__, T__] = coeffs(vpa(A_col(m,n)));
         for x  = 1:size(C__,2)
             a = abs(C__(x));
@@ -103,3 +102,4 @@ for m = 1:4
     end
 end
 
+%peter corke's toolbox has ready config qr = [3*pi/2 pi pi 0 0 0]
