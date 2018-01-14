@@ -12,7 +12,6 @@ function [ P_out ] = Forward_K( T, P_in, ang )
 
     P_out = eval(T*P_in);
 
-
 end
 
 
