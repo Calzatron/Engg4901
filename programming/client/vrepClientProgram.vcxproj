@@ -10,7 +10,7 @@
     <ProjectGuid>{8B923EF5-85AB-4E28-8923-52245263D026}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>bubbleRobClient</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
     <ProjectName>vrepClientProgram</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

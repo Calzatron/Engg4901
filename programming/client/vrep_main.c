@@ -1,20 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
-#include "extApi.h"
+#include <strsafe.h>
+#include <windows.h> 
+#include <tchar.h>
 #include <string.h>
 #include <math.h>
+#include "extApi.h"
 
+
+#define BUFSIZE 4096 
+
+HANDLE g_hChildStd_IN_Rd = NULL;
+HANDLE g_hChildStd_IN_Wr = NULL;
+HANDLE g_hChildStd_OUT_Rd = NULL;
+HANDLE g_hChildStd_OUT_Wr = NULL;
+
+HANDLE g_hInputFile = NULL;
 
 typedef struct info {
 	
-    int clientID;
-    int objectCount;
-    int* objectHandles;
-    int* isJoint;
-    char** objectNames;
-	int* jacoArmJointHandles;
+    int clientID;						/*	ID for networking	*/
+    int objectCount;					/*	Number of objects in the scene	*/	
+    int* objectHandles;					/*	The ID corresponding to the i'th object	*/
+    int* isJoint;						/*	Boolean array, for i'th handle as a joint	*/
+    char** objectNames;					/*	Array of names of objects in scene	*/
+	int* jacoArmJointHandles;			/*	joint ID array	*/
     char* response;
 
 } info;
@@ -41,28 +52,38 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr);
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr);
 void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
 void interpret_command(info* info_ptr, move* move_ptr);
+void CreateChildProcess(void);
+void WriteToPipe(void);
+void ReadFromPipe(void);
+
 
 int main(int argc, char** argv){
     
-    printf("getting client\n");
-    simxFinish(-1);
-    info* info_ptr = makeInfo();
+    printf("getting client\n");				// start
+    simxFinish(-1);							// kill any existing coms to Vrep
+    info* info_ptr = makeInfo();			// initialise structures
 	move* move_ptr = makeMove();
     
-    //while(1){
-    //}
+    /*	Get ID for connection to VREP	*/
     info_ptr->clientID = simxStart((simxChar*)"127.0.0.1",19999,true,true,5000,5);
     printf("got client\n");
+
+	/*	Check that the ID is valid	*/
     if (info_ptr->clientID != -1) {
         printf("Successfully connected to Vrep\n");
-        // retrieve data in a blocking fashion - ensure response from vrep
-        int objectCount;        // integer variable
-        int* objectHandles;     //array of ints of unknown size
-        
+
+        /*	Retrieve data in a blocking fashion - ensure response from vrep	*/
+        int objectCount;					// integer variable
+        int* objectHandles;					//array of ints of unknown size
+
+        /*	Get the object handles from VREP for all objects in the scene	*/
         int ret = simxGetObjects(info_ptr->clientID, sim_handle_all, &objectCount, 
                 &objectHandles, simx_opmode_blocking);
-        if (ret == simx_return_ok){
+
+        /*	Check if succeeded	*/
+		if (ret == simx_return_ok){
             printf("Number of objects in scene: %d \n", objectCount);
+
             /*  store all object handles  */;
             info_ptr->objectCount = objectCount;
             info_ptr->objectHandles = malloc(sizeof(int)*info_ptr->objectCount);
@@ -70,10 +91,13 @@ int main(int argc, char** argv){
             info_ptr->objectHandles = objectHandles;
             printf(">> %d\n", info_ptr->objectHandles[40]);
 
-            /*  retrieve all object names from custom function in VRep Main */
+            /*	Set-able boolean value to retrieve names from Vrep and store joints
+			*	or just use known joint handles to identify joints	*/
 			int en_name = 0;
 			
 			if (en_name) {
+				/*	retrieve the object names from VREP and store them in the info struct	*/
+				/*  calls custom function in VRep Main */
 				get_object_names_vrep(info_ptr);
 			}
 			else {
@@ -89,7 +113,8 @@ int main(int argc, char** argv){
 				}
 			}
 
-			/* Retrieve all angles of joints to be used in kinematics */
+			/* Retrieve all angles of joints to be used in kinematics
+			*	Store the positions in move_ptr->currAng[i] for the i'th joint */
 			initial_arm_config_vrep(info_ptr, move_ptr);
 
             /*  Print a sample name to check */
@@ -145,6 +170,7 @@ void get_command(info* info_ptr, move* move_ptr){
         response[i] = c;
         ++i;
     }
+
     response[i] = '\0';
 	info_ptr->response = malloc(sizeof(char) * 128);
     strcpy(info_ptr->response, response);
@@ -572,4 +598,154 @@ int forward_xy_a(move* move_ptr) {
 
 	return 0;
 
+}
+
+
+
+
+void CreateChildProcess(){
+	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
+	SECURITY_ATTRIBUTES saAttr;
+
+	printf("\n->Start of parent execution.\n");
+
+	// Set the bInheritHandle flag so pipe handles are inherited. 
+
+	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+	saAttr.bInheritHandle = TRUE;
+	saAttr.lpSecurityDescriptor = NULL;
+
+	// Create a pipe for the child process's STDOUT. 
+
+	if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0)) {
+		printf("StdoutRd CreatePipe");
+		exit(3);
+	}
+	// Ensure the read handle to the pipe for STDOUT is not inherited.
+
+	if (!SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0)) {
+		printf("Stdout SetHandleInformation"); exit(4);
+
+		// Create a pipe for the child process's STDIN. 
+	}
+	if (!CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0)) {
+		printf("Stdin CreatePipe");
+		exit(5);
+
+		// Ensure the write handle to the pipe for STDIN is not inherited. 
+	}
+	if (!SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0)) {
+		printf("Stdin SetHandleInformation");
+		exit(6);
+	}
+	
+	/*	Spawn Process	*/
+	TCHAR szCmdline[] = TEXT("C:/Users/Callum/Documents/2017/METR4901/programming/SDL2-2.0.7/VisualC/Win32/Debug/testjoystick");
+	TCHAR szCurrentDirectory[] = TEXT("");
+	PROCESS_INFORMATION piProcInfo;
+	STARTUPINFO siStartInfo;
+	BOOL bSuccess = FALSE;
+
+	// Set up members of the PROCESS_INFORMATION structure. 
+
+	ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+
+	// Set up members of the STARTUPINFO structure. 
+	// This structure specifies the STDIN and STDOUT handles for redirection.
+
+	ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+	siStartInfo.cb = sizeof(STARTUPINFO);
+	siStartInfo.hStdError = g_hChildStd_OUT_Wr;
+	siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
+	siStartInfo.hStdInput = g_hChildStd_IN_Rd;
+	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+	// Create the child process. 
+
+	bSuccess = CreateProcess(NULL,
+		szCmdline,     // command line 
+		NULL,          // process security attributes 
+		NULL,          // primary thread security attributes 
+		TRUE,          // handles are inherited 
+		0,             // creation flags 
+		NULL,          // use parent's environment 
+		NULL,          // use parent's current directory 
+		&siStartInfo,  // STARTUPINFO pointer 
+		&piProcInfo);  // receives PROCESS_INFORMATION 
+
+					   // If an error occurs, exit the application. 
+	if (!bSuccess) {
+		printf("Creating Process not a success"); exit(8);
+	}
+	else {
+		// Close handles to the child process and its primary thread.
+		// Some applications might keep these handles to monitor the status
+		// of the child process, for example. 
+
+		CloseHandle(piProcInfo.hProcess);
+		CloseHandle(piProcInfo.hThread);
+	}
+}
+
+
+void WriteToPipe(void){
+
+// Read from a file and write its contents to the pipe for the child's STDIN.
+// Stop when there is no more data. 
+
+	printf("in WriteToPipe\n");
+	DWORD dwRead, dwWritten;
+	CHAR chBuf[BUFSIZE];
+	BOOL bSuccess = FALSE;
+
+
+	bSuccess = ReadFile(g_hInputFile, chBuf, BUFSIZE, &dwRead, NULL);
+	if (!bSuccess || dwRead == 0) {
+		if (!bSuccess) {
+			printf("failed reading from file\n"); //break; 
+		}
+		printf("dwRead == 0? %d\n %s", dwRead, chBuf);
+		//break;
+	}
+
+	bSuccess = WriteFile(g_hChildStd_IN_Wr, chBuf, dwRead, &dwWritten, NULL);
+	if (!bSuccess) {
+		printf("failed writing to child\n"); //break; 
+	}
+
+
+	// Close the pipe handle so the child process stops reading. 
+
+	if (!CloseHandle(g_hChildStd_IN_Wr)) {
+		printf("StdInWr CloseHandle"); exit(9);
+	}
+	else { printf("wrote some thusgas\n"); }
+	fflush(stdout);
+}
+
+
+void ReadFromPipe(void){
+
+// Read output from the child process's pipe for STDOUT
+// and write to the parent process's pipe for STDOUT. 
+// Stop when there is no more data. 
+
+	DWORD dwRead, dwWritten;
+	CHAR chBuf[BUFSIZE];
+	BOOL bSuccess = FALSE;
+	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	printf("we made it here\n"); fflush(stdout);
+	for (;;)
+	{
+		//printf("checkion\n");
+		bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
+		//printf("asdf\n"); fflush(stdout);
+		if (!bSuccess || dwRead == 0) { printf("failed reading from child\n"); break; }
+		//else { printf("this is chBuf %s\n", chBuf); }
+		//printf("aaa\n");
+
+		bSuccess = WriteFile(hParentStdOut, chBuf,
+			dwRead, &dwWritten, NULL);
+		if (!bSuccess) { printf("failed writing to stdout\n"); break; }
+	}
 }
