@@ -7,7 +7,7 @@
 #include <string.h>
 #include <math.h>
 #include "extApi.h"
-
+#include "project.h"
 
 #define BUFSIZE 4096 
 
@@ -28,20 +28,11 @@ typedef struct info {
 	int* jacoArmJointHandles;			/*	joint ID array	*/
     char* response;
 
+	int targetHandle;
+
 } info;
 
-typedef struct move {
-	double* alpha;
-	double* a_i;
-	double* d_i;
-	double* lengthD;
-	double currPos[3];
-	double lastPos[3];
-	double currAng[6];
-	double nextAng[6];
-	double motorAng[6];
 
-} move;
 
 info* makeInfo(void); 
 move* makeMove(void);
@@ -55,7 +46,8 @@ void interpret_command(info* info_ptr, move* move_ptr);
 void CreateChildProcess(void);
 void WriteToPipe(void);
 void ReadFromPipe(void);
-
+void get_target_position(info* info_ptr, simxFloat* startPosition, int relativeHandle);
+void move_target(info* info_ptr, move* move_ptr, char direction);
 
 int main(int argc, char** argv){
     
@@ -104,10 +96,15 @@ int main(int argc, char** argv){
 				for (int h = 0; h < info_ptr->objectCount; h++) {
 					if ((h == 18) || (h == 21) || (h == 24) || (h == 27) || (h == 30) || (h == 33)) {
 						info_ptr->isJoint[h] = 1;
+						info_ptr->objectHandles[h] = h;
 						printf("H = %d\n", h);
-					}
-					else {
+					} else {
 						info_ptr->isJoint[h] = 0;
+						info_ptr->objectHandles[h] = 0;
+					}
+
+					if (h == 127) {
+						info_ptr->targetHandle = h;
 					}
 
 				}
@@ -131,7 +128,9 @@ int main(int argc, char** argv){
 				}
 			}
             printf("Written to file\n");
-            get_command(info_ptr, move_ptr);
+			while (1) {
+				get_command(info_ptr, move_ptr);
+			}
         } else {
             printf("Remote API function call returned with error: %d\n", ret);
         }
@@ -181,7 +180,7 @@ void get_command(info* info_ptr, move* move_ptr){
 
 
 void interpret_command(info* info_ptr, move* move_ptr) {
-
+	printf("interpret_command\n");
 	char joint[6] = { '1', '2', '3', '4', '5', '6' };
 	int check = 1;
 	for (int j = 0; j < 6; j++) {
@@ -190,8 +189,14 @@ void interpret_command(info* info_ptr, move* move_ptr) {
 		}
 	}
 	if ((strlen(info_ptr->response) > 3) && (info_ptr->response[1] == ' ')) { check = 0; }
+	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'w')) { move_target(info_ptr, move_ptr, 'w'); }
+	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'a')) { move_target(info_ptr, move_ptr, 'a'); }
+	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 's')) { move_target(info_ptr, move_ptr, 's'); }
+	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'd')) { move_target(info_ptr, move_ptr, 'd'); }
+
+
 	if (check) { 
-		printf("invalid command %s\n", info_ptr->response); 
+		printf("*\n", info_ptr->response); 
 		free(info_ptr->response);
 		get_command(info_ptr, move_ptr); 
 	}
@@ -245,7 +250,7 @@ void get_object_names_vrep(info* info_ptr){
     int replySize[1] = {1};
     info_ptr->objectNames = malloc(sizeof(char*)*info_ptr->objectCount);
 
-    for(int i = 0; i < info_ptr->objectCount; i++){
+    for(int i = 0; i < info_ptr->objectCount; ++i){
         int ret = 0;
         simxChar* replyData;
         simxInt num = i;
@@ -256,7 +261,10 @@ void get_object_names_vrep(info* info_ptr){
                 simx_opmode_blocking);
         if (ret != simx_return_ok){
             printf("ret not ok\n");
-        }
+		}
+		else {
+			printf("%d :	%s\n", i, replyData);
+		}
         info_ptr->objectNames[i] = malloc(sizeof(char)*(strlen(replyData)+1));
         strcpy(info_ptr->objectNames[i], replyData);
         char* underScore = "_";
@@ -272,6 +280,9 @@ void get_object_names_vrep(info* info_ptr){
                     ++count;
                 }
             }
+			if (strcmp(token, "Target") > 0) {
+				info_ptr->targetHandle = i+1;
+			}
             token = strtok(NULL, underScore);
             if (count == 5){
                 info_ptr->isJoint[i] = 1;
@@ -285,7 +296,7 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	/* Updates info struct with all jaco arm joint current angles 
 	*  joints 4 and 5 are initially adjusted to take on FK values,
 	*  the other joints are offset by 180 degrees */
-	
+	printf("get_joint_angles_vrep\n");
 	int count = 0;
 	while (count < 6){
 			printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
@@ -332,10 +343,12 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	/* puts the arm into a starting pos, straight up, by rotating joints 4 and 5
 	*  the joint handles are also found, and angles of each using get_joint_angles */
-
+	printf("initial_arm_config_vrep\n");
 	int i = 0;
 	int num = 0;
 	info_ptr->jacoArmJointHandles = malloc(sizeof(int) * 6);
+	printf("jacoarmjointhandles malloced %d\n", info_ptr->objectCount);
+
 	while (num < 6) {
 
 		if (info_ptr->isJoint[i]) {
@@ -345,6 +358,10 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 			++num;
 		}
 		++i;
+		if (i > info_ptr->objectCount) {
+			printf("i: %d\n", i);
+			exit(1);
+		}
 	}
 
 	get_joint_angles_vrep(info_ptr, move_ptr);
@@ -386,25 +403,28 @@ void write_object_info(info* info_ptr, char* filename){
 }
 
 
-void define_classic_parameters(move* move_ptr, info* info_ptr) {
+void define_classic_parameters(move* move_ptr) {
+	/*	Stores in memory the forward kinematic
+	*	parameters of the Jaco arm as per the classic solution
+	*/
 
 	/* Define joint lengths */
 	move_ptr->lengthD = malloc(sizeof(double) * 7);
-	move_ptr->lengthD[0] = 9.8;			// hand offset
-	move_ptr->lengthD[1] = 275.5;		// length of joint 1
-	move_ptr->lengthD[2] = 410.0;		// length of joint 2
-	move_ptr->lengthD[3] = 207.3;
-	move_ptr->lengthD[4] = 74.3;
-	move_ptr->lengthD[5] = 74.3;
-	move_ptr->lengthD[6] = 168.7;
+	move_ptr->lengthD[0] = 9.8;			// hand offset				e2
+	move_ptr->lengthD[1] = 275.5;		// length of joint 1		D1
+	move_ptr->lengthD[2] = 410.0;		// length of joint 2		D2
+	move_ptr->lengthD[3] = 207.3;		//							D3
+	move_ptr->lengthD[4] = 74.3;		//							D4
+	move_ptr->lengthD[5] = 74.3;		//							D5	
+	move_ptr->lengthD[6] = 168.7;		//							D6
 
 	/* Define DH Parameters */
 	move_ptr->alpha = malloc(sizeof(double) * 7);
-	move_ptr->alpha[0] = 0.0;				// redundant, will start at 1
+	move_ptr->alpha[0] = 0.0;				// redundant, will start at 1 for joint 1
 	move_ptr->alpha[1] = 3.141592 / 2.0;
 	move_ptr->alpha[2] = 3.141592;
 	move_ptr->alpha[3] = 3.141592 / 2.0;
-	move_ptr->alpha[4] = 55.0*3.141592/180.0;
+	move_ptr->alpha[4] = 55.0*3.141592 / 180.0;
 	move_ptr->alpha[5] = 55.0*3.141592 / 180.0;
 	move_ptr->alpha[6] = 3.141592;
 
@@ -454,18 +474,18 @@ void fk_classic(move* move_ptr) {
 	/* Compute the transform matrix given angles*/
 	double T[4][4];
 
-	T[1 - 1][1 - 1] = 0.4698*sin(q3)*sin(q6) + 0.6710*cos(q3)*sin(q4)*sin(q6) + 0.4698*cos(q5)*sin(q3)*sin(q6) + 0.81915*cos(q6)*sin(q3)*sin(q5) + cos(q3)*cos(q4)*cos(q5)*cos(q6);
-	T[1 - 1][2 - 1] = 0.81915*sin(q3)*sin(q5)*sin(q6) + cos(q3)*cos(q4)*cos(q5)*sin(q6) + 0.5736*cos(q3)*cos(q4)*cos(q6)*sin(q5) + 0.32899*cos(q3)*cos(q5)*cos(q6)*sin(q4);
-	T[1 - 1][3 - 1] = 0.67101*cos(q5)*sin(q3);
-	T[1 - 1][4 - 1] = 141.3028*cos(q5)*sin(q3);
-	T[2 - 1][1 - 1] = 0.67101*sin(q3)*sin(q4)*sin(q6) + cos(q4)*cos(q5)*cos(q6)*sin(q3);
-	T[2 - 1][2 - 1] = 0.46985*cos(q3)*cos(q6) + 0.46985*cos(q3)*cos(q5)*cos(q6) + cos(q4)*cos(q5)*sin(q3)*sin(q6) + 0.57358*cos(q4)*cos(q6)*sin(q3)*sin(q5) + 0.32899*cos(q5)*cos(q6)*sin(q3)*sin(q4);
-	T[2 - 1][3 - 1] = 0.32899*cos(q3);
-	T[2 - 1][4 - 1] = 366.50701*cos(q3);
-	T[3 - 1][1 - 1] = 0.32899*cos(q4)*cos(q5)*sin(q6) + 0.57358*cos(q4)*cos(q6)*sin(q5) + cos(q5)*cos(q6)*sin(q4);
-	T[3 - 1][2 - 1] = 0.67101*cos(q4)*cos(q6) + 0.57358*cos(q4)*sin(q5)*sin(q6) + cos(q5)*sin(q4)*sin(q6) + 0.57358*cos(q6)*sin(q4)*sin(q5);
-	T[3 - 1][3 - 1] = 0.46985*cos(q4) + 0.46985*cos(q4)*cos(q5);
-	T[3 - 1][4 - 1] = 167.55713*cos(q4) + 98.94129*cos(q4)*cos(q5);
+	T[1 - 1][1 - 1] = 0.75*cos(q4)*sin(q1)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q2)*sin(q3)*sin(q6) - 0.43301270189221932338186158537647*cos(q1)*cos(q3)*sin(q2)*sin(q6) - 0.25*cos(q4)*cos(q5)*sin(q1)*sin(q6) - 0.5*cos(q4)*cos(q6)*sin(q1)*sin(q5) - 1.0*cos(q5)*cos(q6)*sin(q1)*sin(q4) + 0.5*sin(q1)*sin(q4)*sin(q5)*sin(q6) + 0.75*cos(q1)*cos(q2)*cos(q3)*sin(q4)*sin(q6) + 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q5)*sin(q3)*sin(q6) + 0.86602540378443864676372317075294*cos(q1)*cos(q2)*cos(q6)*sin(q3)*sin(q5) - 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q5)*sin(q2)*sin(q6) - 0.86602540378443864676372317075294*cos(q1)*cos(q3)*cos(q6)*sin(q2)*sin(q5) + 0.75*cos(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q6) + cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q5)*cos(q6) - 0.5*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5)*sin(q6) - 0.25*cos(q1)*cos(q2)*cos(q3)*cos(q5)*sin(q4)*sin(q6) - 0.5*cos(q1)*cos(q2)*cos(q3)*cos(q6)*sin(q4)*sin(q5) + cos(q1)*cos(q4)*cos(q5)*cos(q6)*sin(q2)*sin(q3) - 0.5*cos(q1)*cos(q4)*sin(q2)*sin(q3)*sin(q5)*sin(q6) - 0.25*cos(q1)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q6) - 0.5*cos(q1)*cos(q6)*sin(q2)*sin(q3)*sin(q4)*sin(q5);
+	T[1 - 1][2 - 1] = 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q6)*sin(q2) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q6)*sin(q3) - 0.75*cos(q4)*cos(q6)*sin(q1) + 0.25*cos(q4)*cos(q5)*cos(q6)*sin(q1) - 0.5*cos(q4)*sin(q1)*sin(q5)*sin(q6) - 1.0*cos(q5)*sin(q1)*sin(q4)*sin(q6) - 0.5*cos(q6)*sin(q1)*sin(q4)*sin(q5) - 0.75*cos(q1)*cos(q2)*cos(q3)*cos(q6)*sin(q4) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q5)*cos(q6)*sin(q3) + 0.43301270189221932338186158537647*cos(q1)*cos(q3)*cos(q5)*cos(q6)*sin(q2) - 0.75*cos(q1)*cos(q6)*sin(q2)*sin(q3)*sin(q4) + 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3)*sin(q5)*sin(q6) - 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)*sin(q5)*sin(q6) + cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q6) + 0.5*cos(q1)*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q5) + 0.25*cos(q1)*cos(q2)*cos(q3)*cos(q5)*cos(q6)*sin(q4) - 0.5*cos(q1)*cos(q2)*cos(q3)*sin(q4)*sin(q5)*sin(q6) + cos(q1)*cos(q4)*cos(q5)*sin(q2)*sin(q3)*sin(q6) + 0.5*cos(q1)*cos(q4)*cos(q6)*sin(q2)*sin(q3)*sin(q5) + 0.25*cos(q1)*cos(q5)*cos(q6)*sin(q2)*sin(q3)*sin(q4) - 0.5*cos(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6);
+	T[1 - 1][3 - 1] = 0.86602540378443864676372317075294*sin(q1)*sin(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q4)*sin(q1) - 0.25*cos(q1)*cos(q2)*sin(q3) + 0.25*cos(q1)*cos(q3)*sin(q2) - 0.43301270189221932338186158537647*cos(q4)*cos(q5)*sin(q1) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q3)*sin(q4) + 0.75*cos(q1)*cos(q2)*cos(q5)*sin(q3) - 0.75*cos(q1)*cos(q3)*cos(q5)*sin(q2) - 0.43301270189221932338186158537647*cos(q1)*sin(q2)*sin(q3)*sin(q4) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q1)*cos(q2)*cos(q3)*cos(q5)*sin(q4) - 0.86602540378443864676372317075294*cos(q1)*cos(q4)*sin(q2)*sin(q3)*sin(q5) - 0.43301270189221932338186158537647*cos(q1)*cos(q5)*sin(q2)*sin(q3)*sin(q4);
+	T[1 - 1][4 - 1] = 9.8000000000000211859935286588393*sin(q1) + 410.0*cos(q1)*cos(q2) - 165.92424280921737560930281782652*cos(q4)*sin(q1) + 183.2484856184347722889290885445*sin(q1)*sin(q4)*sin(q5) - 345.99353125177566425918485037982*cos(q1)*cos(q2)*sin(q3) + 345.99353125177566425918485037982*cos(q1)*cos(q3)*sin(q2) - 91.62424280921738614446454427225*cos(q4)*cos(q5)*sin(q1) - 165.92424280921737560930281782652*cos(q1)*cos(q2)*cos(q3)*sin(q4) + 158.697843750591871980759606231*cos(q1)*cos(q2)*cos(q5)*sin(q3) - 158.697843750591871980759606231*cos(q1)*cos(q3)*cos(q5)*sin(q2) - 165.92424280921737560930281782652*cos(q1)*sin(q2)*sin(q3)*sin(q4) - 183.2484856184347722889290885445*cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5) - 91.62424280921738614446454427225*cos(q1)*cos(q2)*cos(q3)*cos(q5)*sin(q4) - 183.2484856184347722889290885445*cos(q1)*cos(q4)*sin(q2)*sin(q3)*sin(q5) - 91.62424280921738614446454427225*cos(q1)*cos(q5)*sin(q2)*sin(q3)*sin(q4);
+	T[2 - 1][1 - 1] = 0.25*cos(q1)*cos(q4)*cos(q5)*sin(q6) - 0.75*cos(q1)*cos(q4)*sin(q6) + 0.5*cos(q1)*cos(q4)*cos(q6)*sin(q5) + cos(q1)*cos(q5)*cos(q6)*sin(q4) + 0.43301270189221932338186158537647*cos(q2)*sin(q1)*sin(q3)*sin(q6) - 0.43301270189221932338186158537647*cos(q3)*sin(q1)*sin(q2)*sin(q6) - 0.5*cos(q1)*sin(q4)*sin(q5)*sin(q6) + 0.75*cos(q2)*cos(q3)*sin(q1)*sin(q4)*sin(q6) + 0.43301270189221932338186158537647*cos(q2)*cos(q5)*sin(q1)*sin(q3)*sin(q6) + 0.86602540378443864676372317075294*cos(q2)*cos(q6)*sin(q1)*sin(q3)*sin(q5) - 0.43301270189221932338186158537647*cos(q3)*cos(q5)*sin(q1)*sin(q2)*sin(q6) - 0.86602540378443864676372317075294*cos(q3)*cos(q6)*sin(q1)*sin(q2)*sin(q5) + 0.75*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q6) + cos(q2)*cos(q3)*cos(q4)*cos(q5)*cos(q6)*sin(q1) - 0.5*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5)*sin(q6) - 0.25*cos(q2)*cos(q3)*cos(q5)*sin(q1)*sin(q4)*sin(q6) - 0.5*cos(q2)*cos(q3)*cos(q6)*sin(q1)*sin(q4)*sin(q5) + cos(q4)*cos(q5)*cos(q6)*sin(q1)*sin(q2)*sin(q3) - 0.5*cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q5)*sin(q6) - 0.25*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q6) - 0.5*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5);
+	T[2 - 1][2 - 1] = 0.75*cos(q1)*cos(q4)*cos(q6) - 0.25*cos(q1)*cos(q4)*cos(q5)*cos(q6) - 0.43301270189221932338186158537647*cos(q2)*cos(q6)*sin(q1)*sin(q3) + 0.43301270189221932338186158537647*cos(q3)*cos(q6)*sin(q1)*sin(q2) + 0.5*cos(q1)*cos(q4)*sin(q5)*sin(q6) + cos(q1)*cos(q5)*sin(q4)*sin(q6) + 0.5*cos(q1)*cos(q6)*sin(q4)*sin(q5) - 0.75*cos(q2)*cos(q3)*cos(q6)*sin(q1)*sin(q4) - 0.43301270189221932338186158537647*cos(q2)*cos(q5)*cos(q6)*sin(q1)*sin(q3) + 0.43301270189221932338186158537647*cos(q3)*cos(q5)*cos(q6)*sin(q1)*sin(q2) - 0.75*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q4) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3)*sin(q5)*sin(q6) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)*sin(q5)*sin(q6) + cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q1)*sin(q6) + 0.5*cos(q2)*cos(q3)*cos(q4)*cos(q6)*sin(q1)*sin(q5) + 0.25*cos(q2)*cos(q3)*cos(q5)*cos(q6)*sin(q1)*sin(q4) - 0.5*cos(q2)*cos(q3)*sin(q1)*sin(q4)*sin(q5)*sin(q6) + cos(q4)*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q6) + 0.5*cos(q4)*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q5) + 0.25*cos(q5)*cos(q6)*sin(q1)*sin(q2)*sin(q3)*sin(q4) - 0.5*sin(q1)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6);
+	T[2 - 1][3 - 1] = 0.43301270189221932338186158537647*cos(q1)*cos(q4) + 0.43301270189221932338186158537647*cos(q1)*cos(q4)*cos(q5) - 0.25*cos(q2)*sin(q1)*sin(q3) + 0.25*cos(q3)*sin(q1)*sin(q2) - 0.86602540378443864676372317075294*cos(q1)*sin(q4)*sin(q5) - 0.43301270189221932338186158537647*cos(q2)*cos(q3)*sin(q1)*sin(q4) + 0.75*cos(q2)*cos(q5)*sin(q1)*sin(q3) - 0.75*cos(q3)*cos(q5)*sin(q1)*sin(q2) - 0.43301270189221932338186158537647*sin(q1)*sin(q2)*sin(q3)*sin(q4) - 0.86602540378443864676372317075294*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5) - 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q5)*sin(q1)*sin(q4) - 0.86602540378443864676372317075294*cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q5) - 0.43301270189221932338186158537647*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4);
+	T[2 - 1][4 - 1] = 165.92424280921737560930281782652*cos(q1)*cos(q4) - 9.8000000000000211859935286588393*cos(q1) + 410.0*cos(q2)*sin(q1) + 91.62424280921738614446454427225*cos(q1)*cos(q4)*cos(q5) - 345.99353125177566425918485037982*cos(q2)*sin(q1)*sin(q3) + 345.99353125177566425918485037982*cos(q3)*sin(q1)*sin(q2) - 183.2484856184347722889290885445*cos(q1)*sin(q4)*sin(q5) - 165.92424280921737560930281782652*cos(q2)*cos(q3)*sin(q1)*sin(q4) + 158.697843750591871980759606231*cos(q2)*cos(q5)*sin(q1)*sin(q3) - 158.697843750591871980759606231*cos(q3)*cos(q5)*sin(q1)*sin(q2) - 165.92424280921737560930281782652*sin(q1)*sin(q2)*sin(q3)*sin(q4) - 183.2484856184347722889290885445*cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5) - 91.62424280921738614446454427225*cos(q2)*cos(q3)*cos(q5)*sin(q1)*sin(q4) - 183.2484856184347722889290885445*cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q5) - 91.62424280921738614446454427225*cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4);
+	T[3 - 1][1 - 1] = 0.43301270189221932338186158537647*sin(q2)*sin(q3)*sin(q6) + 0.43301270189221932338186158537647*cos(q2)*cos(q3)*sin(q6) + 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q5)*sin(q6) + 0.86602540378443864676372317075294*cos(q2)*cos(q3)*cos(q6)*sin(q5) - 0.75*cos(q2)*sin(q3)*sin(q4)*sin(q6) + 0.75*cos(q3)*sin(q2)*sin(q4)*sin(q6) + 0.43301270189221932338186158537647*cos(q5)*sin(q2)*sin(q3)*sin(q6) + 0.86602540378443864676372317075294*cos(q6)*sin(q2)*sin(q3)*sin(q5) - 1.0*cos(q2)*cos(q4)*cos(q5)*cos(q6)*sin(q3) + cos(q3)*cos(q4)*cos(q5)*cos(q6)*sin(q2) + 0.5*cos(q2)*cos(q4)*sin(q3)*sin(q5)*sin(q6) + 0.25*cos(q2)*cos(q5)*sin(q3)*sin(q4)*sin(q6) + 0.5*cos(q2)*cos(q6)*sin(q3)*sin(q4)*sin(q5) - 0.5*cos(q3)*cos(q4)*sin(q2)*sin(q5)*sin(q6) - 0.25*cos(q3)*cos(q5)*sin(q2)*sin(q4)*sin(q6) - 0.5*cos(q3)*cos(q6)*sin(q2)*sin(q4)*sin(q5);
+	T[3 - 1][2 - 1] = 0.75*cos(q2)*cos(q6)*sin(q3)*sin(q4) - 0.43301270189221932338186158537647*cos(q6)*sin(q2)*sin(q3) - 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q5)*cos(q6) - 0.43301270189221932338186158537647*cos(q2)*cos(q3)*cos(q6) - 0.75*cos(q3)*cos(q6)*sin(q2)*sin(q4) + 0.86602540378443864676372317075294*cos(q2)*cos(q3)*sin(q5)*sin(q6) - 0.43301270189221932338186158537647*cos(q5)*cos(q6)*sin(q2)*sin(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3)*sin(q5)*sin(q6) - 1.0*cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q6) - 0.5*cos(q2)*cos(q4)*cos(q6)*sin(q3)*sin(q5) - 0.25*cos(q2)*cos(q5)*cos(q6)*sin(q3)*sin(q4) + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q6) + 0.5*cos(q3)*cos(q4)*cos(q6)*sin(q2)*sin(q5) + 0.25*cos(q3)*cos(q5)*cos(q6)*sin(q2)*sin(q4) + 0.5*cos(q2)*sin(q3)*sin(q4)*sin(q5)*sin(q6) - 0.5*cos(q3)*sin(q2)*sin(q4)*sin(q5)*sin(q6);
+	T[3 - 1][3 - 1] = 0.75*cos(q2)*cos(q3)*cos(q5) - 0.25*sin(q2)*sin(q3) - 0.25*cos(q2)*cos(q3) + 0.43301270189221932338186158537647*cos(q2)*sin(q3)*sin(q4) - 0.43301270189221932338186158537647*cos(q3)*sin(q2)*sin(q4) + 0.75*cos(q5)*sin(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q2)*cos(q4)*sin(q3)*sin(q5) + 0.43301270189221932338186158537647*cos(q2)*cos(q5)*sin(q3)*sin(q4) - 0.86602540378443864676372317075294*cos(q3)*cos(q4)*sin(q2)*sin(q5) - 0.43301270189221932338186158537647*cos(q3)*cos(q5)*sin(q2)*sin(q4);
+	T[3 - 1][4 - 1] = 410.0*sin(q2) - 345.99353125177566425918485037982*cos(q2)*cos(q3) - 345.99353125177566425918485037982*sin(q2)*sin(q3) + 158.697843750591871980759606231*cos(q2)*cos(q3)*cos(q5) + 165.92424280921737560930281782652*cos(q2)*sin(q3)*sin(q4) - 165.92424280921737560930281782652*cos(q3)*sin(q2)*sin(q4) + 158.697843750591871980759606231*cos(q5)*sin(q2)*sin(q3) + 183.2484856184347722889290885445*cos(q2)*cos(q4)*sin(q3)*sin(q5) + 91.62424280921738614446454427225*cos(q2)*cos(q5)*sin(q3)*sin(q4) - 183.2484856184347722889290885445*cos(q3)*cos(q4)*sin(q2)*sin(q5) - 91.62424280921738614446454427225*cos(q3)*cos(q5)*sin(q2)*sin(q4) + 275.5000000000000006000769315822;
 	T[4 - 1][1 - 1] = 0.0;
 	T[4 - 1][2 - 1] = 0.0;
 	T[4 - 1][3 - 1] = 0.0;
@@ -587,6 +607,7 @@ void ik_RRR_arm(move* move_ptr, char* plane) {
 	th_c = acos((px - a*cos(th_a) - b*cos(th_a + th_b)) / c) - th_a - th_b;
 
 }
+
 
 int forward_xy_a(move* move_ptr) {
 
@@ -748,4 +769,32 @@ void ReadFromPipe(void){
 			dwRead, &dwWritten, NULL);
 		if (!bSuccess) { printf("failed writing to stdout\n"); break; }
 	}
+}
+
+void move_target(info * info_ptr, move * move_ptr, char direction)
+{
+	/*	Get the target's position relative to the base of the arm	*/
+	printf("move_target(), %d\n", info_ptr->targetHandle); fflush(stdout);
+	//simxFloat* position = malloc(sizeof(int) * 3);
+	//simxFloat position = malloc(sizeof(simxFloat)*3);
+	simxFloat position[3];
+	simxFloat orientation[3];
+	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_blocking);
+	simxGetObjectOrientation(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &orientation, simx_opmode_blocking);
+	printf("%f %f %f	%f %f %f\n", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2]); fflush(stdout);
+	if (direction == 'w') { position[1] += (simxFloat)(0.1); }
+	if (direction == 's') { position[1] -= (simxFloat)(0.1); }
+	if (direction == 'a') { position[0] += (simxFloat)(0.1); }
+	if (direction == 'd') { position[0] -= (simxFloat)(0.1); }
+	printf("%f %f %f\n", position[0], position[1], position[2]); fflush(stdout);
+
+
+	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
+
+}
+
+void get_position(info* info_ptr, simxFloat* startPosition, int relativeHandle) {
+
+	
+	;
 }
