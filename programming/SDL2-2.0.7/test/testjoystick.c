@@ -69,7 +69,9 @@ loop(void *arg)
 				SDL_Log("Joystick %d axis %d value: %d\n",
 					event.jaxis.which,
 					event.jaxis.axis, event.jaxis.value);
-				printf("Joystick %d axis %d value: %d\n", event.jaxis.which, event.jaxis.axis, event.jaxis.value); fflush(stdout);
+				if (event.jaxis.axis != 3) {
+					printf("Joystick %d axis %d value: %d\n", event.jaxis.which, event.jaxis.axis, event.jaxis.value); fflush(stdout);
+				}
 				break;
 			case SDL_JOYHATMOTION:
 				SDL_Log("Joystick %d hat %d value:",

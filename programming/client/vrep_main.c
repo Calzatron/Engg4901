@@ -30,6 +30,8 @@ typedef struct info {
 
 	int targetHandle;
 
+
+
 } info;
 
 
@@ -45,9 +47,10 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 void interpret_command(info* info_ptr, move* move_ptr);
 void CreateChildProcess(void);
 void WriteToPipe(void);
-void ReadFromPipe(void);
-void get_target_position(info* info_ptr, simxFloat* startPosition, int relativeHandle);
+void ReadFromPipe(info* info_ptr);
+void get_position(info* info_ptr, simxFloat* startPosition, int relativeHandle);
 void move_target(info* info_ptr, move* move_ptr, char direction);
+void fk_classic(move* move_ptr, info* info_ptr);
 
 int main(int argc, char** argv){
     
@@ -128,7 +131,12 @@ int main(int argc, char** argv){
 				}
 			}
             printf("Written to file\n");
+			
+			CreateChildProcess();
 			while (1) {
+
+				ReadFromPipe(info_ptr);
+
 				get_command(info_ptr, move_ptr);
 			}
         } else {
@@ -193,7 +201,7 @@ void interpret_command(info* info_ptr, move* move_ptr) {
 	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'a')) { move_target(info_ptr, move_ptr, 'a'); }
 	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 's')) { move_target(info_ptr, move_ptr, 's'); }
 	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'd')) { move_target(info_ptr, move_ptr, 'd'); }
-
+	if ((strlen(info_ptr->response) < 4) && (info_ptr->response[0] == 'i') && info_ptr->response[1] == 'k') { fk_classic(move_ptr, info_ptr); }
 
 	if (check) { 
 		printf("*\n", info_ptr->response); 
@@ -405,7 +413,7 @@ void write_object_info(info* info_ptr, char* filename){
 
 void define_classic_parameters(move* move_ptr) {
 	/*	Stores in memory the forward kinematic
-	*	parameters of the Jaco arm as per the classic solution
+	*	parameters of the Jaco arm as per the classic DH solution
 	*/
 
 	/* Define joint lengths */
@@ -454,20 +462,24 @@ void define_classic_parameters(move* move_ptr) {
 
 
 
-void fk_classic(move* move_ptr) {
-
+void fk_classic(move* move_ptr, info* info_ptr) {
+	/*	Calculates the position of the tip using classic DH parameters
+	*	ret = T * pt	
+	*/	
+	
 	/* Get current angles*/
-		double q1, q2, q3, q4, q5, q6;
+	double q1, q2, q3, q4, q5, q6;
 	q1 = move_ptr->currAng[0];
 	q2 = move_ptr->currAng[1];
 	q3 = move_ptr->currAng[2];
 	q4 = move_ptr->currAng[3];
 	q5 = move_ptr->currAng[4];
 	q6 = move_ptr->currAng[5];
+	printf("current angles: %f %f %f %f %f %f\n", q1, q2, q3, q4, q5, q6);
 	/* Define a reference position	*/
 	double pt[4][1];
 	pt[0][0] = 0.0;
-	pt[1][0] = 0.0;
+	pt[1][0] = 98;
 	pt[2][0] = 1126.9;
 	pt[3][0] = 0.0;
 
@@ -507,6 +519,20 @@ void fk_classic(move* move_ptr) {
 
 		}
 	}
+	printf("Forward: %f %f %f\n", ret[0][1], ret[1][0], ret[2][0]);
+	simxFloat position[3];
+	simxGetObjectPosition(info_ptr->clientID, 33, 18, &position, simx_opmode_blocking);
+	printf("%f %f %f\n", position[0], position[1], position[2]);
+	simxGetObjectPosition(info_ptr->clientID, 30, 18, &position, simx_opmode_blocking);
+	printf("%f %f %f\n", position[0], position[1], position[2]);
+	simxGetObjectPosition(info_ptr->clientID, 27, 18, &position, simx_opmode_blocking);
+	printf("%f %f %f\n", position[0], position[1], position[2]);
+	simxGetObjectPosition(info_ptr->clientID, 24, 18, &position, simx_opmode_blocking);
+	printf("%f %f %f\n", position[0], position[1], position[2]);
+	simxGetObjectPosition(info_ptr->clientID, 21, 18, &position, simx_opmode_blocking);
+	printf("%f %f %f\n", position[0], position[1], position[2]);
+	simxGetObjectPosition(info_ptr->clientID, 18, 18, &position, simx_opmode_blocking);
+	printf("%f %f %f\n", position[0], position[1], position[2]);
 
 }
 
@@ -622,155 +648,6 @@ int forward_xy_a(move* move_ptr) {
 }
 
 
-
-
-void CreateChildProcess(){
-	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
-	SECURITY_ATTRIBUTES saAttr;
-
-	printf("\n->Start of parent execution.\n");
-
-	// Set the bInheritHandle flag so pipe handles are inherited. 
-
-	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-	saAttr.bInheritHandle = TRUE;
-	saAttr.lpSecurityDescriptor = NULL;
-
-	// Create a pipe for the child process's STDOUT. 
-
-	if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0)) {
-		printf("StdoutRd CreatePipe");
-		exit(3);
-	}
-	// Ensure the read handle to the pipe for STDOUT is not inherited.
-
-	if (!SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0)) {
-		printf("Stdout SetHandleInformation"); exit(4);
-
-		// Create a pipe for the child process's STDIN. 
-	}
-	if (!CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0)) {
-		printf("Stdin CreatePipe");
-		exit(5);
-
-		// Ensure the write handle to the pipe for STDIN is not inherited. 
-	}
-	if (!SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0)) {
-		printf("Stdin SetHandleInformation");
-		exit(6);
-	}
-	
-	/*	Spawn Process	*/
-	TCHAR szCmdline[] = TEXT("C:/Users/Callum/Documents/2017/METR4901/programming/SDL2-2.0.7/VisualC/Win32/Debug/testjoystick");
-	TCHAR szCurrentDirectory[] = TEXT("");
-	PROCESS_INFORMATION piProcInfo;
-	STARTUPINFO siStartInfo;
-	BOOL bSuccess = FALSE;
-
-	// Set up members of the PROCESS_INFORMATION structure. 
-
-	ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
-
-	// Set up members of the STARTUPINFO structure. 
-	// This structure specifies the STDIN and STDOUT handles for redirection.
-
-	ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
-	siStartInfo.cb = sizeof(STARTUPINFO);
-	siStartInfo.hStdError = g_hChildStd_OUT_Wr;
-	siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
-	siStartInfo.hStdInput = g_hChildStd_IN_Rd;
-	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-	// Create the child process. 
-
-	bSuccess = CreateProcess(NULL,
-		szCmdline,     // command line 
-		NULL,          // process security attributes 
-		NULL,          // primary thread security attributes 
-		TRUE,          // handles are inherited 
-		0,             // creation flags 
-		NULL,          // use parent's environment 
-		NULL,          // use parent's current directory 
-		&siStartInfo,  // STARTUPINFO pointer 
-		&piProcInfo);  // receives PROCESS_INFORMATION 
-
-					   // If an error occurs, exit the application. 
-	if (!bSuccess) {
-		printf("Creating Process not a success"); exit(8);
-	}
-	else {
-		// Close handles to the child process and its primary thread.
-		// Some applications might keep these handles to monitor the status
-		// of the child process, for example. 
-
-		CloseHandle(piProcInfo.hProcess);
-		CloseHandle(piProcInfo.hThread);
-	}
-}
-
-
-void WriteToPipe(void){
-
-// Read from a file and write its contents to the pipe for the child's STDIN.
-// Stop when there is no more data. 
-
-	printf("in WriteToPipe\n");
-	DWORD dwRead, dwWritten;
-	CHAR chBuf[BUFSIZE];
-	BOOL bSuccess = FALSE;
-
-
-	bSuccess = ReadFile(g_hInputFile, chBuf, BUFSIZE, &dwRead, NULL);
-	if (!bSuccess || dwRead == 0) {
-		if (!bSuccess) {
-			printf("failed reading from file\n"); //break; 
-		}
-		printf("dwRead == 0? %d\n %s", dwRead, chBuf);
-		//break;
-	}
-
-	bSuccess = WriteFile(g_hChildStd_IN_Wr, chBuf, dwRead, &dwWritten, NULL);
-	if (!bSuccess) {
-		printf("failed writing to child\n"); //break; 
-	}
-
-
-	// Close the pipe handle so the child process stops reading. 
-
-	if (!CloseHandle(g_hChildStd_IN_Wr)) {
-		printf("StdInWr CloseHandle"); exit(9);
-	}
-	else { printf("wrote some thusgas\n"); }
-	fflush(stdout);
-}
-
-
-void ReadFromPipe(void){
-
-// Read output from the child process's pipe for STDOUT
-// and write to the parent process's pipe for STDOUT. 
-// Stop when there is no more data. 
-
-	DWORD dwRead, dwWritten;
-	CHAR chBuf[BUFSIZE];
-	BOOL bSuccess = FALSE;
-	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	printf("we made it here\n"); fflush(stdout);
-	for (;;)
-	{
-		//printf("checkion\n");
-		bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
-		//printf("asdf\n"); fflush(stdout);
-		if (!bSuccess || dwRead == 0) { printf("failed reading from child\n"); break; }
-		//else { printf("this is chBuf %s\n", chBuf); }
-		//printf("aaa\n");
-
-		bSuccess = WriteFile(hParentStdOut, chBuf,
-			dwRead, &dwWritten, NULL);
-		if (!bSuccess) { printf("failed writing to stdout\n"); break; }
-	}
-}
-
 void move_target(info * info_ptr, move * move_ptr, char direction)
 {
 	/*	Get the target's position relative to the base of the arm	*/
@@ -782,10 +659,10 @@ void move_target(info * info_ptr, move * move_ptr, char direction)
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_blocking);
 	simxGetObjectOrientation(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &orientation, simx_opmode_blocking);
 	printf("%f %f %f	%f %f %f\n", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2]); fflush(stdout);
-	if (direction == 'w') { position[1] += (simxFloat)(0.1); }
-	if (direction == 's') { position[1] -= (simxFloat)(0.1); }
-	if (direction == 'a') { position[0] += (simxFloat)(0.1); }
-	if (direction == 'd') { position[0] -= (simxFloat)(0.1); }
+	if (direction == 'w') { position[1] += (simxFloat)(0.05); }
+	if (direction == 's') { position[1] -= (simxFloat)(0.05); }
+	if (direction == 'a') { position[0] += (simxFloat)(0.05); }
+	if (direction == 'd') { position[0] -= (simxFloat)(0.05); }
 	printf("%f %f %f\n", position[0], position[1], position[2]); fflush(stdout);
 
 
@@ -795,6 +672,5 @@ void move_target(info * info_ptr, move * move_ptr, char direction)
 
 void get_position(info* info_ptr, simxFloat* startPosition, int relativeHandle) {
 
-	
 	;
 }
