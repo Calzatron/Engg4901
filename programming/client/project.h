@@ -1,6 +1,6 @@
 
-#ifndef PROJECT.H
-
+#ifndef PROJECT_H_
+#define PROJECT_H_
 /*	Define motion struct	*/
 
 

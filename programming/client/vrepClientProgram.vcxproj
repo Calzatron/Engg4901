@@ -57,6 +57,7 @@
   <ItemGroup>
     <ClInclude Include="..\remoteApi\extApi.h" />
     <ClInclude Include="..\remoteApi\extApiPlatform.h" />
+    <ClInclude Include="joystick.h" />
     <ClInclude Include="project.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
