@@ -8,15 +8,10 @@
 #include <math.h>
 #include "extApi.h"
 #include "project.h"
+#include "joystick.h"
+
 
 #define BUFSIZE 4096 
-
-HANDLE g_hChildStd_IN_Rd = NULL;
-HANDLE g_hChildStd_IN_Wr = NULL;
-HANDLE g_hChildStd_OUT_Rd = NULL;
-HANDLE g_hChildStd_OUT_Wr = NULL;
-
-HANDLE g_hInputFile = NULL;
 
 typedef struct info {
 	
@@ -47,7 +42,7 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 void interpret_command(info* info_ptr, move* move_ptr);
 void CreateChildProcess(void);
 void WriteToPipe(void);
-void ReadFromPipe(info* info_ptr);
+void ReadFromPipe(void);
 void get_position(info* info_ptr, simxFloat* startPosition, int relativeHandle);
 void move_target(info* info_ptr, move* move_ptr, char direction);
 void fk_classic(move* move_ptr, info* info_ptr);
@@ -135,7 +130,13 @@ int main(int argc, char** argv){
 			CreateChildProcess();
 			while (1) {
 
-				ReadFromPipe(info_ptr);
+				//ReadFromPipe();
+
+				if (joystick_input_available) {
+					int* arr;
+					arr = joystick_get_char();
+					print("arr:	%d %d \n", arr[0], arr[1]);
+				}
 
 				get_command(info_ptr, move_ptr);
 			}
@@ -204,7 +205,7 @@ void interpret_command(info* info_ptr, move* move_ptr) {
 	if ((strlen(info_ptr->response) < 4) && (info_ptr->response[0] == 'i') && info_ptr->response[1] == 'k') { fk_classic(move_ptr, info_ptr); }
 
 	if (check) { 
-		printf("*\n", info_ptr->response); 
+		printf("*%s\n", info_ptr->response); 
 		free(info_ptr->response);
 		get_command(info_ptr, move_ptr); 
 	}

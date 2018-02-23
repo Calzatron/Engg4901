@@ -9,6 +9,8 @@
 #include <math.h>
 #include "project.h"
 
+
+
 #define BUFSIZE 4096 
 
 HANDLE g_hChildStd_IN_Rd = NULL;
@@ -23,13 +25,29 @@ volatile uint8_t out_insert_pos;
 volatile uint8_t bytes_in_out_buffer;
 
 #define INPUT_BUFFER_SIZE 16
-volatile char input_buffer[INPUT_BUFFER_SIZE];
+volatile char input_buffer_cmd[INPUT_BUFFER_SIZE];		// to store a character representing the button pressed
+volatile int input_buffer_val[INPUT_BUFFER_SIZE];		// to store the value of the button pressed
 volatile uint8_t input_insert_pos;
 volatile uint8_t bytes_in_input_buffer;
 volatile uint8_t input_overrun;
 
+void interpret_joystick(char* buffer);
+void CreateChildProcess(void);
+int joystick_input_available(void);
+void joystick_clear_input_buffer(void);
+int* joystick_get_char(void);
+
 
 void CreateChildProcess() {
+	/*
+	* Initialise our buffers
+	*/
+	out_insert_pos = 0;
+	bytes_in_out_buffer = 0;
+	input_insert_pos = 0;
+	bytes_in_input_buffer = 0;
+	input_overrun = 0;
+
 	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
 	SECURITY_ATTRIBUTES saAttr;
 
@@ -114,6 +132,47 @@ void CreateChildProcess() {
 }
 
 
+int joystick_input_available(void) {
+	return (bytes_in_input_buffer != 0);
+}
+
+
+void joystick_clear_input_buffer(void) {
+	/* Just adjust our buffer data so it looks empty */
+	input_insert_pos = 0;
+	bytes_in_input_buffer = 0;
+}
+
+
+int* joystick_get_char(void) {
+	/* Wait until we've received a character */
+	while (bytes_in_input_buffer == 0) {
+		/* do nothing */
+	}
+	int i;
+	char c;
+	if (input_insert_pos - bytes_in_input_buffer < 0) {
+		/* Need to wrap around */
+
+		c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer
+			+ INPUT_BUFFER_SIZE];
+		i = input_buffer_val[input_insert_pos - bytes_in_input_buffer
+			+ INPUT_BUFFER_SIZE];
+	}
+	else {
+
+		c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer];
+		i = input_buffer_val[input_insert_pos - bytes_in_input_buffer];
+	}
+
+	/* Decrement our count of bytes in the input buffer */
+	bytes_in_input_buffer--;
+	int arr[2] = { c, i };
+	return arr;
+}
+
+
+
 void WriteToPipe(void) {
 
 	// Read from a file and write its contents to the pipe for the child's STDIN.
@@ -168,17 +227,180 @@ void ReadFromPipe() {
 
 		bSuccess = WriteFile(hParentStdOut, chBuf,
 			dwRead, &dwWritten, NULL);
-		char* buffer = malloc(sizeof(char)*(strlen(chBuf) + 1));
-		strcpy(buffer, chBuf);
-		interpret_joystick(buffer);
-		free(buffer);
+
+		if (chBuf[0] != 0) {
+			char* fullBuffer = malloc(sizeof(char)*(strlen(chBuf) + 1));
+			strcpy(fullBuffer, chBuf);
+			char* line = strtok(fullBuffer, "\n");
+			while (line != NULL) {
+
+				char* buffer = malloc(sizeof(char)*(strlen(line) + 1));
+				strcpy(buffer, line);
+				printf("Buffer going in: %s\n", buffer);
+				interpret_joystick(buffer);
+				free(buffer);
+
+				line = strtok(NULL, "\n");
+			}
+			free(fullBuffer);
+			
+		}
 		if (!bSuccess) { printf("failed writing to stdout\n"); break; }
+		memset(chBuf, 0, BUFSIZE);
 	}
 }
 
 
 void interpret_joystick(char* buffer) {
 
+	int wordCount = 1;
+	int isButton = 0;
+	int isAxis = 0;
 
+	for (int i = 0; i < (strlen(buffer)); i++) {
+
+		if (buffer[i] == ' ') {
+			++wordCount;
+		}
+		else if ((buffer[i] == 'v') && (buffer[i+1] == 'a') && (buffer[i + 2] == 'l')) {
+			//printf("isAxis: %s\n", buffer);
+			++isAxis;
+		}
+		else if ((buffer[i] == 'b') && (buffer[i + 1] == 'u') && (buffer[i + 2] == 't')) {
+			//printf("isbutton: %s\n", buffer);
+			++isButton;
+		}
+	}
+
+	if ((isButton < 1) && (isAxis < 1)) {
+		printf("returning\n");
+		return;
+	}
+
+
+	printf("is something\n"); fflush(stdout);
+		
+	int actuator;
+	char* token;
+	int value;
+	token = strtok(buffer, " ");
+	//printf("token1: %s\n", token); fflush(stdout);
+
+	for (int words = 1; words < 7; words++) {
+		if (token == NULL) {
+			break;
+		}
+		
+		printf("token %d: %s\n", words, token); fflush(stdout);
+		if (words == 4) {
+			//printf("words=3 %s\n", token); fflush(stdout);
+			char* err;
+			actuator = strtol(token, &err, 10);
+			//printf("This is actuator: %s %d\n", token, actuator);
+		} else if ((isAxis > 0) && (words == 6)) {
+			//printf("words=5 %s\n", token); fflush(stdout);
+			char* err;
+			value= strtol(token, &err, 10);
+			//printf("This is actuator: %s %d\n", token, value);
+		}
+		else if ((isButton > 0) && (words == 5)) {
+			//printf("############\n");
+			if (strcmp(token, "up") > 0) {
+				value = 0;
+			}
+			else {
+				value = 1;
+			}
+		}
+		token = strtok(NULL, " ");
+	}
+
+
+	printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
+	char cmd;
+	if (isButton > 0) {
+		switch (actuator) {
+			case 0:
+				cmd = '1';
+				break;
+			case 1:
+				cmd = '2';
+				break;
+			case 2:
+				cmd = '3';
+				break;
+			case 3:
+				cmd = '4';
+				break;
+			case 4:
+				cmd = '5';
+				break;
+			case 5:
+				cmd = '6';
+				break;
+			case 6:
+				cmd = '7';
+				break;
+			case 7:
+				cmd = '8';
+				break;
+		}
+	}
+	else if (isAxis > 0) {
+		switch (actuator) {
+			case 0:
+				if (value < 0) {
+					cmd = 'd';
+					value = value * (-1);
+				}
+				else {
+					cmd = 'a';
+				}
+				break;
+			case 1:
+				if (value < 0) {
+					cmd = 's';
+					value = value * (-1);
+				}
+				else {
+					cmd = 'w';
+				}
+			case 2:
+				return;
+				break;
+			case 4:
+				if (value < 0) {
+					cmd = '-';
+					value = value * (-1);
+				}
+				else {
+					cmd = '+';
+				}
+				break;
+		}
+	}
+
+	/*
+	* Check if we have space in our buffer. If not, set the overrun
+	* flag and throw away the character. (We never clear the
+	* overrun flag - it's up to the programmer to check/clear
+	* this flag if desired.)
+	*/
+	if (bytes_in_input_buffer >= INPUT_BUFFER_SIZE) {
+		input_overrun = 1;
+	}
+	else {
+
+		/*
+		* There is room in the input buffer
+		*/
+		input_buffer_cmd[input_insert_pos++] = cmd;
+		input_buffer_val[input_insert_pos++] = value;
+		bytes_in_input_buffer++;
+		if (input_insert_pos == INPUT_BUFFER_SIZE) {
+			/* Wrap around buffer pointer if necessary */
+			input_insert_pos = 0;
+		}
+	}
 
 }
