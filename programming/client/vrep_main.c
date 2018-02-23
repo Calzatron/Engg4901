@@ -9,9 +9,17 @@
 #include "extApi.h"
 #include "project.h"
 #include "joystick.h"
-
+#include <process.h>
 
 #define BUFSIZE 4096 
+
+HANDLE  hConsoleOut;                 // Handle to the console   
+HANDLE  hRunMutex;                   // "Keep Running" mutex   
+HANDLE  hScreenMutex;                // "Screen update" mutex  
+int     ThreadNr;                    // Number of threads started   
+CONSOLE_SCREEN_BUFFER_INFO csbiInfo; // Console information 
+
+
 
 typedef struct info {
 	
@@ -127,19 +135,35 @@ int main(int argc, char** argv){
 			}
             printf("Written to file\n");
 			
+			/* Create a child process to retreive button presses and joystick
+			*	positions from the gaming controller	*/
 			CreateChildProcess();
+			printf("Child Process Created\n");
+
+			/*	Begin a thread for processing the commands from either
+			*	control inputs or the joystick	*/
+			hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
+			hScreenMutex = CreateMutex(NULL, FALSE, NULL);		// Cleared   
+			hRunMutex = CreateMutex(NULL, TRUE, NULL);			// Set   
+			ThreadNr = 0;										//initialise threadcount
+			ThreadNr++;											// increment threadcount for command thread
+			_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the process to their new home
+
 			while (1) {
 
-				//ReadFromPipe();
-
+				/*	Need to work out how to choose between command or joystick based control	*/
 				if (joystick_input_available) {
+					/*	A joystick command is available to action on	*/
 					int* arr;
 					arr = joystick_get_char();
-					print("arr:	%d %d \n", arr[0], arr[1]);
+					printf("arr:	%d %d \n", arr[0], arr[1]);
 				}
 
+				/*	Instead of getting input from joystick, get from command line input	*/
 				get_command(info_ptr, move_ptr);
+			
 			}
+
         } else {
             printf("Remote API function call returned with error: %d\n", ret);
         }
@@ -166,6 +190,21 @@ move* makeMove(void) {
 	move* move_ptr = malloc(sizeof(move));
 	return move_ptr;
 }
+
+
+void ShutDown(void) // Shut down threads   
+{
+	while (ThreadNr > 0)
+	{
+		// Tell thread to die and record its death.  
+		ReleaseMutex(hRunMutex);
+		ThreadNr--;
+	}
+
+	// Clean up display when done  
+	WaitForSingleObject(hScreenMutex, INFINITE);
+}
+
 
 void get_command(info* info_ptr, move* move_ptr){
     

@@ -219,14 +219,13 @@ void ReadFromPipe() {
 	CHAR chBuf[BUFSIZE];
 	BOOL bSuccess = FALSE;
 	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	printf("we made it here\n"); fflush(stdout);
+	//printf("we made it here\n"); fflush(stdout);
 	for (;;)
 	{
 		bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
 		if (!bSuccess || dwRead == 0) { printf("failed reading from child\n"); break; }
 
-		bSuccess = WriteFile(hParentStdOut, chBuf,
-			dwRead, &dwWritten, NULL);
+		//bSuccess = WriteFile(hParentStdOut, chBuf,dwRead, &dwWritten, NULL);
 
 		if (chBuf[0] != 0) {
 			char* fullBuffer = malloc(sizeof(char)*(strlen(chBuf) + 1));
@@ -236,7 +235,7 @@ void ReadFromPipe() {
 
 				char* buffer = malloc(sizeof(char)*(strlen(line) + 1));
 				strcpy(buffer, line);
-				printf("Buffer going in: %s\n", buffer);
+				//printf("Buffer going in: %s\n", buffer);
 				interpret_joystick(buffer);
 				free(buffer);
 
@@ -273,12 +272,12 @@ void interpret_joystick(char* buffer) {
 	}
 
 	if ((isButton < 1) && (isAxis < 1)) {
-		printf("returning\n");
+		//printf("returning\n");
 		return;
 	}
 
 
-	printf("is something\n"); fflush(stdout);
+	//printf("is something\n"); fflush(stdout);
 		
 	int actuator;
 	char* token;
@@ -291,7 +290,7 @@ void interpret_joystick(char* buffer) {
 			break;
 		}
 		
-		printf("token %d: %s\n", words, token); fflush(stdout);
+		//printf("token %d: %s\n", words, token); fflush(stdout);
 		if (words == 4) {
 			//printf("words=3 %s\n", token); fflush(stdout);
 			char* err;
@@ -316,7 +315,7 @@ void interpret_joystick(char* buffer) {
 	}
 
 
-	printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
+	//printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
 	char cmd;
 	if (isButton > 0) {
 		switch (actuator) {
