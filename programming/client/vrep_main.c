@@ -33,6 +33,7 @@ typedef struct info {
 
 	int targetHandle;
 
+	char programMode[3];
 
 
 } info;
@@ -61,9 +62,45 @@ int main(int argc, char** argv){
     simxFinish(-1);							// kill any existing coms to Vrep
     info* info_ptr = makeInfo();			// initialise structures
 	move* move_ptr = makeMove();
-    
+
+	/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
+	char inputBuffer[10];
+	if (argc == 1) {
+		printf("\nPlease specify a Kinematics mode>> "); fflush(stdout);
+		char c = getChar(stdin);
+		int i = 0;
+		while ((c != '\n') && (i < 10)) {
+			inputBuffer[i] = c;
+			c = getChar(stdin);
+			++i;
+		}
+	}
+	else {
+		strcpy(inputBuffer, argv[2]);
+	}
+	for (int j = 0; j < 9; j++) {
+		if (((inputBuffer[j] == 'i') && (inputBuffer[j + 1] == 'k')) || ((inputBuffer[j] == 'I') && (inputBuffer[j + 1] == 'K'))) {
+			strcpy(info_ptr->programMode, "ik");
+		} else if (((inputBuffer[j] == 'f') && (inputBuffer[j + 1] == 'k')) || ((inputBuffer[j] == 'F') && (inputBuffer[j + 1] == 'K'))) {
+			strcpy(info_ptr->programMode, "fk");
+		}
+	}
+	
+	
+
     /*	Get ID for connection to VREP	*/
-    info_ptr->clientID = simxStart((simxChar*)"127.0.0.1",19999,true,true,5000,5);
+	char ipAddress[18];
+	int port = 19999;
+	if (argc > 3) {
+		strcpy(ipAddress, argv[3]);
+		char* ptr;
+		port = strtol(argv[4], &ptr, 10);
+	}
+	else {
+		strcpy(ipAddress, "127.0.0.1");
+	}
+
+    info_ptr->clientID = simxStart((simxChar*)ipAddress,19999,true,true,5000,5);
     printf("got client\n");
 
 	/*	Check that the ID is valid	*/
@@ -125,11 +162,11 @@ int main(int argc, char** argv){
 
             /*  write information to a file */
 			if (en_name) {
-				if (argc == 2) {
+				if (argc == 3) {
 					/* filename specified */
-					write_object_info(info_ptr, argv[1]);
+					write_object_info(info_ptr, argv[2]);
 				}
-				else if (argc == 1) {
+				else if (argc == 2) {
 					write_object_info(info_ptr, "objects");
 				}
 			}
