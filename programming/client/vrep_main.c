@@ -10,6 +10,8 @@
 #include "project.h"
 #include "joystick.h"
 #include <process.h>
+#include "Shlwapi.h"
+#include <direct.h>
 
 #define BUFSIZE 4096 
 
@@ -56,39 +58,39 @@ void get_position(info* info_ptr, simxFloat* startPosition, int relativeHandle);
 void move_target(info* info_ptr, move* move_ptr, char direction);
 void fk_classic(move* move_ptr, info* info_ptr);
 
-int main(int argc, char** argv){
-    
-    printf("getting client\n");				// start
-    simxFinish(-1);							// kill any existing coms to Vrep
-    info* info_ptr = makeInfo();			// initialise structures
-	move* move_ptr = makeMove();
 
+void initialise_program(info* info_ptr, char argc, char** argv) {
 	/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
 	char inputBuffer[10];
 	if (argc == 1) {
-		printf("\nPlease specify a Kinematics mode>> "); fflush(stdout);
-		char c = getChar(stdin);
+		printf("Usage: vrepClientProgram.exe fk/ik [object filename] [IP Address] [port]");
+		printf("\nPlease specify a Kinematics mode (ik/fk)>> "); fflush(stdout);
+		char c = getchar();
 		int i = 0;
 		while ((c != '\n') && (i < 10)) {
+			/*	store input	*/
 			inputBuffer[i] = c;
-			c = getChar(stdin);
+			c = getchar();
 			++i;
 		}
 	}
 	else {
 		strcpy(inputBuffer, argv[2]);
 	}
+	/*	Search for mode in input buffer	*/
 	for (int j = 0; j < 9; j++) {
-		if (((inputBuffer[j] == 'i') && (inputBuffer[j + 1] == 'k')) || ((inputBuffer[j] == 'I') && (inputBuffer[j + 1] == 'K'))) {
+		if (((inputBuffer[j] == 'i') && (inputBuffer[j + 1] == 'k')) ||
+			((inputBuffer[j] == 'I') && (inputBuffer[j + 1] == 'K'))) {
 			strcpy(info_ptr->programMode, "ik");
-		} else if (((inputBuffer[j] == 'f') && (inputBuffer[j + 1] == 'k')) || ((inputBuffer[j] == 'F') && (inputBuffer[j + 1] == 'K'))) {
+		}
+		else if (((inputBuffer[j] == 'f') && (inputBuffer[j + 1] == 'k')) ||
+			((inputBuffer[j] == 'F') && (inputBuffer[j + 1] == 'K'))) {
 			strcpy(info_ptr->programMode, "fk");
 		}
 	}
-	
-	
+	printf("%s program mode was set\n", info_ptr->programMode);
 
-    /*	Get ID for connection to VREP	*/
+	/*	Get IP Address and Port from input or use local host settings	*/
 	char ipAddress[18];
 	int port = 19999;
 	if (argc > 3) {
@@ -100,119 +102,146 @@ int main(int argc, char** argv){
 		strcpy(ipAddress, "127.0.0.1");
 	}
 
-    info_ptr->clientID = simxStart((simxChar*)ipAddress,19999,true,true,5000,5);
-    printf("got client\n");
+	/*	Get ID for connection to VREP	*/
+	info_ptr->clientID = simxStart((simxChar*)ipAddress, port, true, true, 5000, 5);
+	printf("\nGot client at %s %d\n", ipAddress, port);
 
 	/*	Check that the ID is valid	*/
-    if (info_ptr->clientID != -1) {
-        printf("Successfully connected to Vrep\n");
+	if (info_ptr->clientID != -1) {
+		printf("Successfully connected to VREP\n");
+	} else {
+		printf("Connection failed %d\n", info_ptr->clientID);
+		exit(1);
+	}
 
-        /*	Retrieve data in a blocking fashion - ensure response from vrep	*/
-        int objectCount;					// integer variable
-        int* objectHandles;					//array of ints of unknown size
+}
 
-        /*	Get the object handles from VREP for all objects in the scene	*/
-        int ret = simxGetObjects(info_ptr->clientID, sim_handle_all, &objectCount, 
-                &objectHandles, simx_opmode_blocking);
+int main(int argc, char** argv){
+    
+    printf("getting client\n");				// start
+    simxFinish(-1);							// kill any existing coms to Vrep
+    info* info_ptr = makeInfo();			// initialise structures
+	move* move_ptr = makeMove();
 
-        /*	Check if succeeded	*/
-		if (ret == simx_return_ok){
-            printf("Number of objects in scene: %d \n", objectCount);
+	initialise_program(info_ptr, argc, argv);
 
-            /*  store all object handles  */;
-            info_ptr->objectCount = objectCount;
-            info_ptr->objectHandles = malloc(sizeof(int)*info_ptr->objectCount);
-            info_ptr->isJoint = malloc(sizeof(int)*info_ptr->objectCount);
-            info_ptr->objectHandles = objectHandles;
-            printf(">> %d\n", info_ptr->objectHandles[40]);
+    /*	Retrieve data in a blocking fashion - ensure response from vrep	*/
+    int objectCount;					// integer variable
+    int* objectHandles;					//array of ints of unknown size
 
-            /*	Set-able boolean value to retrieve names from Vrep and store joints
-			*	or just use known joint handles to identify joints	*/
-			int en_name = 0;
+    /*	Get the object handles from VREP for all objects in the scene	*/
+    int ret = simxGetObjects(info_ptr->clientID, sim_handle_all, &objectCount, 
+            &objectHandles, simx_opmode_blocking);
+
+    /*	Check if succeeded	*/
+	if (ret != simx_return_ok) {
+		printf("Could not retrieve objects from VREP\n");
+		printf("Remote API function call returned with error: %d\n", ret);
+		return 1;
+	}
+    printf("Number of objects in scene: %d \n", objectCount);
+
+    /*  store all object handles  */;
+    info_ptr->objectCount = objectCount;
+    info_ptr->objectHandles = malloc(sizeof(int)*info_ptr->objectCount);
+    info_ptr->isJoint = malloc(sizeof(int)*info_ptr->objectCount);
+    info_ptr->objectHandles = objectHandles;
+    printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
+
+    /*	Set-able boolean value to retrieve names from Vrep and store joints
+	*	or just use known joint handles to identify joints	*/
+	int en_name = 0;
+	
+	if (en_name) {
+		/*	retrieve the object names from VREP and store them in the info struct	*/
+		/*  calls custom function in VRep Main */
+		get_object_names_vrep(info_ptr);
+	}
+	else if (argc >= 3) {
+		/*	Read objects from an existing file	*/
+		char objectFileName[20];
+		strcpy(objectFileName, argv[2]);
+		char* cwd = _getcwd(NULL, 0);
+		char* objectFilePath = malloc(sizeof(char)*(strlen(cwd) + strlen(argv[2]) + 5));
+		strcpy(objectFilePath, cwd);
+		strcat(objectFilePath, "/");
+		strcat(objectFilePath, argv[2]);
+		BOOL exists = PathFileExists(objectFilePath);
+
+	}
+	else {
+		/*	use hard-coded handles	*/
+		for (int h = 0; h < info_ptr->objectCount; h++) {
+			if ((h == 18) || (h == 21) || (h == 24) || (h == 27) || (h == 30) || (h == 33)) {
+				info_ptr->isJoint[h] = 1;
+				info_ptr->objectHandles[h] = h;
+				printf("H = %d\n", h);
+			} else {
+				info_ptr->isJoint[h] = 0;
+				info_ptr->objectHandles[h] = 0;
+			}
+
+			if (h == 127) {
+				info_ptr->targetHandle = h;
+			}
+
+		}
+	}
+
+    /*  write information to a file */
+	if (en_name) {
+		if (argc == 3) {
+			/* filename specified */
+			write_object_info(info_ptr, argv[2]);
+		}
+		else if (argc == 2) {
+			write_object_info(info_ptr, "objects");
+		}
+	}
+    printf("Written to file\n");
+
+	/* Retrieve all angles of joints to be used in kinematics
+	*	Store the positions in move_ptr->currAng[i] for the i'th joint */
+	initial_arm_config_vrep(info_ptr, move_ptr);
+
+	/*  Print a sample name to check */
+	//printf("aa: %s\n", info_ptr->objectNames[40]);
+
+
+	/* Create a child process to retreive button presses and joystick
+	*	positions from the gaming controller	*/
+	CreateChildProcess();
+	printf("Child Process Created\n");
+
+	/*	Begin a thread for processing the commands from either
+	*	control inputs or the joystick	*/
+	hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	hScreenMutex = CreateMutex(NULL, FALSE, NULL);		// Cleared   
+	hRunMutex = CreateMutex(NULL, TRUE, NULL);			// Set   
+	ThreadNr = 0;										//initialise threadcount
+	ThreadNr++;											// increment threadcount for command thread
+	_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the process to their new home
+
+	while (1) {
+
+		/*	Need to work out how to choose between command or joystick based control	*/
+		if (joystick_input_available) {
+			/*	A joystick command is available to action on	*/
+			int* arr;
+			arr = joystick_get_char();
+			printf("arr:	%d %d \n", arr[0], arr[1]);
+		}
+
+		/*	Instead of getting input from joystick, get from command line input	*/
+		get_command(info_ptr, move_ptr);
 			
-			if (en_name) {
-				/*	retrieve the object names from VREP and store them in the info struct	*/
-				/*  calls custom function in VRep Main */
-				get_object_names_vrep(info_ptr);
-			}
-			else {
-				for (int h = 0; h < info_ptr->objectCount; h++) {
-					if ((h == 18) || (h == 21) || (h == 24) || (h == 27) || (h == 30) || (h == 33)) {
-						info_ptr->isJoint[h] = 1;
-						info_ptr->objectHandles[h] = h;
-						printf("H = %d\n", h);
-					} else {
-						info_ptr->isJoint[h] = 0;
-						info_ptr->objectHandles[h] = 0;
-					}
+	}
 
-					if (h == 127) {
-						info_ptr->targetHandle = h;
-					}
 
-				}
-			}
+    extApi_sleepMs(2000);
 
-			/* Retrieve all angles of joints to be used in kinematics
-			*	Store the positions in move_ptr->currAng[i] for the i'th joint */
-			initial_arm_config_vrep(info_ptr, move_ptr);
+    simxFinish(-1); // close all open connections
 
-            /*  Print a sample name to check */
-            //printf("aa: %s\n", info_ptr->objectNames[40]);
-
-            /*  write information to a file */
-			if (en_name) {
-				if (argc == 3) {
-					/* filename specified */
-					write_object_info(info_ptr, argv[2]);
-				}
-				else if (argc == 2) {
-					write_object_info(info_ptr, "objects");
-				}
-			}
-            printf("Written to file\n");
-			
-			/* Create a child process to retreive button presses and joystick
-			*	positions from the gaming controller	*/
-			CreateChildProcess();
-			printf("Child Process Created\n");
-
-			/*	Begin a thread for processing the commands from either
-			*	control inputs or the joystick	*/
-			hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
-			hScreenMutex = CreateMutex(NULL, FALSE, NULL);		// Cleared   
-			hRunMutex = CreateMutex(NULL, TRUE, NULL);			// Set   
-			ThreadNr = 0;										//initialise threadcount
-			ThreadNr++;											// increment threadcount for command thread
-			_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the process to their new home
-
-			while (1) {
-
-				/*	Need to work out how to choose between command or joystick based control	*/
-				if (joystick_input_available) {
-					/*	A joystick command is available to action on	*/
-					int* arr;
-					arr = joystick_get_char();
-					printf("arr:	%d %d \n", arr[0], arr[1]);
-				}
-
-				/*	Instead of getting input from joystick, get from command line input	*/
-				get_command(info_ptr, move_ptr);
-			
-			}
-
-        } else {
-            printf("Remote API function call returned with error: %d\n", ret);
-        }
-
-        extApi_sleepMs(2000);
-
-        simxFinish(-1); // close all open connections
-    } else {
-
-        printf("Connection failed %d\n", info_ptr->clientID);
-        return 1;
-    }
     return 0;
 }
 
