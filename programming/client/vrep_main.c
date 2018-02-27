@@ -57,7 +57,7 @@ void ReadFromPipe(void);
 void get_position(info* info_ptr, simxFloat* startPosition, int relativeHandle);
 void move_target(info* info_ptr, move* move_ptr, char direction);
 void fk_classic(move* move_ptr, info* info_ptr);
-
+void read_object_info(info* info_ptr, char* filename);
 
 void initialise_program(info* info_ptr, char argc, char** argv) {
 	/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
@@ -142,10 +142,18 @@ int main(int argc, char** argv){
     printf("Number of objects in scene: %d \n", objectCount);
 
     /*  store all object handles  */;
-    info_ptr->objectCount = objectCount;
+    /*	allocate space	*/
+	info_ptr->objectCount = objectCount;
     info_ptr->objectHandles = malloc(sizeof(int)*info_ptr->objectCount);
     info_ptr->isJoint = malloc(sizeof(int)*info_ptr->objectCount);
-    info_ptr->objectHandles = objectHandles;
+	info_ptr->objectNames = malloc(sizeof(char*)*info_ptr->objectCount);
+
+	for (int joint = 0; joint < objectCount; joint++) {
+		/*	initially all objects aren't joints
+		*	joint handles will be found later	*/
+		info_ptr->isJoint[joint] = 0;
+	}
+	info_ptr->objectHandles = objectHandles;
     printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
 
     /*	Set-able boolean value to retrieve names from Vrep and store joints
@@ -158,16 +166,31 @@ int main(int argc, char** argv){
 		get_object_names_vrep(info_ptr);
 	}
 	else if (argc >= 3) {
-		/*	Read objects from an existing file	*/
+		/*	Check if need to fill in the file or if it is ready for reading	*/
 		char objectFileName[20];
 		strcpy(objectFileName, argv[2]);
 		char* cwd = _getcwd(NULL, 0);
 		char* objectFilePath = malloc(sizeof(char)*(strlen(cwd) + strlen(argv[2]) + 5));
 		strcpy(objectFilePath, cwd);
-		strcat(objectFilePath, "/");
+		strcat(objectFilePath, "\\");
 		strcat(objectFilePath, argv[2]);
-		BOOL exists = PathFileExists(objectFilePath);
-
+		int exists = PathFileExists(objectFilePath);
+		
+		if (exists) {
+			/*	read file for it's contents
+			*	get joints etc	*/
+			read_object_info(info_ptr, argv[2]);
+		}
+		else {
+			/*	file didn't exist, get names from vrep and write them to the file
+			*	only joints are stored in file of given filename
+			*/
+			get_object_names_vrep(info_ptr);
+			write_object_info(info_ptr, argv[2]);
+		}
+		
+		printf("File path: %s exists: %d true: %d\n", objectFilePath, exists, true);
+		return 1;
 	}
 	else {
 		/*	use hard-coded handles	*/
@@ -188,21 +211,23 @@ int main(int argc, char** argv){
 		}
 	}
 
-    /*  write information to a file */
-	if (en_name) {
-		if (argc == 3) {
-			/* filename specified */
-			write_object_info(info_ptr, argv[2]);
-		}
-		else if (argc == 2) {
-			write_object_info(info_ptr, "objects");
-		}
-	}
-    printf("Written to file\n");
-
 	/* Retrieve all angles of joints to be used in kinematics
 	*	Store the positions in move_ptr->currAng[i] for the i'th joint */
 	initial_arm_config_vrep(info_ptr, move_ptr);
+
+ //   /*  write information to a file */
+	//if (en_name) {
+	//	if (argc == 3) {
+	//		/* filename specified */
+	//		write_object_info(info_ptr, argv[2]);
+	//	}
+	//	else if (argc == 2) {
+	//		write_object_info(info_ptr, "objects");
+	//	}
+	//}
+ //   printf("Written to file\n");
+
+	
 
 	/*  Print a sample name to check */
 	//printf("aa: %s\n", info_ptr->objectNames[40]);
@@ -362,7 +387,7 @@ void get_object_names_vrep(info* info_ptr){
      *  object handle and returns the object's name.
     */
     int replySize[1] = {1};
-    info_ptr->objectNames = malloc(sizeof(char*)*info_ptr->objectCount);
+    
 
     for(int i = 0; i < info_ptr->objectCount; ++i){
         int ret = 0;
@@ -515,6 +540,79 @@ void write_object_info(info* info_ptr, char* filename){
     fclose(object_fp);
 
 }
+
+
+void read_object_info(info* info_ptr, char* filename) {
+	/*	read's in the file that contains the object names
+	*	and handles. Updates the info_ptr struct with information	*/
+
+	FILE* objectFilePtr = fopen(filename, "r");
+	if (objectFilePtr == NULL) {
+		fprintf(stdout, "Failed to open file %s for reading\n", filename);
+		exit(1);
+	}
+
+	char buffer[BUFSIZE];
+	int fileLength = 0;
+	char c = fgetc(objectFilePtr);
+
+	while ((c != EOF) && (fileLength < BUFSIZE)) {
+		buffer[fileLength] = c;
+		c = fgetc(objectFilePtr);
+		++fileLength;
+	}
+
+	c = '\0';
+	int count;
+	int i = 0;
+	//for (i = 0; i < fileLength; i++) {
+	int stable = 1;
+
+	while (i < fileLength) {
+
+		c = buffer[i];
+		++i;
+		if (c == EOF) {
+			stable = 0;
+		}
+		int spaceToggle = 0;
+		int wordHandleIt = 0;
+		int objectNameIt = 0;
+		char wordHandle[6];
+		int objectHandle = 0;
+		char objectName[35];
+		while (c != '\n') {
+			if (!spaceToggle) {
+				wordHandle[wordHandleIt] = c;
+				++wordHandleIt;
+			}
+			else {
+				if (c != ' ') {
+					objectName[objectNameIt] = c;
+					++objectNameIt;
+				}
+			}
+
+			c = buffer[i];
+			++i;
+			if (c == ' '){
+				spaceToggle = true;
+
+				wordHandle[wordHandleIt] = '\0';
+				char* err;
+				objectHandle = strtol(wordHandle, &err, 10);
+				info_ptr->isJoint[objectHandle] = 1;
+				//printf("is joint %d\n", objectHandle);
+			} else if (c == '\n') {
+				objectName[objectNameIt] = '\0';
+				info_ptr->objectNames[objectHandle] = malloc(sizeof(char)* (strlen(objectName)));
+				strcpy(info_ptr->objectNames[objectHandle], objectName);
+				//printf("is name ^%s^\n", info_ptr->objectNames[objectHandle]);
+			}
+		}
+	}
+}
+
 
 
 void define_classic_parameters(move* move_ptr) {
