@@ -32,12 +32,16 @@ volatile uint8_t bytes_in_input_buffer;
 volatile uint8_t input_overrun;
 volatile long ltime;
 volatile long delay;
+volatile uint8_t joystickToggle;
+volatile int lastJoystickValue;
+volatile char lastJoystickCmd;
 
 void interpret_joystick(char* buffer);
 void CreateChildProcess(void);
 int joystick_input_available(void);
 void joystick_clear_input_buffer(void);
 int* joystick_get_char(void);
+void add_to_buffer(int value, char cmd);
 
 
 void CreateChildProcess() {
@@ -49,10 +53,11 @@ void CreateChildProcess() {
 	input_insert_pos = 0;
 	bytes_in_input_buffer = 0;
 	input_overrun = 0;
-
+	joystickToggle = 0x00;
 	ltime = clock();			// returns ms as a long
-	delay = 500;				// 500 ms delay between writing to buffer
-
+	delay = 200;				// 500 ms delay between writing to buffer
+	lastJoystickCmd = '\0';
+	lastJoystickValue = 0;
 	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
 	SECURITY_ATTRIBUTES saAttr;
 
@@ -233,6 +238,7 @@ void ReadFromPipe() {
 
 		//bSuccess = WriteFile(hParentStdOut, chBuf,dwRead, &dwWritten, NULL);
 
+		printf("%ld %ld\n", delay + ltime, clock());
 		if (chBuf[0] != 0) {
 			char* fullBuffer = malloc(sizeof(char)*(strlen(chBuf) + 1));
 			strcpy(fullBuffer, chBuf);
@@ -321,8 +327,18 @@ void interpret_joystick(char* buffer) {
 	}
 
 	if (value == 0) {
+		joystickToggle = 0x00;
+		printf("joysticktoggle OFF\n");
 		return;
 	}
+	else if (value != lastJoystickValue) {
+		printf("joysticktoggle ON\n");
+		joystickToggle = 0xFF;
+	}
+	//else {
+	//	joystickToggle = 0xFF;
+	//}
+
 	//printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
 	char cmd;
 	if (isButton > 0) {
@@ -387,7 +403,7 @@ void interpret_joystick(char* buffer) {
 				break;
 		}
 	}
-	//printf("cmd: %c value %d\n", cmd, value);
+
 	/*
 	* Check if we have space in our buffer. If not, set the overrun
 	* flag and throw away the character. (We never clear the
@@ -402,10 +418,32 @@ void interpret_joystick(char* buffer) {
 		/*
 		* There is room in the input buffer
 		*/
-		if (delay + ltime < clock()) {
+		if ((delay + ltime < clock()) || (value > 30000)) {
 			input_buffer_cmd[input_insert_pos] = cmd;
 			//printf("input buff: %c %c\n", input_buffer_cmd[input_insert_pos], cmd);			// this shows they are equal
 			input_buffer_val[input_insert_pos] = value;
+			lastJoystickCmd = cmd;
+			lastJoystickValue = value;
+			input_insert_pos++;
+			bytes_in_input_buffer++;
+			if (input_insert_pos == INPUT_BUFFER_SIZE) {
+				/* Wrap around buffer pointer if necessary */
+				input_insert_pos = 0;
+			}
+			ltime = clock();
+		}
+	}
+}
+
+
+void add_to_buffer(void) {
+	/*	adds stuff to the buffer if the joystick is held	*/	
+	while (1) {
+		if ((delay + 750 + ltime < clock()) && (joystickToggle)) {
+			printf("adding extra %c %d to buffer\n", lastJoystickCmd, lastJoystickValue);
+			input_buffer_cmd[input_insert_pos] = lastJoystickCmd;
+			//printf("input buff: %c %c\n", input_buffer_cmd[input_insert_pos], cmd);			// this shows they are equal
+			input_buffer_val[input_insert_pos] = lastJoystickValue;
 			input_insert_pos++;
 			bytes_in_input_buffer++;
 			if (input_insert_pos == INPUT_BUFFER_SIZE) {

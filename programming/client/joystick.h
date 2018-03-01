@@ -13,5 +13,6 @@ void joystick_clear_input_buffer(void);
 
 int* joystick_get_char(void);
 
+void add_to_buffer(void);
 
 #endif // !JOYSTICK.H

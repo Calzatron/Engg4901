@@ -223,6 +223,8 @@ int main(int argc, char** argv){
 	ThreadNr = 0;										//initialise threadcount
 	ThreadNr++;											// increment threadcount for command thread
 	_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the process to their new home
+	ThreadNr++;											// increment threadcount for command thread
+	_beginthread(add_to_buffer, 0, &ThreadNr);			// direct the process to their new home
 
 	while (1) {
 
