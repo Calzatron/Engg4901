@@ -162,11 +162,11 @@ int main(int argc, char** argv){
 	
 	if (en_name) {
 		/*	retrieve the object names from VREP and store them in the info struct	*/
-		/*  calls custom function in VRep Main */
+		/*  calls custom function in VREP Main */
 		get_object_names_vrep(info_ptr);
 	}
 	else if (argc >= 3) {
-		/*	Check if need to fill in the file or if it is ready for reading	*/
+		/*	Check if need to fill in the file or if it is ready for reading		*/
 		char objectFileName[20];
 		strcpy(objectFileName, argv[2]);
 		char* cwd = _getcwd(NULL, 0);
@@ -419,7 +419,7 @@ void get_object_names_vrep(info* info_ptr){
                     ++count;
                 }
             }
-			if (strcmp(token, "Target") > 0) {
+			if (strcmp(token, "Target") == 0) {
 				info_ptr->targetHandle = i+1;
 			}
             token = strtok(NULL, underScore);
@@ -536,6 +536,10 @@ void write_object_info(info* info_ptr, char* filename){
         }
 
     }
+
+	char line2[256]; 
+	sprintf(line2, "%d Target\n", info_ptr->targetHandle);
+	fputs(line2, object_fp);
     fflush(object_fp);
     fclose(object_fp);
 
@@ -557,6 +561,9 @@ void read_object_info(info* info_ptr, char* filename) {
 	char c = fgetc(objectFilePtr);
 
 	while ((c != EOF) && (fileLength < BUFSIZE)) {
+		/*	Load as much of the file into memory as possible,
+		*	save the length of the file in characters so the end
+		*	position is known	*/
 		buffer[fileLength] = c;
 		c = fgetc(objectFilePtr);
 		++fileLength;
@@ -565,11 +572,11 @@ void read_object_info(info* info_ptr, char* filename) {
 	c = '\0';
 	int count;
 	int i = 0;
-	//for (i = 0; i < fileLength; i++) {
 	int stable = 1;
 
 	while (i < fileLength) {
-
+		/*	go through every character in the file's loaded buffer,
+		*	breaking words at spaces and new lines	*/
 		c = buffer[i];
 		++i;
 		if (c == EOF) {
@@ -596,21 +603,41 @@ void read_object_info(info* info_ptr, char* filename) {
 			c = buffer[i];
 			++i;
 			if (c == ' '){
+				/*	The object handle of a joint has been stored in a temporary array
+				*	and needs to be saved	*/
 				spaceToggle = true;
 
 				wordHandle[wordHandleIt] = '\0';
 				char* err;
 				objectHandle = strtol(wordHandle, &err, 10);
 				info_ptr->isJoint[objectHandle] = 1;
-				//printf("is joint %d\n", objectHandle);
 			} else if (c == '\n') {
+				/*	The name corresponding to the last saved objectHandle has been stored
+				*	and needs to be perminantly saved, as this will allow finding the
+				*	targeHandle etc later.	*/
 				objectName[objectNameIt] = '\0';
 				info_ptr->objectNames[objectHandle] = malloc(sizeof(char)* (strlen(objectName)));
 				strcpy(info_ptr->objectNames[objectHandle], objectName);
-				//printf("is name ^%s^\n", info_ptr->objectNames[objectHandle]);
 			}
 		}
 	}
+
+	for (int ob = 0; ob < info_ptr->objectCount; ob++) {
+		/*	Fill in any information that was missed, it is not necessary to know the 
+		*	names of objects that aren't joints, however for analysis later, the
+		*	isJoint array must be full of 0's or 1's so this needs to be filled in.
+		*	The Target must also be found and recorded as targetHandle	*/
+		if (info_ptr->isJoint[ob] != 1) {
+			info_ptr->isJoint[ob] = 0;
+			info_ptr->objectNames[ob] = malloc(sizeof(char)*3);
+			info_ptr->objectNames[ob] = '\0';
+		}
+		else if (strcmp(info_ptr->objectNames[ob], "Target") == 0) {
+			info_ptr->isJoint[ob] = 0;
+			info_ptr->targetHandle = ob;
+		}
+	}
+	printf("This is the target's object handle: %d\n", info_ptr->targetHandle);
 }
 
 
