@@ -3,6 +3,25 @@
 #define PROJECT_H_
 /*	Define motion struct	*/
 
+typedef struct info {
+
+	int clientID;						/*	ID for networking	*/
+	int objectCount;					/*	Number of objects in the scene	*/
+	int* objectHandles;					/*	The ID corresponding to the i'th object	*/
+	int* isJoint;						/*	Boolean array, for i'th handle as a joint	*/
+	char** objectNames;					/*	Array of names of objects in scene	*/
+	int* jacoArmJointHandles;			/*	joint ID array	*/
+	char* response;
+
+	int targetHandle;
+
+	char* programMode;
+
+
+} info;
+
+
+
 
 typedef struct move {
 	double* alpha;

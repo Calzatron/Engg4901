@@ -8,8 +8,8 @@
 #include <string.h>
 #include <math.h>
 #include "project.h"
-
-
+#include <time.h>
+#include <sys/types.h>
 
 #define BUFSIZE 4096 
 
@@ -30,6 +30,8 @@ volatile int input_buffer_val[INPUT_BUFFER_SIZE];		// to store the value of the 
 volatile uint8_t input_insert_pos;
 volatile uint8_t bytes_in_input_buffer;
 volatile uint8_t input_overrun;
+volatile long ltime;
+volatile long delay;
 
 void interpret_joystick(char* buffer);
 void CreateChildProcess(void);
@@ -47,6 +49,9 @@ void CreateChildProcess() {
 	input_insert_pos = 0;
 	bytes_in_input_buffer = 0;
 	input_overrun = 0;
+
+	ltime = clock();			// returns ms as a long
+	delay = 500;				// 500 ms delay between writing to buffer
 
 	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
 	SECURITY_ATTRIBUTES saAttr;
@@ -243,7 +248,7 @@ void ReadFromPipe() {
 				line = strtok(NULL, "\n");
 			}
 			free(fullBuffer);
-			
+
 		}
 		if (!bSuccess) { printf("failed writing to stdout\n"); break; }
 		memset(chBuf, 0, BUFSIZE);
@@ -315,7 +320,9 @@ void interpret_joystick(char* buffer) {
 		token = strtok(NULL, " ");
 	}
 
-
+	if (value == 0) {
+		return;
+	}
 	//printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
 	char cmd;
 	if (isButton > 0) {
@@ -395,15 +402,17 @@ void interpret_joystick(char* buffer) {
 		/*
 		* There is room in the input buffer
 		*/
-		
-		input_buffer_cmd[input_insert_pos] = cmd;
-		//printf("input buff: %c %c\n", input_buffer_cmd[input_insert_pos], cmd);			// this shows they are equal
-		input_buffer_val[input_insert_pos] = value;
-		input_insert_pos++;
-		bytes_in_input_buffer++;
-		if (input_insert_pos == INPUT_BUFFER_SIZE) {
-			/* Wrap around buffer pointer if necessary */
-			input_insert_pos = 0;
+		if (delay + ltime < clock()) {
+			input_buffer_cmd[input_insert_pos] = cmd;
+			//printf("input buff: %c %c\n", input_buffer_cmd[input_insert_pos], cmd);			// this shows they are equal
+			input_buffer_val[input_insert_pos] = value;
+			input_insert_pos++;
+			bytes_in_input_buffer++;
+			if (input_insert_pos == INPUT_BUFFER_SIZE) {
+				/* Wrap around buffer pointer if necessary */
+				input_insert_pos = 0;
+			}
+			ltime = clock();
 		}
 	}
 }

@@ -51,6 +51,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="joystick.c" />
+    <ClCompile Include="kinematics.c" />
     <ClCompile Include="vrep_main.c" />
     <ClCompile Include="..\remoteApi\extApi.c" />
     <ClCompile Include="..\remoteApi\extApiPlatform.c" />
@@ -59,6 +60,7 @@
     <ClInclude Include="..\remoteApi\extApi.h" />
     <ClInclude Include="..\remoteApi\extApiPlatform.h" />
     <ClInclude Include="joystick.h" />
+    <ClInclude Include="kinematics.h" />
     <ClInclude Include="project.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
