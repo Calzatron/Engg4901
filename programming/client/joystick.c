@@ -150,24 +150,25 @@ int* joystick_get_char(void) {
 		/* do nothing */
 	}
 	int i;
-	char c;
+	char c = 'l';
 	if (input_insert_pos - bytes_in_input_buffer < 0) {
 		/* Need to wrap around */
-
+		//printf(" / %c %c / ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer + INPUT_BUFFER_SIZE]);
 		c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer
 			+ INPUT_BUFFER_SIZE];
 		i = input_buffer_val[input_insert_pos - bytes_in_input_buffer
 			+ INPUT_BUFFER_SIZE];
 	}
 	else {
-
+		//printf(" ? %c %c ? ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer]);
 		c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer];
 		i = input_buffer_val[input_insert_pos - bytes_in_input_buffer];
 	}
 
 	/* Decrement our count of bytes in the input buffer */
 	bytes_in_input_buffer--;
-	int arr[2] = { c, i };
+	//printf("joystick.c: %c %d\n", c, i);									// this shows nothing for c
+	int arr[2] = { c, i };													// prints c as 0
 	return arr;
 }
 
@@ -349,36 +350,37 @@ void interpret_joystick(char* buffer) {
 		switch (actuator) {
 			case 0:
 				if (value < 0) {
-					cmd = 'd';
+					cmd = 'a';
 					value = value * (-1);
 				}
 				else {
-					cmd = 'a';
+					cmd = 'd';
 				}
 				break;
 			case 1:
 				if (value < 0) {
-					cmd = 's';
+					cmd = 'w';
 					value = value * (-1);
 				}
 				else {
-					cmd = 'w';
+					cmd = 's';
 				}
+				break;
 			case 2:
 				return;
 				break;
 			case 4:
 				if (value < 0) {
-					cmd = '-';
+					cmd = '+';
 					value = value * (-1);
 				}
 				else {
-					cmd = '+';
+					cmd = '-';
 				}
 				break;
 		}
 	}
-
+	//printf("cmd: %c value %d\n", cmd, value);
 	/*
 	* Check if we have space in our buffer. If not, set the overrun
 	* flag and throw away the character. (We never clear the
@@ -393,13 +395,15 @@ void interpret_joystick(char* buffer) {
 		/*
 		* There is room in the input buffer
 		*/
-		input_buffer_cmd[input_insert_pos++] = cmd;
-		input_buffer_val[input_insert_pos++] = value;
+		
+		input_buffer_cmd[input_insert_pos] = cmd;
+		//printf("input buff: %c %c\n", input_buffer_cmd[input_insert_pos], cmd);			// this shows they are equal
+		input_buffer_val[input_insert_pos] = value;
+		input_insert_pos++;
 		bytes_in_input_buffer++;
 		if (input_insert_pos == INPUT_BUFFER_SIZE) {
 			/* Wrap around buffer pointer if necessary */
 			input_insert_pos = 0;
 		}
 	}
-
 }

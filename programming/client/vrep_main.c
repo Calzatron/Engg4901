@@ -35,7 +35,7 @@ typedef struct info {
 
 	int targetHandle;
 
-	char programMode[3];
+	char* programMode;
 
 
 } info;
@@ -62,11 +62,12 @@ void read_object_info(info* info_ptr, char* filename);
 void initialise_program(info* info_ptr, char argc, char** argv) {
 	/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
 	char inputBuffer[10];
+	int i = 0;
 	if (argc == 1) {
 		printf("Usage: vrepClientProgram.exe fk/ik [object filename] [IP Address] [port]");
 		printf("\nPlease specify a Kinematics mode (ik/fk)>> "); fflush(stdout);
 		char c = getchar();
-		int i = 0;
+		
 		while ((c != '\n') && (i < 10)) {
 			/*	store input	*/
 			inputBuffer[i] = c;
@@ -75,10 +76,12 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 		}
 	}
 	else {
-		strcpy(inputBuffer, argv[2]);
+		strcpy(inputBuffer, argv[1]);
+		i = strlen(argv[1]) + 1;
 	}
 	/*	Search for mode in input buffer	*/
-	for (int j = 0; j < 9; j++) {
+	info_ptr->programMode = malloc(sizeof(char) * 3);
+	for (int j = 0; j < i; j++) {
 		if (((inputBuffer[j] == 'i') && (inputBuffer[j + 1] == 'k')) ||
 			((inputBuffer[j] == 'I') && (inputBuffer[j + 1] == 'K'))) {
 			strcpy(info_ptr->programMode, "ik");
@@ -88,8 +91,8 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 			strcpy(info_ptr->programMode, "fk");
 		}
 	}
-	printf("%s program mode was set\n", info_ptr->programMode);
-
+	//printf("%s program mode was set\n", info_ptr->programMode);
+	//exit(0);
 	/*	Get IP Address and Port from input or use local host settings	*/
 	char ipAddress[18];
 	int port = 19999;
@@ -190,7 +193,6 @@ int main(int argc, char** argv){
 		}
 		
 		printf("File path: %s exists: %d true: %d\n", objectFilePath, exists, true);
-		return 1;
 	}
 	else {
 		/*	use hard-coded handles	*/
@@ -250,16 +252,28 @@ int main(int argc, char** argv){
 	while (1) {
 
 		/*	Need to work out how to choose between command or joystick based control	*/
-		if (joystick_input_available) {
-			/*	A joystick command is available to action on	*/
-			int* arr;
-			arr = joystick_get_char();
-			printf("arr:	%d %d \n", arr[0], arr[1]);
-		}
+		if (strcmp(info_ptr->programMode, "ik") == 0) {
+			if (joystick_input_available) {
+				/*	A joystick command is available to action on	*/
+				int* arr;
+				arr = joystick_get_char();
+				//printf("arr:	%c %d \n", arr[0], arr[1]);
 
-		/*	Instead of getting input from joystick, get from command line input	*/
-		get_command(info_ptr, move_ptr);
-			
+				info_ptr->response = malloc(sizeof(char) * 128);
+				sprintf(info_ptr->response, "%c", arr[0]);
+				//strcpy(info_ptr->response, response);
+				printf("received: %s\n", info_ptr->response);
+				interpret_command(info_ptr, move_ptr);
+				free(info_ptr->response);
+
+
+
+			}
+		}
+		else {
+			/*	Instead of getting input from joystick, get from command line input	*/
+			get_command(info_ptr, move_ptr);
+		}
 	}
 
 
@@ -320,6 +334,21 @@ void get_command(info* info_ptr, move* move_ptr){
 
 void interpret_command(info* info_ptr, move* move_ptr) {
 	printf("interpret_command\n");
+
+
+	if (strcmp(info_ptr->programMode, "ik") == 0) {
+		/*	Mode is for IK, move target	object	*/
+		
+		if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'w')) { move_target(info_ptr, move_ptr, 'w'); }
+		if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'a')) { move_target(info_ptr, move_ptr, 'a'); }
+		if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 's')) { move_target(info_ptr, move_ptr, 's'); }
+		if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'd')) { move_target(info_ptr, move_ptr, 'd'); }
+		if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == '-')) { move_target(info_ptr, move_ptr, '-'); }
+		if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == '+')) { move_target(info_ptr, move_ptr, '+'); }
+		return;
+	}
+
+
 	char joint[6] = { '1', '2', '3', '4', '5', '6' };
 	int check = 1;
 	for (int j = 0; j < 6; j++) {
@@ -327,12 +356,10 @@ void interpret_command(info* info_ptr, move* move_ptr) {
 			check = 0;
 		}
 	}
+
+
 	if ((strlen(info_ptr->response) > 3) && (info_ptr->response[1] == ' ')) { check = 0; }
-	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'w')) { move_target(info_ptr, move_ptr, 'w'); }
-	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'a')) { move_target(info_ptr, move_ptr, 'a'); }
-	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 's')) { move_target(info_ptr, move_ptr, 's'); }
-	if ((strlen(info_ptr->response) < 3) && (info_ptr->response[0] == 'd')) { move_target(info_ptr, move_ptr, 'd'); }
-	if ((strlen(info_ptr->response) < 4) && (info_ptr->response[0] == 'i') && info_ptr->response[1] == 'k') { fk_classic(move_ptr, info_ptr); }
+	if ((strlen(info_ptr->response) < 4) && (info_ptr->response[0] == 'f') && info_ptr->response[1] == 'k') { fk_classic(move_ptr, info_ptr); }
 
 	if (check) { 
 		printf("*%s\n", info_ptr->response); 
@@ -894,8 +921,9 @@ void move_target(info * info_ptr, move * move_ptr, char direction)
 	if (direction == 's') { position[1] -= (simxFloat)(0.05); }
 	if (direction == 'a') { position[0] += (simxFloat)(0.05); }
 	if (direction == 'd') { position[0] -= (simxFloat)(0.05); }
+	if (direction == '+') { position[2] += (simxFloat)(0.05); }
+	if (direction == '-') { position[2] -= (simxFloat)(0.05); }
 	printf("%f %f %f\n", position[0], position[1], position[2]); fflush(stdout);
-
 
 	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
 
