@@ -86,8 +86,8 @@ A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1
 
 %% Matlab implementation of moving point to point %%
 
-p_initial = [ 0; 9.81; 814.4; 1];
-
+%p_initial = [ 0; 9.81; 814.4; 1];
+p_initial = [ 20.5; 23.0; 780.8; 1];
 P_next = [ 1000-774.7; 9.81; 762.8; 1];
 
 % px = P_next(1);
@@ -109,29 +109,36 @@ q_2 = (pi/2) - atan2(sq_2,cq_2);
 
 q_1 = tan((P_next(2))/P_next(1));
 
-q_3*180/pi
-q_2*180/pi
+q_3*180/pi;
+q_2*180/pi;
 
 q_4 = pi/4;%3*pi/2;
 
-Rx = (px + 85.563*cosd(30)*cos(q_2+q_3) + 85.563*sind(30)*sin(q_2*q_3)) * sin(q_4);
-Ry = 85.563*cosd(30)*cos(q_2+q_3)*cos(q_4) + py - 9.81;
-Rz = pz + 85.563*sind(30)*cos(q_2+q_3) - 85.563*cosd(30)*sin(q_2+q_3);
+tic;
 
-R = [Rx; Ry; Rz; 1]
+Rx = (px + 85.563*cosd(30)*cos(q_2+q_3) + 85.563*sind(30)*sin(q_2+q_3)) * sin(q_4);
+Ry = 85.563*cosd(30)*cos(q_2+q_3)*cos(q_4) + py - 9.81;
+Rz = pz + 85.563*sind(30)*cos(abs(q_2+q_3)) - 85.563*cosd(30)*sin(abs(q_2+q_3));
+
+R = [Rx; Ry; Rz; 1];
 
 q_5 = pi+ pi/4;
 
 % 1000-x added to reflect vrep real-world coords
 S = [1000 + (Rx + 202.782*sin(q_5*2/5)*sin(q_4)); Ry + 202.782*sin(q_5*2/5)*cos(q_4+pi); Rz + 202.782*cos(q_5*2/5); 1]
 
+toc;
+tic;
 
-A_new = vpa(subs(A, [q1,q2,q3,q4,q5,q6], [pi - q_1, pi/2 - q_2, -pi/2 - q_3, pi + q_4, pi + q_5, 0]));
+A_new = vpa(subs(A, [q1,q2,q3,q4,q5,q6], [pi + q_1, pi/2 + q_2, -pi/2 + q_3, pi + q_4, pi + q_5, 0]));
 
 [ A_new(1,4)+1000 ;A_new(2,4);A_new(3,4);A_new(4,4)]
 
+toc;
+
+
 A_up = vpa(subs(A, [q1,q2,q3,q4,q5,q6], [pi, pi/2, -pi/2, pi, pi, 0]));
-[A_up(1,4);A_up(2,4);A_up(3,4);A_up(4,4)]
+[A_up(1,4);A_up(2,4);A_up(3,4);A_up(4,4)];
 
 
 %P = A_up * [0;0;0;1];
