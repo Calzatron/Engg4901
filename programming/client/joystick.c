@@ -276,16 +276,13 @@ void interpret_joystick(char* buffer) {
 	int isAxis = 0;
 
 	if (!joystickCheck){
-		//printf("\n#%s#\n", buffer); fflush(stdout);
-		//if (strcmp("No Joysticks Attached", buffer) == 0 || strcmp("No Joysticks Attached\n", buffer) == 0) {
+
 		if ((buffer[0] == 'N') && (buffer[1] == 'o') && (buffer[3] == 'J')){
+			/*	Joystick is not plugged in, look to command prompt for inputs	*/
 			joystickEn = 0x00;
-			//printf("joystick Check = 0x00\n");
-			
-			//joystickEnabled(joystickCheck);
 		}
 		else {
-			//printf("joystick Check = 0xFF\n");
+			/*	Joystick is enabled and running as expected	*/
 			joystickEn = 0xFF;
 		}
 		joystickCheck = 0xFF;

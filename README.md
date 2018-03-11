@@ -15,6 +15,10 @@ Only the required VREP remote API files are included in this repository.
 The 'object filename' is called object.txt, which is found in the release folder, if 'object filename' is not there it will be automatically generated on start-up, which takes ~10 seconds to get all the information from VREP.
 
 _______________________________________________________________________________
-Joystick for IK is the only functionality so far, although awsd commands are to come.
-Keyboard commands are accepted for FK, in the form: jointNumber Angle\n
+Can determine whether a joystick is connected and to use that, or aswd commands, on start-up.
+Keyboard commands are accepted for FK, in the form: jointNumber Angle\n, and 'w\n' for forwards in ik.
 Where jointNumber correspondes to joint 1 (base) to 6 (tip).
+
+Bugs: deleting objects from a scene will decrease the object count but not modify the objects
+handles, so if there's 100 objects, some may have handles >100. Thus loading in the handles is required
+for modified scenes, where loading from a file fails due to accessing elements > object count.

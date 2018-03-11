@@ -151,7 +151,12 @@ int main(int argc, char** argv){
 		*	joint handles will be found later	*/
 		info_ptr->isJoint[joint] = 0;
 	}
+
+	/*	store all object handles	*/
 	info_ptr->objectHandles = objectHandles;
+
+
+	
     printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
 
     /*	Set-able boolean value to retrieve names from Vrep and store joints
@@ -444,18 +449,27 @@ void get_object_names_vrep(info* info_ptr){
     */
     int replySize[1] = {1};
     
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//for (int j = 0; j < info_ptr->objectCount; j++) {
+	
+	//	printf("objectHandle[%d]: %d\n", j, info_ptr->objectHandles[j]);
+	//}
+	//exit(0);
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     for(int i = 0; i < info_ptr->objectCount; ++i){
         int ret = 0;
         simxChar* replyData;
-        simxInt num = i;
+		//printf("%d		", info_ptr->objectHandles[i]);
+		simxInt num = i;//info_ptr->objectHandles[i];
         info_ptr->isJoint[i] = 0;
         ret = simxCallScriptFunction(info_ptr->clientID, "", sim_scripttype_mainscript,
                 "get_object_names", 1, &num, 0, NULL, 0, NULL, 0, NULL, 
                 NULL, NULL, NULL, NULL, &replySize, &replyData, NULL, NULL,
                 simx_opmode_blocking);
         if (ret != simx_return_ok){
-            printf("ret not ok\n");
+            printf("ret not ok %d\n", i);
 		}
 		else {
 			printf("%d :	%s\n", i, replyData);
@@ -476,7 +490,8 @@ void get_object_names_vrep(info* info_ptr){
                 }
             }
 			if (strcmp(token, "Target") == 0) {
-				info_ptr->targetHandle = i+1;
+				info_ptr->targetHandle = info_ptr->objectHandles[i];
+				printf("Target is %d indexed at: %d\n", info_ptr->objectHandles[i], i); //i+1;
 			}
             token = strtok(NULL, underScore);
             if (count == 5){
@@ -541,7 +556,7 @@ void write_object_info(info* info_ptr, char* filename){
     for (int i = 0; i < info_ptr->objectCount; i++){
         if (info_ptr->isJoint[i]){ 
             char line[256];
-            sprintf(line, "%d %s\n", i, info_ptr->objectNames[i]);
+            sprintf(line, "%d %s\n", info_ptr->objectHandles[i], info_ptr->objectNames[i]);
             fputs(line, object_fp);
         }
 
