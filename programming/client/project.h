@@ -17,6 +17,7 @@ typedef struct info {
 
 	char* programMode;
 
+	
 
 } info;
 

@@ -15,4 +15,6 @@ int* joystick_get_char(void);
 
 void add_to_buffer(void);
 
+uint8_t joystickEnabled(void);
+
 #endif // !JOYSTICK.H

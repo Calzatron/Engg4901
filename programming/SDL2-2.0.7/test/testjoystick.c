@@ -325,6 +325,13 @@ main(int argc, char *argv[])
 	//printf("here is something\n"); fflush(stdout);
     /* Print information about the joysticks */
     SDL_Log("There are %d joysticks attached\n", SDL_NumJoysticks());
+	if (SDL_NumJoysticks() == 0) {
+		printf("No Joysticks Attached\n");
+		exit(1);
+	}
+	else {
+		printf("Joysticks Attached\n");
+	}
     for (i = 0; i < SDL_NumJoysticks(); ++i) {
         name = SDL_JoystickNameForIndex(i);
         SDL_Log("Joystick %d: %s\n", i, name ? name : "Unknown Joystick");

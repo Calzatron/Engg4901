@@ -4,8 +4,13 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <strsafe.h>
+#include <windows.h> 
+#include <tchar.h>
+#include <string.h>
 #include "project.h"
-
 
 move* move_ptr;
 void define_classic_parameters(move* move_ptr);

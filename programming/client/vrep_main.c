@@ -59,7 +59,7 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 	int i = 0;
 	if (argc == 1) {
 		printf("Usage: vrepClientProgram.exe fk/ik [object filename] [IP Address] [port]");
-		printf("\nPlease specify a Kinematics mode (ik/fk)>> "); fflush(stdout);
+		printf("\nPlease specify a scene Kinematics mode (ik/fk)>> "); fflush(stdout);
 		char c = getchar();
 		
 		while ((c != '\n') && (i < 10)) {
@@ -109,6 +109,8 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 		printf("Connection failed %d\n", info_ptr->clientID);
 		exit(1);
 	}
+
+	
 
 }
 
@@ -223,19 +225,26 @@ int main(int argc, char** argv){
 	ThreadNr = 0;										//initialise threadcount
 	ThreadNr++;											// increment threadcount for command thread
 	_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the process to their new home
+	
+	
 	ThreadNr++;											// increment threadcount for command thread
 	_beginthread(add_to_buffer, 0, &ThreadNr);			// direct the process to their new home
+	
+	
 
 	while (1) {
-
+		//printf(".");
 		/*	Need to work out how to choose between command or joystick based control	*/
-		if (strcmp(info_ptr->programMode, "ik") == 0) {
-			if (joystick_input_available) {
-				
+		if ((strcmp(info_ptr->programMode, "ik") == 0) && (joystickEnabled())) {
+
+			//printf("ik and joystickEn\n"); fflush(stdout);
+			/*	A joystick was found, get inputs from this	*/
+			if (joystick_input_available()) {
+				//printf("input_av\n");
 				/*	A joystick command is available to action on	*/
 				int* arr;
 				arr = joystick_get_char();
-				//printf("arr:	%c %d \n", arr[0], arr[1]);
+				printf("arr:	%c %d \n", arr[0], arr[1]);
 
 				info_ptr->response = malloc(sizeof(char) * 128);
 				/*	the input is converted into the same format that command line ik
@@ -245,9 +254,12 @@ int main(int argc, char** argv){
 				interpret_command_ik(info_ptr, move_ptr, false);
 
 			}
+			
+
 		}
 		else {
 			/*	Instead of getting input from joystick, get from command line input	*/
+			printf("commandline ");
 			get_command(info_ptr, move_ptr);
 		}
 	}
@@ -568,7 +580,7 @@ void read_object_info(info* info_ptr, char* filename) {
 	}
 
 	c = '\0';
-	int count;
+	//int count;
 	int i = 0;
 	int stable = 1;
 
