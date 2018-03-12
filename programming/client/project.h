@@ -1,7 +1,11 @@
 
 #ifndef PROJECT_H_
 #define PROJECT_H_
+
+#define DEBUG	1
+
 /*	Define motion struct	*/
+
 
 typedef struct info {
 

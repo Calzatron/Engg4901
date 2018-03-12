@@ -23,8 +23,6 @@
 
 /*	Global Definitions	*/
 #define BUFSIZE 4096 
-#define DEBUG	1
-
 
 HANDLE  hConsoleOut;                 // Handle to the console   
 HANDLE  hRunMutex;                   // "Keep Running" mutex   
@@ -157,9 +155,12 @@ int main(int argc, char** argv){
 	/*	store all object handles	*/
 	info_ptr->objectHandles = objectHandles;
 
+	#ifdef DEBUG
+		printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
+	#endif // DEBUG
 
 	
-    printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
+    //printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
 
     /*	Set-able boolean value to retrieve names from Vrep and store joints
 	*	or just use known joint handles to identify joints	*/
@@ -193,8 +194,10 @@ int main(int argc, char** argv){
 			get_object_names_vrep(info_ptr);
 			write_object_info(info_ptr, argv[2]);
 		}
-		
-		printf("File path: %s exists: %d true: %d\n", objectFilePath, exists, true);
+		#ifdef DEBUG
+				printf("File path: %s exists: %d true: %d\n", objectFilePath, exists, true);
+		#endif // DEBUG
+	
 	}
 	else {
 		/*	use hard-coded handles	*/
@@ -214,7 +217,7 @@ int main(int argc, char** argv){
 
 		}
 	}
-
+	printf("Wait, getting information... ");
 	/* Retrieve all angles of joints to be used in kinematics
 	*	Store the positions in move_ptr->currAng[i] for the i'th joint */
 	initial_arm_config_vrep(info_ptr, move_ptr);
@@ -222,9 +225,11 @@ int main(int argc, char** argv){
 	/* Create a child process to retreive button presses and joystick
 	*	positions from the gaming controller	*/
 	CreateChildProcess();
-	if (DEBUG) {
+
+	#ifdef DEBUG
 		printf("Child Process Created\n");
-	}
+	#endif // DEBUG
+
 	/*	Begin a thread for processing the commands from either
 	*	control inputs or the joystick	*/
 	hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -248,38 +253,17 @@ int main(int argc, char** argv){
 			//printf("ik and joystickEn\n"); fflush(stdout);
 			/*	A joystick was found, get inputs from this	*/
 			if (joystick_input_available()) {
-				//printf("input_av\n");
 				/*	A joystick command is available to action on	*/
-				//int* arr = malloc(sizeof(int)*2);
-				//joystick_get_char(arr);
-				//
-				//if (DEBUG) {
-				//	printf("arr:	%c %d \n", arr[0], arr[1]);
-				//}
-				//
-				//info_ptr->response = malloc(sizeof(char) * 128);
-				///*	the input is converted into the same format that command line ik
-				//*	inputs come in to allow joystick or command line inputs	*/
-				//
-				//sprintf(info_ptr->response, "%c %d", arr[0], arr[1]);
-				//
-				//printf("received: %s\n", info_ptr->response);
-				//
-				//free(arr);
 				joystick_get_char(info_ptr);
 
 				interpret_command_ik(info_ptr, move_ptr, false);
-
 			}
-			
-
 		}
 		else {
 			/*	Instead of getting input from joystick, get from command line input	*/
-			
-			if (DEBUG) {
-				printf("commandline ");
-			}
+				#ifdef DEBUG
+					printf("commandline ");
+				#endif // DEBUG
 			
 			get_command(info_ptr, move_ptr);
 		}
@@ -338,9 +322,11 @@ void get_command(info* info_ptr, move* move_ptr){
     response[i] = '\0';
 	info_ptr->response = malloc(sizeof(char) * 128);
     strcpy(info_ptr->response, response);
-	if (DEBUG) {
+
+	#ifdef DEBUG
 		printf("received: %s\n", info_ptr->response);
-	}
+	#endif // DEBUG
+
 	/*	Command received, send it to get interpretted	*/
 	if (strcmp(info_ptr->programMode, "fk") == 0) {
 		interpret_command_fk(info_ptr, move_ptr);
@@ -369,9 +355,9 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 
 	}
 
-	if (DEBUG) {
+	#ifdef DEBUG
 		printf("	Duty:	%f\n", duty);
-	}
+	#endif // DEBUG
 
 	if (info_ptr->response[0] == 'w') { move_target_vrep(info_ptr, move_ptr, 'w', duty); }
 	if (info_ptr->response[0] == 'a') { move_target_vrep(info_ptr, move_ptr, 'a', duty); }
@@ -388,7 +374,11 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 
 
 void interpret_command_fk(info* info_ptr, move* move_ptr) {
-	printf("interpret_command\n");
+	
+	#ifdef DEBUG
+		printf("interpret_command\n");
+	#endif // DEBUG
+	//printf("interpret_command\n");
 
 
 	/*	Forward Kinematics Mode Interpretting	*/
@@ -527,21 +517,29 @@ void get_object_names_vrep(info* info_ptr){
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	/* puts the arm into a starting pos, straight up, by rotating joints 4 and 5
 	*  the joint handles are also found, and angles of each using get_joint_angles */
-	printf("initial_arm_config_vrep\n");
+	#ifdef DEBUG
+		printf("initial_arm_config_vrep\n");
+	#endif // DEBUG
+	
 	int i = 0;
 	int num = 0;
 	info_ptr->jacoArmJointHandles = malloc(sizeof(int) * 6);
 	
-	if (DEBUG) {
+	#ifdef DEBUG
 		printf("jacoarmjointhandles malloced %d\n", info_ptr->objectCount);
-	}
+	#endif // DEBUG
 
 	while (num < 6) {
 
 		if (info_ptr->isJoint[i]) {
 			//printf("is joint: %s\n", info_ptr->objectNames[i]);
 			info_ptr->jacoArmJointHandles[num] = info_ptr->objectHandles[i];
-			printf("joint handle: %d\n", info_ptr->jacoArmJointHandles[num]);
+			#ifdef DEBUG
+						printf("joint handle: %d\n", info_ptr->jacoArmJointHandles[num]);
+
+			#endif // DEBUG
+
+		//	printf("joint handle: %d\n", info_ptr->jacoArmJointHandles[num]);
 			++num;
 		}
 		++i;
@@ -740,15 +738,15 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	/* Updates info struct with all jaco arm joint current angles
 	*  joints 4 and 5 are initially adjusted to take on FK values,
 	*  the other joints are offset by 180 degrees */
-	if (DEBUG) {
+	#ifdef DEBUG
 		printf("get_joint_angles_vrep\n");
-	}
-	
+	#endif // DEBUG
+
 	int count = 0;
 	while (count < 6) {
-		if (DEBUG) {
+		#ifdef DEBUG
 			printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
-		}
+		#endif // DEBUG
 
 		simxFloat position;
 		int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[count], &position, simx_opmode_blocking);
@@ -763,10 +761,10 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 			}
 		}
 
-		if (DEBUG) {
-			printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[count], position, move_ptr->currAng[count]);
-		}
-		//printf("this is angle: %s, %f\n", info_ptr->objectNames[info_ptr->jacoArmJointHandles[count]], position);
+		#ifdef DEBUG
+				printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[count], position, move_ptr->currAng[count]);
+		#endif // DEBUG
+
 		++count;
 	}
 }
@@ -795,24 +793,26 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float duty)
 {
 	/*	Get the target's position relative to the base of the arm	*/
-	if (DEBUG) {
+
+	#ifdef DEBUG
 		printf("move_target(), %d\n", info_ptr->targetHandle); fflush(stdout);
-	}
+	#endif // DEBUG
 
 	simxFloat position[3];
 	simxFloat orientation[3];
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_blocking);
 	simxGetObjectOrientation(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &orientation, simx_opmode_blocking);
 	
-	if (DEBUG) {
+	#ifdef DEBUG
 		printf("%f %f %f	%f %f %f\n", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2]); fflush(stdout);
-	}
+	#endif // DEBUG
+
 	/*	Determine new position to move from input	*/
 	if (direction == 'w') {			//position[1] += (simxFloat)(0.01 * duty); }
 		/*	moves the tip away from the arm's base	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) + (0.01*duty);
+		simxFloat hype = sqrtf(hype_2) + (0.03*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle);
@@ -823,7 +823,7 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 		/*	moves the tip towards the arm's base	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) - (0.01*duty);
+		simxFloat hype = sqrtf(hype_2) - (0.03*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle);
@@ -837,8 +837,8 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 		simxFloat hype = sqrtf(hype_2);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
-		position[0] = hype * cosf(angle + (duty*3.0*3.141592 / 180.0));
-		position[1] = hype * sinf(angle + (duty*3.0*3.141592 / 180.0));
+		position[0] = hype * cosf(angle + (duty*4.0*3.141592 / 180.0));
+		position[1] = hype * sinf(angle + (duty*4.0*3.141592 / 180.0));
 
 	}
 	else if (direction == 'd') {	//position[0] -= (simxFloat)(0.01 * duty); }
@@ -848,17 +848,17 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 		simxFloat hype = sqrtf(hype_2);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
-		position[0] = hype * cosf(angle - (duty*3.0*3.141592 / 180.0));
-		position[1] = hype * sinf(angle - (duty*3.0*3.141592 / 180.0));
+		position[0] = hype * cosf(angle - (duty*4.0*3.141592 / 180.0));
+		position[1] = hype * sinf(angle - (duty*4.0*3.141592 / 180.0));
 	
 	}
-	else if (direction == '+') { position[2] += (simxFloat)(0.01 * duty); }
-	else if (direction == '-') { position[2] -= (simxFloat)(0.01 * duty); }
+	else if (direction == '+') { position[2] += (simxFloat)(0.02 * duty); }
+	else if (direction == '-') { position[2] -= (simxFloat)(0.02 * duty); }
 	
-	if (DEBUG) {
+	#ifdef DEBUG
 		printf("%f %f %f\n", position[0], position[1], position[2]); fflush(stdout);
-	}
-	
+	#endif // DEBUG
+
 	/*	write to VREP the new position	*/
 	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
 

@@ -193,12 +193,9 @@ void joystick_get_char(info* info_ptr) {
 	bytes_in_input_buffer--;
 	
 	access = 0xFF;
-
-	printf("joystick.c: %c %d\n", c, i);									// this shows nothing for c
-	
-																			
-	//int* arr = malloc(sizeof(int) * 2);
-	//joystick_get_char(arr);
+	#ifdef DEBUG
+		printf("joystick.c: %c %d\n", c, i);									// this shows nothing for c
+	#endif // DEBUG
 
 
 	info_ptr->response = malloc(sizeof(char) * 128);
@@ -209,15 +206,6 @@ void joystick_get_char(info* info_ptr) {
 
 	printf("received: %s\n", info_ptr->response);
 
-	//free(arr);
-																			
-																			
-																			//int arr[2] = { c, i };													// prints c as 0
-	
-	//arr[0] = c;
-	//arr[1] = i;
-	
-	//return arr;
 }
 
 
@@ -268,7 +256,7 @@ void ReadFromPipe() {
 	CHAR chBuf[BUFSIZE];
 	BOOL bSuccess = FALSE;
 	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	printf("\nInput Type: "); fflush(stdout);
+	printf("Input Type: "); fflush(stdout);
 	//printf("we made it here\n"); fflush(stdout);
 	for (;;)
 	{
@@ -475,12 +463,18 @@ void interpret_joystick(char* buffer) {
 		*/
 		if ((delay + ltime < clock()) || (value > 30000)) {
 			while (!access) {
+				/*	The main thread is using the buffer, wait	*/
 				;
 			}
+			/*	lock the buffer from other threads	*/
 			access = 0x00;
 
 			input_buffer_cmd[input_insert_pos] = cmd;
-			printf("input buff: %c %d\n", input_buffer_cmd[input_insert_pos], value);
+			
+			#ifdef DEBUG
+						printf("input buff: %c %d\n", input_buffer_cmd[input_insert_pos], value);
+			#endif // DEBUG
+		
 			input_buffer_val[input_insert_pos] = value;
 			lastJoystickCmd = cmd;
 			lastJoystickValue = value;
@@ -491,7 +485,7 @@ void interpret_joystick(char* buffer) {
 				/* Wrap around buffer pointer if necessary */
 				input_insert_pos = 0;
 			}
-			
+			/*	Release the buffer and update the delay clock	*/
 			access = 0xFF;
 			ltime = clock();
 		}
@@ -504,10 +498,16 @@ void add_to_buffer(void) {
 	while (1) {
 		if ((delay + 750 + ltime < clock()) && (joystickToggle) && (joystickCheck)) {
 			while (!access) {
+				/*	Another thread is accessing the buffer, wait	*/
 				;
 			}
+			/*	lock the buffer variables from other threads	*/
 			access = 0x00;
-			printf("adding extra %c %d to buffer\n", lastJoystickCmd, lastJoystickValue);
+			
+			#ifdef DEBUG
+						printf("adding extra %c %d to buffer\n", lastJoystickCmd, lastJoystickValue);
+			#endif // DEBUG
+			
 			input_buffer_cmd[input_insert_pos] = lastJoystickCmd;
 			input_buffer_val[input_insert_pos] = lastJoystickValue;
 			input_insert_pos++;
@@ -516,6 +516,7 @@ void add_to_buffer(void) {
 				/* Wrap around buffer pointer if necessary */
 				input_insert_pos = 0;
 			}
+			/*	Release the buffer and update delay clock	*/
 			access = 0xFF;
 			ltime = clock();
 		}
