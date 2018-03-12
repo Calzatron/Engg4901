@@ -11,7 +11,7 @@ int joystick_input_available(void);
 
 void joystick_clear_input_buffer(void);
 
-int* joystick_get_char(void);
+void joystick_get_char(info* info_ptr);
 
 void add_to_buffer(void);
 

@@ -17,7 +17,7 @@ typedef struct info {
 
 	char* programMode;
 
-	
+	float* armPosition;
 
 } info;
 

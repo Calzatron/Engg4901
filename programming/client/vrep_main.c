@@ -23,6 +23,8 @@
 
 /*	Global Definitions	*/
 #define BUFSIZE 4096 
+#define DEBUG	1
+
 
 HANDLE  hConsoleOut;                 // Handle to the console   
 HANDLE  hRunMutex;                   // "Keep Running" mutex   
@@ -220,8 +222,9 @@ int main(int argc, char** argv){
 	/* Create a child process to retreive button presses and joystick
 	*	positions from the gaming controller	*/
 	CreateChildProcess();
-	printf("Child Process Created\n");
-
+	if (DEBUG) {
+		printf("Child Process Created\n");
+	}
 	/*	Begin a thread for processing the commands from either
 	*	control inputs or the joystick	*/
 	hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -247,15 +250,24 @@ int main(int argc, char** argv){
 			if (joystick_input_available()) {
 				//printf("input_av\n");
 				/*	A joystick command is available to action on	*/
-				int* arr;
-				arr = joystick_get_char();
-				printf("arr:	%c %d \n", arr[0], arr[1]);
+				//int* arr = malloc(sizeof(int)*2);
+				//joystick_get_char(arr);
+				//
+				//if (DEBUG) {
+				//	printf("arr:	%c %d \n", arr[0], arr[1]);
+				//}
+				//
+				//info_ptr->response = malloc(sizeof(char) * 128);
+				///*	the input is converted into the same format that command line ik
+				//*	inputs come in to allow joystick or command line inputs	*/
+				//
+				//sprintf(info_ptr->response, "%c %d", arr[0], arr[1]);
+				//
+				//printf("received: %s\n", info_ptr->response);
+				//
+				//free(arr);
+				joystick_get_char(info_ptr);
 
-				info_ptr->response = malloc(sizeof(char) * 128);
-				/*	the input is converted into the same format that command line ik
-				*	inputs come in to allow joystick or command line inputs	*/
-				sprintf(info_ptr->response, "%c %d", arr[0], arr[1]);
-				printf("received: %s\n", info_ptr->response);
 				interpret_command_ik(info_ptr, move_ptr, false);
 
 			}
@@ -264,7 +276,11 @@ int main(int argc, char** argv){
 		}
 		else {
 			/*	Instead of getting input from joystick, get from command line input	*/
-			printf("commandline ");
+			
+			if (DEBUG) {
+				printf("commandline ");
+			}
+			
 			get_command(info_ptr, move_ptr);
 		}
 	}
@@ -322,7 +338,9 @@ void get_command(info* info_ptr, move* move_ptr){
     response[i] = '\0';
 	info_ptr->response = malloc(sizeof(char) * 128);
     strcpy(info_ptr->response, response);
-    printf("received: %s\n", info_ptr->response);
+	if (DEBUG) {
+		printf("received: %s\n", info_ptr->response);
+	}
 	/*	Command received, send it to get interpretted	*/
 	if (strcmp(info_ptr->programMode, "fk") == 0) {
 		interpret_command_fk(info_ptr, move_ptr);
@@ -351,8 +369,10 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 
 	}
 
-	printf("	Duty:	%f\n", duty);
-	
+	if (DEBUG) {
+		printf("	Duty:	%f\n", duty);
+	}
+
 	if (info_ptr->response[0] == 'w') { move_target_vrep(info_ptr, move_ptr, 'w', duty); }
 	if (info_ptr->response[0] == 'a') { move_target_vrep(info_ptr, move_ptr, 'a', duty); }
 	if (info_ptr->response[0] == 's') { move_target_vrep(info_ptr, move_ptr, 's', duty); }
@@ -511,7 +531,10 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	int i = 0;
 	int num = 0;
 	info_ptr->jacoArmJointHandles = malloc(sizeof(int) * 6);
-	printf("jacoarmjointhandles malloced %d\n", info_ptr->objectCount);
+	
+	if (DEBUG) {
+		printf("jacoarmjointhandles malloced %d\n", info_ptr->objectCount);
+	}
 
 	while (num < 6) {
 
@@ -538,6 +561,23 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 25, simx_opmode_oneshot_wait);
 	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 0, simx_opmode_oneshot_wait);
 
+	/*	Gets and stores the position of the jaco's base element relative to the world frame	*/
+	simxFloat position[3];
+	simxInt handle;
+	for (int j = 0; j < info_ptr->objectCount; j++) {
+		if (info_ptr->isJoint[j]) {
+			handle = (simxInt)(info_ptr->objectHandles[j]);
+			simxGetObjectPosition(info_ptr->clientID, handle, -1, &position, simx_opmode_blocking);
+			info_ptr->armPosition = malloc(sizeof(simxFloat) * 3);
+			info_ptr->armPosition[0] = position[0];
+			info_ptr->armPosition[1] = position[1];
+			info_ptr->armPosition[2] = position[2];
+			//printf("Jaco arm %d position: %f %f %f\n", handle, info_ptr->armPosition[0], info_ptr->armPosition[1], info_ptr->armPosition[2]);
+			break;
+		}
+	}
+
+	
 }
 
 void write_object_info(info* info_ptr, char* filename){
@@ -700,10 +740,16 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	/* Updates info struct with all jaco arm joint current angles
 	*  joints 4 and 5 are initially adjusted to take on FK values,
 	*  the other joints are offset by 180 degrees */
-	printf("get_joint_angles_vrep\n");
+	if (DEBUG) {
+		printf("get_joint_angles_vrep\n");
+	}
+	
 	int count = 0;
 	while (count < 6) {
-		printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
+		if (DEBUG) {
+			printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
+		}
+
 		simxFloat position;
 		int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[count], &position, simx_opmode_blocking);
 		move_ptr->currAng[count] = 0;
@@ -717,7 +763,9 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 			}
 		}
 
-		printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[count], position, move_ptr->currAng[count]);
+		if (DEBUG) {
+			printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[count], position, move_ptr->currAng[count]);
+		}
 		//printf("this is angle: %s, %f\n", info_ptr->objectNames[info_ptr->jacoArmJointHandles[count]], position);
 		++count;
 	}
@@ -747,22 +795,71 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float duty)
 {
 	/*	Get the target's position relative to the base of the arm	*/
-	printf("move_target(), %d\n", info_ptr->targetHandle); fflush(stdout);
-	//simxFloat* position = malloc(sizeof(int) * 3);
-	//simxFloat position = malloc(sizeof(simxFloat)*3);
+	if (DEBUG) {
+		printf("move_target(), %d\n", info_ptr->targetHandle); fflush(stdout);
+	}
+
 	simxFloat position[3];
 	simxFloat orientation[3];
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_blocking);
 	simxGetObjectOrientation(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &orientation, simx_opmode_blocking);
-	printf("%f %f %f	%f %f %f\n", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2]); fflush(stdout);
-	if (direction == 'w') { position[1] += (simxFloat)(0.01 * duty); }
-	if (direction == 's') { position[1] -= (simxFloat)(0.01 * duty); }
-	if (direction == 'a') { position[0] += (simxFloat)(0.01 * duty); }
-	if (direction == 'd') { position[0] -= (simxFloat)(0.01 * duty); }
-	if (direction == '+') { position[2] += (simxFloat)(0.01 * duty); }
-	if (direction == '-') { position[2] -= (simxFloat)(0.01 * duty); }
-	printf("%f %f %f\n", position[0], position[1], position[2]); fflush(stdout);
+	
+	if (DEBUG) {
+		printf("%f %f %f	%f %f %f\n", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2]); fflush(stdout);
+	}
+	/*	Determine new position to move from input	*/
+	if (direction == 'w') {			//position[1] += (simxFloat)(0.01 * duty); }
+		/*	moves the tip away from the arm's base	*/
 
+		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
+		simxFloat hype = sqrtf(hype_2) + (0.01*duty);
+		simxFloat angle = atan2f(position[1], position[0]);
+		/*	set new position	*/
+		position[0] = hype * cosf(angle);
+		position[1] = hype * sinf(angle);
+
+	}
+	else if (direction == 's') {	//position[1] -= (simxFloat)(0.01 * duty); }
+		/*	moves the tip towards the arm's base	*/
+
+		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
+		simxFloat hype = sqrtf(hype_2) - (0.01*duty);
+		simxFloat angle = atan2f(position[1], position[0]);
+		/*	set new position	*/
+		position[0] = hype * cosf(angle);
+		position[1] = hype * sinf(angle);
+		
+	}
+	else if (direction == 'a') {	//position[0] += (simxFloat)(0.01 * duty); }
+		/*	moves the arm clockwise radially from the centre position of the arm	*/
+		
+		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
+		simxFloat hype = sqrtf(hype_2);
+		simxFloat angle = atan2f(position[1], position[0]);
+		/*	set new position	*/
+		position[0] = hype * cosf(angle + (duty*3.0*3.141592 / 180.0));
+		position[1] = hype * sinf(angle + (duty*3.0*3.141592 / 180.0));
+
+	}
+	else if (direction == 'd') {	//position[0] -= (simxFloat)(0.01 * duty); }
+		/*	moves the arm anti-clockwise radially from the centre position of the arm	*/
+
+		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
+		simxFloat hype = sqrtf(hype_2);
+		simxFloat angle = atan2f(position[1], position[0]);
+		/*	set new position	*/
+		position[0] = hype * cosf(angle - (duty*3.0*3.141592 / 180.0));
+		position[1] = hype * sinf(angle - (duty*3.0*3.141592 / 180.0));
+	
+	}
+	else if (direction == '+') { position[2] += (simxFloat)(0.01 * duty); }
+	else if (direction == '-') { position[2] -= (simxFloat)(0.01 * duty); }
+	
+	if (DEBUG) {
+		printf("%f %f %f\n", position[0], position[1], position[2]); fflush(stdout);
+	}
+	
+	/*	write to VREP the new position	*/
 	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
 
 }

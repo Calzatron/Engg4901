@@ -332,6 +332,7 @@ main(int argc, char *argv[])
 	else {
 		printf("Joysticks Attached\n");
 	}
+	fflush(stdout);
     for (i = 0; i < SDL_NumJoysticks(); ++i) {
         name = SDL_JoystickNameForIndex(i);
         SDL_Log("Joystick %d: %s\n", i, name ? name : "Unknown Joystick");
