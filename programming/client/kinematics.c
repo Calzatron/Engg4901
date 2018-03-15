@@ -18,7 +18,7 @@ void fk_classic(move* move_ptr, info* info_ptr);
 void fk_mod(move* move_ptr);
 int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
-
+void inverse_kinematics(move* move_ptr, info* info_ptr);
 
 
 void define_classic_parameters(move* move_ptr) {
@@ -69,7 +69,6 @@ void define_classic_parameters(move* move_ptr) {
 	move_ptr->d_i[6] = -(move_ptr->lengthD[6] + move_ptr->lengthD[5] * aa);
 
 }
-
 
 
 
@@ -133,27 +132,129 @@ void fk_classic(move* move_ptr, info* info_ptr) {
 	}
 	printf("Forward: %f %f %f\n", ret[0][1], ret[1][0], ret[2][0]);
 	float position[3];
-	get_position_vrep(info_ptr, &position, 33);
+
+	/*	changed to world position, should be of base, different function that's not extern yet	*/
+
+	get_world_position_vrep(info_ptr, &position, 33);
 	//simxGetObjectPosition(info_ptr->clientID, 33, 18, &position, simx_opmode_blocking);
 	printf("%f %f %f\n", position[0], position[1], position[2]);
-	get_position_vrep(info_ptr, &position, 30);
+	get_world_position_vrep(info_ptr, &position, 30);
 	//simxGetObjectPosition(info_ptr->clientID, 30, 18, &position, simx_opmode_blocking);
 	printf("%f %f %f\n", position[0], position[1], position[2]);
-	get_position_vrep(info_ptr, &position, 27);
+	get_world_position_vrep(info_ptr, &position, 27);
 	//simxGetObjectPosition(info_ptr->clientID, 27, 18, &position, simx_opmode_blocking);
 	printf("%f %f %f\n", position[0], position[1], position[2]);
-	get_position_vrep(info_ptr, &position, 24);
+	get_world_position_vrep(info_ptr, &position, 24);
 	//simxGetObjectPosition(info_ptr->clientID, 24, 18, &position, simx_opmode_blocking);
 	printf("%f %f %f\n", position[0], position[1], position[2]);
-	get_position_vrep(info_ptr, &position, 21);
+	get_world_position_vrep(info_ptr, &position, 21);
 	//simxGetObjectPosition(info_ptr->clientID, 21, 18, &position, simx_opmode_blocking);
 	printf("%f %f %f\n", position[0], position[1], position[2]);
-	get_position_vrep(info_ptr, &position, 18);
+	get_world_position_vrep(info_ptr, &position, 18);
 	//simxGetObjectPosition(info_ptr->clientID, 18, 18, &position, simx_opmode_blocking);
 	printf("%f %f %f\n", position[0], position[1], position[2]);
 
 }
 
+
+
+void inverse_kinematics(move* move_ptr, info* info_ptr) {
+
+	double pi = 3.141594;
+	float position[4];// = malloc(sizeof(float) * 3);
+	position[0] = 0; position[1] = 0; position[2] = 0; position[3] = 0;
+	int baseHandle;
+
+	for (int i = 0; i < info_ptr->objectCount; i++) {
+		if (info_ptr->isJoint[i]) {
+			baseHandle = info_ptr->objectHandles[i];
+			printf("Base handle: %d %d\n", i, baseHandle);
+			break;
+		}
+	}
+
+	float basePosition[4]; basePosition[0] = 0; basePosition[1] = 0; basePosition[2] = 0; basePosition[3] = 0;
+	get_world_position_vrep(info_ptr, basePosition, baseHandle);
+	printf("Base at %f %f %f\n", basePosition[0], basePosition[1], basePosition[2]);
+	int joint4Handle = 27;
+	//printf("baseHandle: %d\n", baseHandle);
+	//printf("got at %f %f %f %d\n", position[0], position[1], position[2], joint4Handle); fflush(stdout);
+	get_world_position_vrep(info_ptr, position, joint4Handle);
+
+	printf("joint4 at %f %f %f\n", position[0], position[1], position[2]);
+	
+	double px = (double)((position[0] - basePosition[0])*1000.0);
+	double py = (double)(position[1])*1000.0;
+	double pz = (double)(position[2])*1000.0;
+	double d1 = 197.13;
+	double d2 = 410.0;
+	double d3 = 207.3;
+	double e2 = 9.8;
+
+	double j = pow(px, 2) + pow((pz - d1), 2) - (d2*d2) - (d3*d3);
+	double k = 2.0 * d2 * d3;
+
+	if (fabsf(j) > fabsf(k)) {
+		printf("x,z,i,j:	%f %f %f %f\n",px,pz, j, k);
+		exit(1);
+	}
+
+	double q_3 = 1 * acos( j / k );
+
+	printf("i,j,q_3:	%f %f %f\n", j, k, q_3);
+
+	double cq_2 = (px*(d2 + d3 * cos(q_3)) + d3 * sin(q_3)*(pz - d1)) / (pow(d2,2) + pow(d3,2) + 2 * d2*d3*cos(q_3));
+	double sq_2 = (-px * d3*sin(q_3) + (d2 + d3 * cos(q_3))*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
+	double q_2 = (pi / 2) - atan2(sq_2, cq_2);
+
+	printf("c,s,q_2:	%f %f %f\n", cq_2, sq_2, q_2);
+
+	if (((move_ptr->currAng[3 - 1] - pi / 4 < q_3) && (move_ptr->currAng[3 - 1] + pi / 4 > q_3)) ||
+				((q_2 < 0) && (q_3 > 0)) || ((q_2 > 0) && (q_3 < 0))){
+		/*	the new q_3 is within reach of the current joint 3's position	*/
+		printf("check");
+	}
+	else {
+		/*	the wrong angle reflection was chosen, re-calculate	*/
+
+		q_3 = -1 * q_3;
+		cq_2 = (px*(d2 + d3 * cos(q_3)) + d3 * sin(q_3)*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
+		sq_2 = (-px * d3*sin(q_3) + (d2 + d3 * cos(q_3))*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
+		q_2 = (pi / 2) - atan2(sq_2, cq_2);
+	}
+
+	//Instead of calculating q_1 should read from vrep
+	//double q_1 = tan(py / px) - sin((e2) / (pow(pow(px, 2) + pow(py, 2), .5)));
+	//double q_1 = tan(py / px) - sin((100.0 + e2) / (pow(pow(px,2) + pow(py,2), .5)));
+	double q_1 = move_ptr->currAng[1 - 1];
+	double q_4 = move_ptr->currAng[4 - 1];
+	double q_5 = move_ptr->currAng[5 - 1];
+	
+	printf("Angles are:		%f %f %f %f %f\n", q_1, q_2, q_3, q_4, q_5);
+	
+	/*	Transform angles into DH	*/
+	double q1, q2, q3, q4, q5, q6;
+	q1 = -q_1;//pi - q_1;
+	q2 = -(pi / 2.0) + (q_2 + pi);
+	q3 = (pi / 2) + (q_3 + pi);
+	q4 = q_4;
+	q5 = -pi + q_5;
+	q6 = 0;
+	double T[3];
+
+	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+
+	
+	printf("Calc position of Tip at:		%f %f %f\n", -1000 + T[0], T[1], T[2]);
+	get_world_position_vrep(info_ptr, &position, info_ptr->targetHandle-1);
+	printf("Position of Tip at:			%f %f %f\n", position[0], position[1], position[2]);
+	//int targetHandle = info_ptr->targetHandle;
+	//set_world_position_vrep(info_ptr, T, targetHandle);
+	//free(position);
+
+}
 
 
 void fk_mod(move* move_ptr) {

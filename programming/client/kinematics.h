@@ -8,4 +8,6 @@ void fk_classic(move* move_ptr, info* info_ptr);
 void fk_mod(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
 
+void inverse_kinematics(move* move_ptr, info* info_ptr);
+
 #endif // !KINEMATICS.H

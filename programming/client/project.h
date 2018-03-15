@@ -7,6 +7,9 @@
 /*	Define motion struct	*/
 
 
+
+
+
 typedef struct info {
 
 	int clientID;						/*	ID for networking	*/
@@ -42,7 +45,9 @@ typedef struct move {
 } move;
 
 
-
+void get_position_vrep(info* info_ptr, float* position, int handle);
+void set_world_position_vrep(info* info_ptr, float* position, int objectHandle);
+void get_world_position_vrep(info* info_ptr, float* position, int handle);
 
 
 #endif // !PROJECT.H
