@@ -48,6 +48,6 @@ typedef struct move {
 void get_position_vrep(info* info_ptr, float* position, int handle);
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle);
 void get_world_position_vrep(info* info_ptr, float* position, int handle);
-
+void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
 
 #endif // !PROJECT.H

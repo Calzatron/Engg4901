@@ -51,6 +51,8 @@ void get_position_vrep(info* info_ptr, float* position, int handle);
 void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int relativeHandle);
 void get_world_position_vrep(info* info_ptr, float* position, int handle);
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle);
+void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
+
 
 /*	Program Functions	*/
 
@@ -580,7 +582,6 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 		}
 	}
 
-	
 }
 
 void write_object_info(info* info_ptr, char* filename){
@@ -755,7 +756,12 @@ void get_world_position_vrep(info* info_ptr, float* position, int handle) {
 
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) {
 
-	simxGetJointPosition(info_ptr->clientID, objectHandle, &position, simx_opmode_blocking);
+	simxFloat pos[3];
+	pos[0] = position[0];
+	pos[1] = position[1];
+	pos[2] = position[2];
+	printf("Sending target %d to %f %f %f\n", objectHandle, pos[0], pos[1], pos[2]);
+	simxSetObjectPosition(info_ptr->clientID, objectHandle, -1, &pos, simx_opmode_blocking);
 	
 }
 
@@ -811,7 +817,6 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
 	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
 
-	//get_command(info_ptr, move_ptr);
 }
 
 

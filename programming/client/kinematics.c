@@ -163,7 +163,7 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 	double pi = 3.141594;
 	float position[4];// = malloc(sizeof(float) * 3);
 	position[0] = 0; position[1] = 0; position[2] = 0; position[3] = 0;
-	int baseHandle;
+	/*int baseHandle;
 
 	for (int i = 0; i < info_ptr->objectCount; i++) {
 		if (info_ptr->isJoint[i]) {
@@ -172,9 +172,12 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 			break;
 		}
 	}
-
+	*/
 	float basePosition[4]; basePosition[0] = 0; basePosition[1] = 0; basePosition[2] = 0; basePosition[3] = 0;
-	get_world_position_vrep(info_ptr, basePosition, baseHandle);
+	//get_world_position_vrep(info_ptr, basePosition, baseHandle);
+	basePosition[0] = info_ptr->armPosition[0];
+	basePosition[1] = info_ptr->armPosition[1];
+	basePosition[2] = info_ptr->armPosition[2];
 	printf("Base at %f %f %f\n", basePosition[0], basePosition[1], basePosition[2]);
 	int joint4Handle = 27;
 	//printf("baseHandle: %d\n", baseHandle);
@@ -234,7 +237,7 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 	
 	/*	Transform angles into DH	*/
 	double q1, q2, q3, q4, q5, q6;
-	q1 = -q_1;//pi - q_1;
+	q1 = pi - q_1;
 	q2 = -(pi / 2.0) + (q_2 + pi);
 	q3 = (pi / 2) + (q_3 + pi);
 	q4 = q_4;
@@ -246,13 +249,27 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
 	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
 
-	
-	printf("Calc position of Tip at:		%f %f %f\n", -1000 + T[0], T[1], T[2]);
+	T[0] = (T[0] / 1000.0) + basePosition[0];
+	T[1] = (T[1] / 1000.0);
+	T[2] = (T[2] / 1000.0);
+
+	printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
 	get_world_position_vrep(info_ptr, &position, info_ptr->targetHandle-1);
 	printf("Position of Tip at:			%f %f %f\n", position[0], position[1], position[2]);
-	//int targetHandle = info_ptr->targetHandle;
-	//set_world_position_vrep(info_ptr, T, targetHandle);
+	int targetHandle = info_ptr->targetHandle;
+
+
+	float desTargetPos[3];
+	desTargetPos[0] = (float)(T[0]);
+	desTargetPos[1] = (float)(T[1]);
+	desTargetPos[2] = (float)(T[2]);
+
+	set_world_position_vrep(info_ptr, desTargetPos, targetHandle);
 	//free(position);
+
+
+	//move_joint_angle_vrep(info_ptr, move_ptr, 1, q_1);
+
 
 }
 
