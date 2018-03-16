@@ -52,8 +52,8 @@ void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int re
 void get_world_position_vrep(info* info_ptr, float* position, int handle);
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle);
 void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
-
-
+void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
+void pause_communication_vrep(info* info_ptr, int status);
 /*	Program Functions	*/
 
 void initialise_program(info* info_ptr, char argc, char** argv) {
@@ -77,15 +77,45 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 		i = strlen(argv[1]) + 1;
 	}
 	/*	Search for mode in input buffer	*/
+	info_ptr->sceneMode = malloc(sizeof(char) * 3);
 	info_ptr->programMode = malloc(sizeof(char) * 3);
 	for (int j = 0; j < i; j++) {
 		if (((inputBuffer[j] == 'i') && (inputBuffer[j + 1] == 'k')) ||
 			((inputBuffer[j] == 'I') && (inputBuffer[j + 1] == 'K'))) {
+			strcpy(info_ptr->sceneMode, "ik");
 			strcpy(info_ptr->programMode, "ik");
 		}
 		else if (((inputBuffer[j] == 'f') && (inputBuffer[j + 1] == 'k')) ||
 			((inputBuffer[j] == 'F') && (inputBuffer[j + 1] == 'K'))) {
-			strcpy(info_ptr->programMode, "fk");
+			
+			strcpy(info_ptr->sceneMode, "fk");
+
+			/*	The scene was specified to be in FK mode
+			*	Determine if the program inputs will be for FK or IK	*/
+			printf("Would you like ik inputs with a fk VREP scene [Y/n]>>");
+			char c = getchar();
+			if (c == '\n') {
+				strcpy(info_ptr->programMode, "ik");
+			}
+
+			char extraBuffer[20];
+			i = 0;
+			while ((c != '\n') && (i < 10)) {
+				/*	store input	*/
+				extraBuffer[i] = c;
+				c = getchar();
+				++i;
+			}
+			if ((extraBuffer[0] == 'Y') || (extraBuffer[0] == 'y')) {
+				strcpy(info_ptr->programMode, "ik");
+			}
+			else if ((extraBuffer[0] == 'n') || (extraBuffer[0] == 'N')) {
+				strcpy(info_ptr->programMode, "fk");
+			}
+			else {
+				strcpy(info_ptr->programMode, "fk");
+			}
+			printf("\n%s selected\n", info_ptr->programMode);
 		}
 	}
 	
@@ -251,7 +281,7 @@ int main(int argc, char** argv){
 	while (1) {
 		//printf(".");
 		/*	Need to work out how to choose between command or joystick based control	*/
-		if ((strcmp(info_ptr->programMode, "ik") == 0) && (joystickEnabled())) {
+		if ((strcmp(info_ptr->sceneMode, "ik") == 0) && (joystickEnabled())) {
 
 			//printf("ik and joystickEn\n"); fflush(stdout);
 			/*	A joystick was found, get inputs from this	*/
@@ -263,14 +293,30 @@ int main(int argc, char** argv){
 			}
 		}
 		else {
-			/*	Instead of getting input from joystick, get from command line input	*/
+
+			if ((info_ptr->programMode[0] == 'f') && (info_ptr->programMode[1] == 'k')) {
+				/*	Instead of getting input from joystick, get from command line input	*/
 				#ifdef DEBUG
 					printf("commandline ");
 				#endif // DEBUG
-			
-			get_command(info_ptr, move_ptr);
-			printf("entering ik\n"); fflush(stdout);
-			inverse_kinematics(move_ptr, info_ptr);
+
+				get_command(info_ptr, move_ptr);
+			}
+			else {
+				/*	Program Mode is ik but scene is fk... Input can be joystick or commandline
+				*	'wasd' 
+				**/
+				if ((joystick_input_available()) && (joystickEnabled())) {
+					/*	A joystick command is available to action on	*/
+					joystick_get_char(info_ptr);
+					interpret_command_ik(info_ptr, move_ptr, false);
+				}
+				else {
+					get_command(info_ptr, move_ptr);
+				}
+				printf("entering ik\n"); fflush(stdout);
+				inverse_kinematics(move_ptr, info_ptr);
+			}
 		}
 	}
 
@@ -333,12 +379,17 @@ void get_command(info* info_ptr, move* move_ptr){
 	#endif // DEBUG
 
 	/*	Command received, send it to get interpretted	*/
-	if (strcmp(info_ptr->programMode, "fk") == 0) {
+	if ((strcmp(info_ptr->sceneMode, "fk") == 0) && (strcmp(info_ptr->programMode, "fk") == 0)) {
+		/*	The scene is in fk and inputs are fk (move a joint a given angle)	*/
 		interpret_command_fk(info_ptr, move_ptr);
 		//free(info_ptr->response); // not free'd yet
 	}
-	else if (strcmp(info_ptr->programMode, "ik") == 0) {
-		interpret_command_ik(info_ptr, move_ptr, true); // response is free'd in interpret_command
+	else if ((strcmp(info_ptr->sceneMode, "ik") == 0) || (strcmp(info_ptr->programMode, "ik") == 0)) {
+		/*	The scene is in IK and the inputs are IK or the scene is in FK and inputs are IK
+		*	so the inputs are interpreted the same but response will be different 
+		*	(position of tip to be altered, determined by input, and arm follow)
+		*/
+		interpret_command_ik(info_ptr, move_ptr, true); 
 	}
 	printf("herr\n");
 }
@@ -365,16 +416,26 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		printf("	Duty:	%f\n", duty);
 	#endif // DEBUG
 
-	if (info_ptr->response[0] == 'w') { move_target_vrep(info_ptr, move_ptr, 'w', duty); }
-	if (info_ptr->response[0] == 'a') { move_target_vrep(info_ptr, move_ptr, 'a', duty); }
-	if (info_ptr->response[0] == 's') { move_target_vrep(info_ptr, move_ptr, 's', duty); }
-	if (info_ptr->response[0] == 'd') { move_target_vrep(info_ptr, move_ptr, 'd', duty); }
-	if (info_ptr->response[0] == '-') { move_target_vrep(info_ptr, move_ptr, '-', duty); }
-	if (info_ptr->response[0] == '+') { move_target_vrep(info_ptr, move_ptr, '+', duty); }
 
+	if (strcmp(info_ptr->programMode, 'ik') == 0) {
+		if (info_ptr->response[0] == 'w') { move_target_vrep(info_ptr, move_ptr, 'w', duty); }
+		if (info_ptr->response[0] == 'a') { move_target_vrep(info_ptr, move_ptr, 'a', duty); }
+		if (info_ptr->response[0] == 's') { move_target_vrep(info_ptr, move_ptr, 's', duty); }
+		if (info_ptr->response[0] == 'd') { move_target_vrep(info_ptr, move_ptr, 'd', duty); }
+		if (info_ptr->response[0] == '-') { move_target_vrep(info_ptr, move_ptr, '-', duty); }
+		if (info_ptr->response[0] == '+') { move_target_vrep(info_ptr, move_ptr, '+', duty); }
+	}
+	else {
+		/*	FK scene but given IK input
+		*	Begin control loop and kinematics for moving joints	*/
+		
+		get_joint_angles_vrep(info_ptr, move_ptr);
+		
+		printf("begining control sequence\n");
+		control_kinematics(move_ptr, info_ptr);
+	}
 
-
-
+	/*	End of interpreting, free response	*/
 	free(info_ptr->response);
 }
 
@@ -403,7 +464,7 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 	}
 	if ((strlen(info_ptr->response) < 4) && (info_ptr->response[0] == 'f') && info_ptr->response[1] == 'k') { 
 		/*	was asked to get the joint angles using the classic DH parameters and FK	*/
-		fk_classic(move_ptr, info_ptr); 
+		fk_classic(move_ptr, info_ptr);								// NEEDS UPDATING
 	}
 
 	if (check) { 
@@ -450,10 +511,9 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 
 	/*	Move the joint a specified angle	*/
 	move_joint_angle_vrep(info_ptr, move_ptr, jointNum, ang);
-	printf("here\n");
+	
 	/*	end of interpreting, free the response	*/	
 	free(info_ptr->response);
-	printf("hererr\n");
 }
 
 
@@ -816,9 +876,24 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot_wait);
 	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
 	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
-
 }
 
+void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang) {
+	/* takes in a joint number between 1 and 6, these are translated into
+	*  object handles, and the arm is moved via external command */
+
+	//get_joint_angles_vrep(info_ptr, move_ptr);
+
+	double jointAngle = ang;
+	if ((jointNum != 4) && (jointNum != 5)) {
+		jointAngle += 3.141592;
+	}
+	jointAngle = fmod(jointAngle, 2 * 3.141592);
+	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot_wait);
+	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
+	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
+}
 
 void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float duty)
 {
@@ -891,5 +966,16 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 
 	/*	write to VREP the new position	*/
 	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
+
+}
+
+void pause_communication_vrep(info* info_ptr, int status) {
+
+	if (status > 0) {
+		simxPauseCommunication(info_ptr->clientID, 1);
+	}
+	else {
+		simxPauseCommunication(info_ptr->clientID, 0);
+	}
 
 }

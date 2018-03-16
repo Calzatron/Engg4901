@@ -18,8 +18,8 @@ void fk_classic(move* move_ptr, info* info_ptr);
 void fk_mod(move* move_ptr);
 int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
-void inverse_kinematics(move* move_ptr, info* info_ptr);
-
+void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
+void control_kinematics(info* info_ptr, move* move_ptr, int x, int y, int z);
 
 void define_classic_parameters(move* move_ptr) {
 	/*	Stores in memory the forward kinematic
@@ -158,31 +158,27 @@ void fk_classic(move* move_ptr, info* info_ptr) {
 
 
 
-void inverse_kinematics(move* move_ptr, info* info_ptr) {
+void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles) {
+	/*	Uses the position of the fourth joint to calculate angles q_2 and q_3
+	*	After, the position of S' is calculated (position of the tip for the given 
+	*	and current angles)
+	*	The target is then moved to S' for the arm to follow
+	*/
+
 
 	double pi = 3.141594;
-	float position[4];// = malloc(sizeof(float) * 3);
-	position[0] = 0; position[1] = 0; position[2] = 0; position[3] = 0;
-	/*int baseHandle;
+	//float position[4];// = malloc(sizeof(float) * 3);
+	//position[0] = 0; position[1] = 0; position[2] = 0; position[3] = 0;
 
-	for (int i = 0; i < info_ptr->objectCount; i++) {
-		if (info_ptr->isJoint[i]) {
-			baseHandle = info_ptr->objectHandles[i];
-			printf("Base handle: %d %d\n", i, baseHandle);
-			break;
-		}
-	}
-	*/
 	float basePosition[4]; basePosition[0] = 0; basePosition[1] = 0; basePosition[2] = 0; basePosition[3] = 0;
 	//get_world_position_vrep(info_ptr, basePosition, baseHandle);
 	basePosition[0] = info_ptr->armPosition[0];
 	basePosition[1] = info_ptr->armPosition[1];
 	basePosition[2] = info_ptr->armPosition[2];
 	printf("Base at %f %f %f\n", basePosition[0], basePosition[1], basePosition[2]);
-	int joint4Handle = 27;
-	//printf("baseHandle: %d\n", baseHandle);
-	//printf("got at %f %f %f %d\n", position[0], position[1], position[2], joint4Handle); fflush(stdout);
-	get_world_position_vrep(info_ptr, position, joint4Handle);
+	//int joint4Handle = 27;
+
+	//get_world_position_vrep(info_ptr, position, joint4Handle);
 
 	printf("joint4 at %f %f %f\n", position[0], position[1], position[2]);
 	
@@ -235,6 +231,13 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 	
 	printf("Angles are:		%f %f %f %f %f\n", q_1, q_2, q_3, q_4, q_5);
 	
+	angles[0] = (q_1);
+	angles[1] = (q_2);
+	angles[2] = (q_3);
+	angles[3] = (q_4);
+	angles[4] = (q_5);
+	angles[5] = (0.0);
+
 	/*	Transform angles into DH	*/
 	double q1, q2, q3, q4, q5, q6;
 	q1 = pi - q_1;
@@ -254,17 +257,18 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 	T[2] = (T[2] / 1000.0);
 
 	printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
-	get_world_position_vrep(info_ptr, &position, info_ptr->targetHandle-1);
-	printf("Position of Tip at:			%f %f %f\n", position[0], position[1], position[2]);
-	int targetHandle = info_ptr->targetHandle;
+	
+	//get_world_position_vrep(info_ptr, &position, info_ptr->targetHandle-1);
+	//printf("Position of Tip at:			%f %f %f\n", position[0], position[1], position[2]);
+	//int targetHandle = info_ptr->targetHandle;
 
 
-	float desTargetPos[3];
-	desTargetPos[0] = (float)(T[0]);
-	desTargetPos[1] = (float)(T[1]);
-	desTargetPos[2] = (float)(T[2]);
+	//float desTargetPos[3];
+	position[0] = (float)(T[0]);
+	position[1] = (float)(T[1]);
+	position[2] = (float)(T[2]);
 
-	set_world_position_vrep(info_ptr, desTargetPos, targetHandle);
+	//set_world_position_vrep(info_ptr, desTargetPos, targetHandle);
 	//free(position);
 
 
@@ -272,6 +276,68 @@ void inverse_kinematics(move* move_ptr, info* info_ptr) {
 
 
 }
+
+
+void control_kinematics(info* info_ptr, move* move_ptr, int x, int y, int z) {
+	
+	
+	float basePosition[4];
+	basePosition[0] = info_ptr->armPosition[0];
+	basePosition[1] = info_ptr->armPosition[1];
+	basePosition[2] = info_ptr->armPosition[2];
+
+	float J4_desired[4];
+	J4_desired[0] = 0; J4_desired[1] = 0; J4_desired[2] = 0; J4_desired[3] = 0;
+	int joint4Handle = 27;
+	get_world_position_vrep(info_ptr, J4_desired, joint4Handle);
+
+
+	float S_desired[4];
+	S_desired[0] = 0; S_desired[1] = 0; S_desired[2] = 0; S_desired[3] = 0;
+	int targetHandle = info_ptr->targetHandle;
+	get_world_position_vrep(info_ptr, S_desired, targetHandle);
+
+	S_desired[0] += x;
+	S_desired[1] += y;
+	S_desired[2] += z;
+	J4_desired[0] += x;
+	J4_desired[1] += y;
+	J4_desired[2] += z;
+	
+	float S_error[4] = { 0, 0, 0, 0 };
+	double angles[6] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+	int loop = 1;
+
+	while (loop) {
+		/*	get the calculated position of the 	*/
+		float position[4] = { J4_desired[0] + S_error[0], J4_desired[1] + S_error[1], J4_desired[2] + S_error[2], 0.0 };
+		/*	update position with the calculated tip position 	*/
+		inverse_kinematics(move_ptr, info_ptr, position, angles);
+		
+		/*	check that the position is within 2cm of the desired tip position	*/
+		if ((S_desired[0] - position[0] < 0.02) && (S_desired[1] - position[1] < 0.02) && (S_desired[2] - position[2] < 0.02)) {
+			loop = 0;
+			continue;
+		}
+
+		/*	Add some proportionality to the error to ensure limited overshoot
+		*	between calculations
+		*/
+		S_error[0] = 0.1*(S_desired[0] - position[0]);
+		S_error[1] = 0.1*(S_desired[1] - position[1]);
+		S_error[2] = 0.1*(S_desired[2] - position[2]);
+
+	}
+
+	/*	Got angles, move the arm	*/
+	pause_communication_vrep(info_ptr, 1);
+	set_joint_angle_vrep(info_ptr, move_ptr, 1, angles[0]);
+	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles[1]);
+	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles[2]);
+	pause_communication_vrep(info_ptr, 0);
+}
+
+
 
 
 void fk_mod(move* move_ptr) {
