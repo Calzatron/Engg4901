@@ -19,7 +19,7 @@ void fk_mod(move* move_ptr);
 int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
 void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
-void control_kinematics(info* info_ptr, move* move_ptr, int x, int y, int z);
+void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z);
 
 void define_classic_parameters(move* move_ptr) {
 	/*	Stores in memory the forward kinematic
@@ -183,7 +183,7 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	printf("joint4 at %f %f %f\n", position[0], position[1], position[2]);
 	
 	double px = (double)((position[0] - basePosition[0])*1000.0);
-	double py = (double)(position[1])*1000.0;
+	double py = (double)((position[1] - basePosition[1])*1000.0);
 	double pz = (double)(position[2])*1000.0;
 	double d1 = 197.13;
 	double d2 = 410.0;
@@ -253,7 +253,7 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
 
 	T[0] = (T[0] / 1000.0) + basePosition[0];
-	T[1] = (T[1] / 1000.0);
+	T[1] = (T[1] / 1000.0) + basePosition[1];
 	T[2] = (T[2] / 1000.0);
 
 	printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
@@ -278,24 +278,19 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 }
 
 
-void control_kinematics(info* info_ptr, move* move_ptr, int x, int y, int z) {
+void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z) {
 	
-	
-	float basePosition[4];
-	basePosition[0] = info_ptr->armPosition[0];
-	basePosition[1] = info_ptr->armPosition[1];
-	basePosition[2] = info_ptr->armPosition[2];
-
+	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
 	float J4_desired[4];
 	J4_desired[0] = 0; J4_desired[1] = 0; J4_desired[2] = 0; J4_desired[3] = 0;
 	int joint4Handle = 27;
 	get_world_position_vrep(info_ptr, J4_desired, joint4Handle);
 
-
+	/*	Get the current tip position and update S_desired	*/
 	float S_desired[4];
 	S_desired[0] = 0; S_desired[1] = 0; S_desired[2] = 0; S_desired[3] = 0;
-	int targetHandle = info_ptr->targetHandle;
-	get_world_position_vrep(info_ptr, S_desired, targetHandle);
+	int tipHandle = info_ptr->targetHandle -1;
+	get_world_position_vrep(info_ptr, S_desired, tipHandle);
 
 	S_desired[0] += x;
 	S_desired[1] += y;
@@ -304,12 +299,14 @@ void control_kinematics(info* info_ptr, move* move_ptr, int x, int y, int z) {
 	J4_desired[1] += y;
 	J4_desired[2] += z;
 	
+	/*	Initialise the control variables	*/
 	float S_error[4] = { 0, 0, 0, 0 };
 	double angles[6] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 	int loop = 1;
-
+	printf("calculating");
 	while (loop) {
-		/*	get the calculated position of the 	*/
+		printf(".");
+		/*	Update the desired Joint4 position	*/
 		float position[4] = { J4_desired[0] + S_error[0], J4_desired[1] + S_error[1], J4_desired[2] + S_error[2], 0.0 };
 		/*	update position with the calculated tip position 	*/
 		inverse_kinematics(move_ptr, info_ptr, position, angles);
@@ -317,15 +314,15 @@ void control_kinematics(info* info_ptr, move* move_ptr, int x, int y, int z) {
 		/*	check that the position is within 2cm of the desired tip position	*/
 		if ((S_desired[0] - position[0] < 0.02) && (S_desired[1] - position[1] < 0.02) && (S_desired[2] - position[2] < 0.02)) {
 			loop = 0;
-			continue;
+			break;
 		}
 
 		/*	Add some proportionality to the error to ensure limited overshoot
 		*	between calculations
 		*/
-		S_error[0] = 0.1*(S_desired[0] - position[0]);
-		S_error[1] = 0.1*(S_desired[1] - position[1]);
-		S_error[2] = 0.1*(S_desired[2] - position[2]);
+		S_error[0] += 0.1*(S_desired[0] - position[0]);
+		S_error[1] += 0.1*(S_desired[1] - position[1]);
+		S_error[2] += 0.1*(S_desired[2] - position[2]);
 
 	}
 

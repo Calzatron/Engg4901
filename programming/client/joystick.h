@@ -1,7 +1,7 @@
 #ifndef JOYSTICK_H_
 #define JOYSTICK_H_
 /*	Define motion struct	*/
-
+extern void initialise_joystick_mutex(void);
 
 void interpret_joystick(char* buffer);
 

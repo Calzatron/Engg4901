@@ -51,9 +51,11 @@ void get_position_vrep(info* info_ptr, float* position, int handle);
 void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int relativeHandle);
 void get_world_position_vrep(info* info_ptr, float* position, int handle);
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle);
-void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
 void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
 void pause_communication_vrep(info* info_ptr, int status);
+void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty);
+
+
 /*	Program Functions	*/
 
 void initialise_program(info* info_ptr, char argc, char** argv) {
@@ -94,7 +96,9 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 			*	Determine if the program inputs will be for FK or IK	*/
 			printf("Would you like ik inputs with a fk VREP scene [Y/n]>>");
 			char c = getchar();
-			if (c == '\n') {
+
+			if ((c == '\n') || (c == '\r')) {
+				/*	Choose ik by default (enter)	*/
 				strcpy(info_ptr->programMode, "ik");
 			}
 
@@ -113,7 +117,7 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 				strcpy(info_ptr->programMode, "fk");
 			}
 			else {
-				strcpy(info_ptr->programMode, "fk");
+				strcpy(info_ptr->programMode, "ik");
 			}
 			printf("\n%s selected\n", info_ptr->programMode);
 		}
@@ -259,6 +263,9 @@ int main(int argc, char** argv){
 	*	positions from the gaming controller	*/
 	CreateChildProcess();
 
+	/*	Initialise Joystick Mutex	*/
+	initialise_joystick_mutex();
+
 	#ifdef DEBUG
 		printf("Child Process Created\n");
 	#endif // DEBUG
@@ -283,7 +290,7 @@ int main(int argc, char** argv){
 		/*	Need to work out how to choose between command or joystick based control	*/
 		if ((strcmp(info_ptr->sceneMode, "ik") == 0) && (joystickEnabled())) {
 
-			//printf("ik and joystickEn\n"); fflush(stdout);
+			printf("ik and joystickEn\n"); fflush(stdout);
 			/*	A joystick was found, get inputs from this	*/
 			if (joystick_input_available()) {
 				/*	A joystick command is available to action on	*/
@@ -294,7 +301,8 @@ int main(int argc, char** argv){
 		}
 		else {
 
-			if ((info_ptr->programMode[0] == 'f') && (info_ptr->programMode[1] == 'k')) {
+			//if (strcmp(info_ptr->sceneMode, "fk") == 0) {
+			if (strcmp(info_ptr->programMode, "fk") == 0) {
 				/*	Instead of getting input from joystick, get from command line input	*/
 				#ifdef DEBUG
 					printf("commandline ");
@@ -306,16 +314,21 @@ int main(int argc, char** argv){
 				/*	Program Mode is ik but scene is fk... Input can be joystick or commandline
 				*	'wasd' 
 				**/
-				if ((joystick_input_available()) && (joystickEnabled())) {
-					/*	A joystick command is available to action on	*/
-					joystick_get_char(info_ptr);
-					interpret_command_ik(info_ptr, move_ptr, false);
+				if (joystickEnabled()) {
+					if (joystick_input_available()) {
+						/*	A joystick command is available to action on	*/
+						joystick_get_char(info_ptr);
+						interpret_command_ik(info_ptr, move_ptr, false);
+					}
 				}
 				else {
+					#ifdef DEBUG
+						printf("commandline ik");
+					#endif // DEBUG
 					get_command(info_ptr, move_ptr);
 				}
-				printf("entering ik\n"); fflush(stdout);
-				inverse_kinematics(move_ptr, info_ptr);
+				//printf("entering ik\n"); fflush(stdout);
+				//inverse_kinematics(move_ptr, info_ptr);
 			}
 		}
 	}
@@ -413,11 +426,15 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 	}
 
 	#ifdef DEBUG
-		printf("	Duty:	%f\n", duty);
+		printf("	*Duty:	%f\n", duty);
+		//pritnf("	programMode %s\n")
 	#endif // DEBUG
 
 
-	if (strcmp(info_ptr->programMode, 'ik') == 0) {
+	if (strcmp(info_ptr->sceneMode, "ik") == 0) {
+		#ifdef DEBUG
+				printf("going to move_target_vrep\n"); fflush(stdout);
+		#endif // DEBUG
 		if (info_ptr->response[0] == 'w') { move_target_vrep(info_ptr, move_ptr, 'w', duty); }
 		if (info_ptr->response[0] == 'a') { move_target_vrep(info_ptr, move_ptr, 'a', duty); }
 		if (info_ptr->response[0] == 's') { move_target_vrep(info_ptr, move_ptr, 's', duty); }
@@ -427,12 +444,25 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 	}
 	else {
 		/*	FK scene but given IK input
-		*	Begin control loop and kinematics for moving joints	*/
-		
+		*	Begin control loop and kinematics for moving joints	*/////////////////////////////////////////////////////////////////
+		#ifdef DEBUG
+			printf("going to get_joint_angles_vrep\n"); fflush(stdout);
+		#endif // DEBUG
 		get_joint_angles_vrep(info_ptr, move_ptr);
+		#ifdef DEBUG
+			printf("going to move_tip_vrep\n"); fflush(stdout);
+		#endif // DEBUG
+
 		
-		printf("begining control sequence\n");
-		control_kinematics(move_ptr, info_ptr);
+		if (info_ptr->response[0] == 'w') { move_tip_vrep(info_ptr, move_ptr, 'w', duty); }
+		if (info_ptr->response[0] == 'a') { move_tip_vrep(info_ptr, move_ptr, 'a', duty); }
+		if (info_ptr->response[0] == 's') { move_tip_vrep(info_ptr, move_ptr, 's', duty); }
+		if (info_ptr->response[0] == 'd') { move_tip_vrep(info_ptr, move_ptr, 'd', duty); }
+		if (info_ptr->response[0] == '-') { move_tip_vrep(info_ptr, move_ptr, '-', duty); }
+		if (info_ptr->response[0] == '+') { move_tip_vrep(info_ptr, move_ptr, '+', duty); }
+
+
+		
 	}
 
 	/*	End of interpreting, free response	*/
@@ -644,6 +674,7 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 
 }
 
+
 void write_object_info(info* info_ptr, char* filename){
 
     /*  Writes all the object handles and corresponding names to filename
@@ -802,6 +833,7 @@ void get_position_vrep(info* info_ptr, float* position, int handle) {
 
 }
 
+
 void get_world_position_vrep(info* info_ptr, float* position, int handle) {
 	//printf("ffgh\n");
 	printf("get world at %f %f %f %d\n", position[0], position[1], position[2], handle); fflush(stdout);
@@ -814,6 +846,7 @@ void get_world_position_vrep(info* info_ptr, float* position, int handle) {
 	
 }
 
+
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) {
 
 	simxFloat pos[3];
@@ -824,6 +857,7 @@ void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) 
 	simxSetObjectPosition(info_ptr->clientID, objectHandle, -1, &pos, simx_opmode_blocking);
 	
 }
+
 
 void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	/* Updates info struct with all jaco arm joint current angles
@@ -863,7 +897,9 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 
 void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang) {
 	/* takes in a joint number between 1 and 6, these are translated into
-	*  object handles, and the arm is moved via external command */
+	*  object handles, and the arm is moved via external command 
+	*	ang is in degrees and represents the change in angle to move the joint
+		specified by jointNum */
 
 	get_joint_angles_vrep(info_ptr, move_ptr);
 
@@ -878,11 +914,13 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
 }
 
+
 void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang) {
 	/* takes in a joint number between 1 and 6, these are translated into
-	*  object handles, and the arm is moved via external command */
+	*  object handles, and the arm is moved via external command 
+	*  ang is in radians and represents the true position of the joint 
+	*	This differs to move_joint_angle_vrep which moves a change in angle (degrees) */
 
-	//get_joint_angles_vrep(info_ptr, move_ptr);
 
 	double jointAngle = ang;
 	if ((jointNum != 4) && (jointNum != 5)) {
@@ -895,14 +933,17 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
 }
 
+
 void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float duty)
 {
-	/*	Get the target's position relative to the base of the arm	*/
+	/*	move's the target for the arm tip to follow
+	*	the movement is specified by direction, with a displacement scaled by duty	*/
 
 	#ifdef DEBUG
 		printf("move_target(), %d\n", info_ptr->targetHandle); fflush(stdout);
 	#endif // DEBUG
-
+	
+	/*	Get the target's position relative to the base of the arm	*/
 	simxFloat position[3];
 	simxFloat orientation[3];
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_blocking);
@@ -968,6 +1009,76 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
 
 }
+
+
+void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
+	/*	Determines the next position the tip should be in from the commands	
+	*	Command is w,s,a,d,-,+
+	*	duty is a decimal between 0->1 that scales the next position */
+#ifdef DEBUG
+	printf("in move_tip_vrep %c %f\n", command, duty); fflush(stdout);
+#endif // DEBUG
+
+
+
+	simxFloat position[3];
+	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, sim_handle_parent, &position, simx_opmode_blocking);
+
+	printf("move_tip_vrep -> tip position: %f %f %f", position[0], position[1], position[2]);
+	
+	if (command == 'w') {
+
+		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
+		simxFloat hype = sqrtf(hype_2) + (0.03*duty);
+		simxFloat angle = atan2f(position[1], position[0]);
+		/*	set new position	*/
+		position[0] = hype * cosf(angle) - position[0];
+		position[1] = hype * sinf(angle) - position[1];
+
+		printf("begining control sequence\n");
+		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
+
+	}
+	else if (command == 's') {
+		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
+		simxFloat hype = sqrtf(hype_2) - (0.03*duty);
+		simxFloat angle = atan2f(position[1], position[0]);
+		/*	set new position	*/
+		position[0] = hype * cosf(angle) - position[0];
+		position[1] = hype * sinf(angle) - position[1];
+
+		printf("begining control sequence\n");
+		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
+
+	}
+	else if (command == 'a') {
+
+		printf("Pivoting +\n");
+		move_joint_angle_vrep(info_ptr, move_ptr, 1, 4.0*duty);
+
+	}
+	else if (command == 'd') {
+
+		printf("Pivoting -\n");
+		move_joint_angle_vrep(info_ptr, move_ptr, 1, -4.0*duty);
+
+	}
+	else if (command == '+') {
+		
+		printf("begining control sequence\n");
+		control_kinematics(info_ptr, move_ptr, 0, 0, 0.04*duty);
+
+	}
+	else if (command == '-') {
+		
+		printf("begining control sequence\n");
+		control_kinematics(info_ptr, move_ptr, 0, 0, -0.04*duty);
+
+	}
+
+}
+
+
 
 void pause_communication_vrep(info* info_ptr, int status) {
 

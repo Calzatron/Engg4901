@@ -13,6 +13,8 @@
 
 #define BUFSIZE 4096 
 
+HANDLE  bufferMutex;
+
 HANDLE g_hChildStd_IN_Rd = NULL;
 HANDLE g_hChildStd_IN_Wr = NULL;
 HANDLE g_hChildStd_OUT_Rd = NULL;
@@ -46,6 +48,19 @@ void add_to_buffer(void);
 uint8_t joystickEnabled(void);
 
 volatile uint8_t access;
+
+
+extern void initialise_joystick_mutex(void) {
+	/*	Defines the buffer mutex	*/
+	bufferMutex = CreateMutex(NULL, FALSE, NULL);
+
+	if (bufferMutex == NULL)
+	{
+		printf("CreateMutex error: %d\n", GetLastError());
+	}
+}
+
+
 
 void CreateChildProcess() {
 	/*
@@ -170,42 +185,54 @@ void joystick_get_char(info* info_ptr) {
 	int i = 0;
 	char c = 'l';
 
-	while (!access) {
-		;
+	DWORD bufferWaitResult = WaitForSingleObject(bufferMutex, INFINITE);  // no time-out interval
+
+	if (bufferWaitResult == WAIT_ABANDONED) {
+		printf("Mutex in indeterminate state");
 	}
-	access = 0x00;
+	else if (bufferWaitResult == WAIT_OBJECT_0) {
+		//while (!access) {
+		//	;
+		//}
+		//access = 0x00;
 
-	if (input_insert_pos - bytes_in_input_buffer < 0) {
-		/* Need to wrap around */
-		//printf(" / %c %c / ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer + INPUT_BUFFER_SIZE]);
-		c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer
-			+ INPUT_BUFFER_SIZE];
-		i = input_buffer_val[input_insert_pos - bytes_in_input_buffer
-			+ INPUT_BUFFER_SIZE];
+		if (input_insert_pos - bytes_in_input_buffer < 0) {
+			/* Need to wrap around */
+			//printf(" / %c %c / ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer + INPUT_BUFFER_SIZE]);
+			c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer
+				+ INPUT_BUFFER_SIZE];
+			i = input_buffer_val[input_insert_pos - bytes_in_input_buffer
+				+ INPUT_BUFFER_SIZE];
+		}
+		else {
+			//printf(" ? %c %c ? ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer]);
+			c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer];
+			i = input_buffer_val[input_insert_pos - bytes_in_input_buffer];
+		}
+
+		/* Decrement our count of bytes in the input buffer */
+		bytes_in_input_buffer--;
+
+		access = 0xFF;
+		#ifdef DEBUG
+			printf("joystick.c: %c %d\n", c, i);									// this shows nothing for c
+		#endif // DEBUG
+
+
+		info_ptr->response = malloc(sizeof(char) * 128);
+		/*	the input is converted into the same format that command line ik
+		*	inputs come in to allow joystick or command line inputs	*/
+
+		sprintf(info_ptr->response, "%c %d", c, i);
+
+		printf("received: %s\n", info_ptr->response);
+
+		if (!ReleaseMutex(bufferMutex))
+		{
+			// Handle error.
+			printf("Could not release Mutex %d\n", GetCurrentThreadId());
+		}
 	}
-	else {
-		//printf(" ? %c %c ? ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer]);
-		c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer];
-		i = input_buffer_val[input_insert_pos - bytes_in_input_buffer];
-	}
-
-	/* Decrement our count of bytes in the input buffer */
-	bytes_in_input_buffer--;
-	
-	access = 0xFF;
-	#ifdef DEBUG
-		printf("joystick.c: %c %d\n", c, i);									// this shows nothing for c
-	#endif // DEBUG
-
-
-	info_ptr->response = malloc(sizeof(char) * 128);
-	/*	the input is converted into the same format that command line ik
-	*	inputs come in to allow joystick or command line inputs	*/
-
-	sprintf(info_ptr->response, "%c %d", c, i);
-
-	printf("received: %s\n", info_ptr->response);
-
 }
 
 
@@ -462,32 +489,47 @@ void interpret_joystick(char* buffer) {
 		* There is room in the input buffer
 		*/
 		if ((delay + ltime < clock()) || (value > 30000)) {
-			while (!access) {
+			//while (!access) {
 				/*	The main thread is using the buffer, wait	*/
-				;
-			}
+			//	;
+			//}
 			/*	lock the buffer from other threads	*/
-			access = 0x00;
+			//access = 0x00;
 
-			input_buffer_cmd[input_insert_pos] = cmd;
-			
-			#ifdef DEBUG
-						printf("input buff: %c %d\n", input_buffer_cmd[input_insert_pos], value);
-			#endif // DEBUG
-		
-			input_buffer_val[input_insert_pos] = value;
-			lastJoystickCmd = cmd;
-			lastJoystickValue = value;
-			input_insert_pos++;
-			bytes_in_input_buffer++;
-			
-			if (input_insert_pos == INPUT_BUFFER_SIZE) {
-				/* Wrap around buffer pointer if necessary */
-				input_insert_pos = 0;
+			DWORD bufferWaitResult = WaitForSingleObject(bufferMutex, INFINITE);  // no time-out interval
+
+			if (bufferWaitResult == WAIT_ABANDONED) {
+				printf("Mutex in indeterminate state\n");
 			}
-			/*	Release the buffer and update the delay clock	*/
-			access = 0xFF;
-			ltime = clock();
+			else if (bufferWaitResult == WAIT_OBJECT_0) {
+
+
+				input_buffer_cmd[input_insert_pos] = cmd;
+
+				#ifdef DEBUG
+					printf("input buff: %c %d\n", input_buffer_cmd[input_insert_pos], value);
+				#endif // DEBUG
+
+				input_buffer_val[input_insert_pos] = value;
+				lastJoystickCmd = cmd;
+				lastJoystickValue = value;
+				input_insert_pos++;
+				bytes_in_input_buffer++;
+
+				if (input_insert_pos == INPUT_BUFFER_SIZE) {
+					/* Wrap around buffer pointer if necessary */
+					input_insert_pos = 0;
+				}
+				/*	Release the buffer and update the delay clock	*/
+				//access = 0xFF;
+				ltime = clock();
+
+				if (!ReleaseMutex(bufferMutex))
+				{
+					// Handle error.
+					printf("Could not release Mutex %d\n", GetCurrentThreadId());
+				}
+			}
 		}
 	}
 }
@@ -495,32 +537,51 @@ void interpret_joystick(char* buffer) {
 
 void add_to_buffer(void) {
 	/*	adds stuff to the buffer if the joystick is held	*/	
-	while (1) {
-		if ((delay + 750 + ltime < clock()) && (joystickToggle) && (joystickCheck)) {
-			while (!access) {
-				/*	Another thread is accessing the buffer, wait	*/
-				;
-			}
-			/*	lock the buffer variables from other threads	*/
-			access = 0x00;
-			
-			#ifdef DEBUG
-						printf("adding extra %c %d to buffer\n", lastJoystickCmd, lastJoystickValue);
-			#endif // DEBUG
-			
-			input_buffer_cmd[input_insert_pos] = lastJoystickCmd;
-			input_buffer_val[input_insert_pos] = lastJoystickValue;
-			input_insert_pos++;
-			bytes_in_input_buffer++;
-			if (input_insert_pos == INPUT_BUFFER_SIZE) {
-				/* Wrap around buffer pointer if necessary */
-				input_insert_pos = 0;
-			}
-			/*	Release the buffer and update delay clock	*/
-			access = 0xFF;
-			ltime = clock();
-		}
-	}
+	//while (1) {
+	//	if ((delay + 750 + ltime < clock()) && (joystickToggle) && (joystickCheck)) {
+	//		//while (!access) {
+	//			/*	Another thread is accessing the buffer, wait	*/
+	//		//	;
+	//		//}
+	//		/*	lock the buffer variables from other threads	*/
+	//		//access = 0x00;
+	//		DWORD bufferWaitResult = WaitForSingleObject(bufferMutex, INFINITE);  // no time-out interval
+
+	//		if (bufferWaitResult == WAIT_ABANDONED) {
+	//			printf("Mutex in indeterminate state\n");
+	//		}
+	//		else if (bufferWaitResult == WAIT_OBJECT_0) {
+
+
+	//			
+	//			if ((lastJoystickCmd > 'a') && (lastJoystickCmd < 'z')) {
+
+	//				#ifdef DEBUG
+	//					printf("thread %d adding extra %c %d to buffer\n", GetCurrentThreadId(), lastJoystickCmd, lastJoystickValue);
+	//				#endif // DEBUG
+
+	//				input_buffer_cmd[input_insert_pos] = lastJoystickCmd;
+	//				input_buffer_val[input_insert_pos] = lastJoystickValue;
+	//				input_insert_pos++;
+	//				bytes_in_input_buffer++;
+	//				if (input_insert_pos == INPUT_BUFFER_SIZE) {
+	//					/* Wrap around buffer pointer if necessary */
+	//					input_insert_pos = 0;
+	//				}
+
+	//			}
+	//			/*	Release the buffer and update delay clock	*/
+	//			//access = 0xFF;
+	//			ltime = clock();
+
+	//			if (!ReleaseMutex(bufferMutex))
+	//			{
+	//				// Handle error.
+	//				printf("Could not release mutex %d\n", GetCurrentThreadId());
+	//			}
+	//		}
+	//	}
+	//}
 	
 }
 
