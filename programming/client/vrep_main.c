@@ -39,7 +39,7 @@ void write_object_info(info* info_ptr, char* filename);
 void get_command(info* info_ptr, move* move_ptr);
 void get_joint_angles_vrep(info* info_ptr, move* move_ptr);
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr);
-void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
+void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang, bool getJointAngles);
 void interpret_command_fk(info* info_ptr, move* move_ptr);
 void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine);
 void CreateChildProcess(void);
@@ -290,7 +290,7 @@ int main(int argc, char** argv){
 		/*	Need to work out how to choose between command or joystick based control	*/
 		if ((strcmp(info_ptr->sceneMode, "ik") == 0) && (joystickEnabled())) {
 
-			printf("ik and joystickEn\n"); fflush(stdout);
+			//printf("ik and joystickEn\n"); fflush(stdout);
 			/*	A joystick was found, get inputs from this	*/
 			if (joystick_input_available()) {
 				/*	A joystick command is available to action on	*/
@@ -540,7 +540,7 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 	}
 
 	/*	Move the joint a specified angle	*/
-	move_joint_angle_vrep(info_ptr, move_ptr, jointNum, ang);
+	move_joint_angle_vrep(info_ptr, move_ptr, jointNum, ang, true);
 	
 	/*	end of interpreting, free the response	*/	
 	free(info_ptr->response);
@@ -647,15 +647,16 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	}
 
 	get_joint_angles_vrep(info_ptr, move_ptr);
-	
-	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[5-1], 5, simx_opmode_oneshot_wait);
-	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[5-1], 25, simx_opmode_oneshot_wait);
-	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 0, simx_opmode_oneshot_wait);
-	
-	ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 5, simx_opmode_oneshot_wait);
-	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 25, simx_opmode_oneshot_wait);
-	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 0, simx_opmode_oneshot_wait);
+	if (strcmp(info_ptr->programMode, "fk") == 0) {
+		/*	set the arm into the upright position	*/
+		int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 5, simx_opmode_oneshot_wait);
+		ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 25, simx_opmode_oneshot_wait);
+		ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 0, simx_opmode_oneshot_wait);
 
+		ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 5, simx_opmode_oneshot_wait);
+		ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 25, simx_opmode_oneshot_wait);
+		ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 0, simx_opmode_oneshot_wait);
+	}
 	/*	Gets and stores the position of the jaco's base element relative to the world frame	*/
 	simxFloat position[3];
 	simxInt handle;
@@ -671,7 +672,6 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 			break;
 		}
 	}
-
 }
 
 
@@ -895,23 +895,23 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 }
 
 
-void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang) {
+void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang, bool getJointAngles) {
 	/* takes in a joint number between 1 and 6, these are translated into
 	*  object handles, and the arm is moved via external command 
 	*	ang is in degrees and represents the change in angle to move the joint
 		specified by jointNum */
-
-	get_joint_angles_vrep(info_ptr, move_ptr);
-
+	if (getJointAngles) {
+		get_joint_angles_vrep(info_ptr, move_ptr);
+	}
 	double jointAngle = move_ptr->currAng[jointNum - 1] + (ang*3.141592 / 180.0);
 	if ((jointNum != 4) && (jointNum != 5)) {
 		jointAngle += 3.141592;
 	}
 	jointAngle = fmod(jointAngle, 2 * 3.141592);
 	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
-	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot_wait);
-	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
-	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
+	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot);
+	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot);
+	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot);
 }
 
 
@@ -1012,7 +1012,7 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 
 
 void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
-	/*	Determines the next position the tip should be in from the commands	
+	/*	Determines the next position the tip should be in from the commands
 	*	Command is w,s,a,d,-,+
 	*	duty is a decimal between 0->1 that scales the next position */
 #ifdef DEBUG
@@ -1020,16 +1020,72 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 #endif // DEBUG
 
 
+	int parentHandle = 18;
+
+	for (int ob = 0; ob < info_ptr->objectCount; ob++) {
+		if (info_ptr->isJoint[ob]) {
+			parentHandle = info_ptr->objectHandles[ob];
+			printf("parentHandle: %d\n", parentHandle);
+			break;
+		}
+	}
 
 	simxFloat position[3];
-	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, sim_handle_parent, &position, simx_opmode_blocking);
+	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
+
+	simxFloat worldPosition[3];
+	simxGetObjectPosition(info_ptr->clientID, parentHandle, -1, &worldPosition, simx_opmode_blocking);
+
+	position[0] -= worldPosition[0];
+	position[1] -= worldPosition[1];
+
+
+
+
+	double tipAngle = 3.141592 - (double)(atan2f(position[1], position[0]));
+
+	double changeAngle;
+	double jointAngle = fmod(move_ptr->currAng[0], 3.141592);
+	if (jointAngle < 0) {
+		jointAngle = 2 * 3.141592 - jointAngle;
+	}
+	printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, move_ptr->currAng[3], jointAngle);
+
+	int notAligned = 1;
+	while (notAligned) {
+		changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+		if (fabs(changeAngle) > 3) {
+			printf("+changeAngle: %f\n", changeAngle);
+			//pause_communication_vrep(info_ptr, 1);
+			//move_joint_angle_vrep(info_ptr, move_ptr, 1, -changeAngle, true);
+			move_joint_angle_vrep(info_ptr, move_ptr, 4, 0.25*changeAngle, true);
+			for (int i = 0; i < 500; i++) {
+				;
+			}
+
+			simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
+			position[0] -= worldPosition[0];
+			position[1] -= worldPosition[1];
+			tipAngle = 3.141592 - (double)(atan2f(position[1], position[0]));
+			changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+		}
+		else {
+			notAligned = 0;
+			break;
+		}
+	}
+	
+
+
+	
+	
 
 	printf("move_tip_vrep -> tip position: %f %f %f", position[0], position[1], position[2]);
 	
 	if (command == 'w') {
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) + (0.03*duty);
+		simxFloat hype = sqrtf(hype_2) + (0.05*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1041,7 +1097,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	}
 	else if (command == 's') {
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) - (0.03*duty);
+		simxFloat hype = sqrtf(hype_2) - (0.05*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1054,13 +1110,13 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	else if (command == 'a') {
 
 		printf("Pivoting +\n");
-		move_joint_angle_vrep(info_ptr, move_ptr, 1, 4.0*duty);
+		move_joint_angle_vrep(info_ptr, move_ptr, 1, 4.0*duty, false);
 
 	}
 	else if (command == 'd') {
 
 		printf("Pivoting -\n");
-		move_joint_angle_vrep(info_ptr, move_ptr, 1, -4.0*duty);
+		move_joint_angle_vrep(info_ptr, move_ptr, 1, -4.0*duty, false);
 
 	}
 	else if (command == '+') {

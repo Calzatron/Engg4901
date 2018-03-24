@@ -113,7 +113,7 @@ sq_2 = (-px*d3*sin(q_3) + (d2+d3*cos(q_3))*(pz -d1)) / (d2^2 + d3^2 + 2*d2*d3*co
 q_2 = (pi/2) - atan2(sq_2,cq_2);
 
 % q_1 offset
-q_1 = tan((p_initial(2))/p_initial(1)) - sin((100+e2) / ((px^2 + py^2)^.5));
+q_1 = atan2((p_initial(2))/p_initial(1)) - sin((100+e2) / ((px^2 + py^2)^.5));
 
 q_3*180/pi
 q_2*180/pi
