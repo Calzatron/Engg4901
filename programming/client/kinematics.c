@@ -18,7 +18,7 @@ void fk_classic(move* move_ptr, info* info_ptr);
 void fk_mod(move* move_ptr);
 int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
-void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
+int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z);
 
 void define_classic_parameters(move* move_ptr) {
@@ -71,9 +71,48 @@ void define_classic_parameters(move* move_ptr) {
 }
 
 
-
-
 void fk_classic(move* move_ptr, info* info_ptr) {
+
+	double q_1 = move_ptr->currAng[1 - 1];
+	double q_2 = move_ptr->currAng[2 - 1];
+	double q_3 = move_ptr->currAng[3 - 1];
+	double q_4 = move_ptr->currAng[4 - 1];
+	double q_5 = move_ptr->currAng[5 - 1];
+	#ifdef DEBUG
+		printf("Angles are:		%f %f %f %f %f\n", q_1, q_2, q_3, q_4, q_5);
+	#endif // DEBUG
+
+
+	double pi = 3.141592;
+
+	/*	Transform angles into DH	*/
+	double q1, q2, q3, q4, q5, q6;
+	q1 = -pi - q_1;
+	//q1 = -q_1;
+	//q1 = q1 + pi;
+	q2 = -(pi / 2.0) + (q_2 + pi);
+	q3 = (pi / 2.0) + (q_3 + pi);
+	q4 = q_4;
+	q5 = -pi + q_5;
+	q6 = 0;
+	double T[3];
+
+	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+
+	T[0] = (T[0] / 1000.0);
+	T[1] = (T[1] / 1000.0);
+	T[2] = (T[2] / 1000.0);
+#ifdef DEBUG
+	printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
+#endif // DEBUG
+
+}
+
+
+
+void fk_classic_old(move* move_ptr, info* info_ptr) {
 	/*	Calculates the position of the tip using classic DH parameters
 	*	ret = T * pt
 	*/
@@ -158,7 +197,7 @@ void fk_classic(move* move_ptr, info* info_ptr) {
 
 
 
-void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles) {
+int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles) {
 	/*	Uses the position of the fourth joint to calculate angles q_2 and q_3
 	*	After, the position of S' is calculated (position of the tip for the given 
 	*	and current angles)
@@ -179,9 +218,10 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	//int joint4Handle = 27;
 
 	//get_world_position_vrep(info_ptr, position, joint4Handle);
-
-	printf("joint4 at %f %f %f\n", position[0], position[1], position[2]);
-	
+	#ifdef DEBUG
+		printf("Tip desired: %f %f %f\n", position[0], position[1], position[2]);
+	#endif // DEBUG
+			
 	//double px = (double)((position[0] - basePosition[0])*1000.0);
 	//double py = (double)((position[1] - basePosition[1])*1000.0);
 	double px = (double)((position[0])*1000.0);
@@ -196,8 +236,11 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	double k = 2.0 * d2 * d3;
 
 	if (fabsf(j) > fabsf(k)) {
-		printf("x,z,i,j:	%f %f %f %f\n",px,pz, j, k);
-		exit(1);
+		#ifdef DEBUG
+		printf("x,z,i,j:	%f %f %f %f\n", px, pz, j, k);
+		#endif // DEBUG
+
+		return 1;
 	}
 
 	double q_3 = 1 * acos( j / k );
@@ -213,7 +256,10 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	if (((move_ptr->currAng[3 - 1] - pi / 4 < q_3) && (move_ptr->currAng[3 - 1] + pi / 4 > q_3)) ||
 				((q_2 < 0) && (q_3 > 0)) || ((q_2 > 0) && (q_3 < 0))){
 		/*	the new q_3 is within reach of the current joint 3's position	*/
+	#ifdef DEBUG
 		printf("check ");
+	#endif // DEBUG
+				
 	}
 	else {
 		/*	the wrong angle reflection was chosen, re-calculate	*/
@@ -230,9 +276,75 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	double q_1 = move_ptr->currAng[1 - 1];
 	double q_4 = move_ptr->currAng[4 - 1];
 	double q_5 = move_ptr->currAng[5 - 1];
+	#ifdef DEBUG
+		printf("Angles are:		%f %f %f %f %f\n", q_1, q_2, q_3, q_4, q_5);
+	#endif // DEBUG
+
 	
-	printf("Angles are:		%f %f %f %f %f\n", q_1, q_2, q_3, q_4, q_5);
+
+
+	/*	Transform angles into DH	*/
+	double q1, q2, q3, q4, q5, q6;
+	q1 = -pi - q_1;
+	//q1 = -q_1;
+	//q1 = q1 + pi;
+	q2 = -(pi / 2.0) + (q_2 + pi);
+	q3 = (pi / 2.0) + (q_3 + pi);
+	q4 = q_4;
+	q5 = -pi + q_5;
+	q6 = 0;
+	double T[3];
 	
+	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+
+//	if ((T[0] / position[0] > 0) && (T[1] / position[1] > 0)) {
+//	#ifdef DEBUG
+//		printf("GGG");
+//		
+//
+//	#endif // 
+//		
+//	}
+//	else {
+//#		ifdef DEBUG
+//			printf("HHH");
+//		#endif // DEBUG
+//		//	exit(1);
+//		//return 2;
+//	}
+	//else {
+	//	q1 = - q_1;
+	//	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	//	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	//	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+	//}
+
+	//if ((T[0] / position[0] > 0) && (T[1] / position[1] > 0)) {
+	//	printf("HHH");
+	//}
+	//else {
+	//	q1 = -q_1;
+	//	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	//	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	//	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+	//}
+
+	//if ((T[0] / position[0] > 0) && (T[1] / position[1] > 0)) {
+	//	printf("JJJ");
+	//}
+	//else {
+	//	q1 = q_1;
+	//	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	//	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	//	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+	//}
+	//if ((T[0] / position[0] > 0) && (T[1] / position[1] > 0)) {
+	//	// same sign -> same coords
+	//	printf("KKK");
+	//}
+
 	angles[0] = (q_1);
 	angles[1] = (q_2);
 	angles[2] = (q_3);
@@ -240,27 +352,13 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	angles[4] = (q_5);
 	angles[5] = (0.0);
 
-	/*	Transform angles into DH	*/
-	double q1, q2, q3, q4, q5, q6;
-	q1 = -pi - q_1;
-	//q1 = -q_1;
-	q2 = -(pi / 2.0) + (q_2 + pi);
-	q3 = (pi / 2) + (q_3 + pi);
-	q4 = q_4;
-	q5 = -pi + q_5;
-	q6 = 0;
-	double T[3];
-
-	T[1 - 1] = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
-	T[2 - 1] = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
-	T[3 - 1] = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
-
-	T[0] = (T[0] / 1000.0);// + basePosition[0];
-	T[1] = (T[1] / 1000.0);// + basePosition[1];
+	T[0] = (T[0] / 1000.0);
+	T[1] = (T[1] / 1000.0);
 	T[2] = (T[2] / 1000.0);
+	#ifdef DEBUG
+		printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
+	#endif // DEBUG
 
-	printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
-	
 	//get_world_position_vrep(info_ptr, &position, info_ptr->targetHandle-1);
 	//printf("Position of Tip at:			%f %f %f\n", position[0], position[1], position[2]);
 	//int targetHandle = info_ptr->targetHandle;
@@ -271,12 +369,21 @@ void inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double*
 	position[1] = (float)(T[1]);
 	position[2] = (float)(T[2]);
 
-	//set_world_position_vrep(info_ptr, desTargetPos, targetHandle);
-	//free(position);
+	//exit(1);
+	
+	if ((T[0] / position[0] > 0) && (T[1] / position[1] > 0)) {
+#ifdef DEBUG
+		printf("GGG");
+		return 0;
+#endif // 
 
-
-	//move_joint_angle_vrep(info_ptr, move_ptr, 1, q_1);
-
+	}
+	else {
+#		ifdef DEBUG
+		printf("HHH");
+		return 2;
+#endif // DEBUG
+	}
 
 }
 
@@ -291,38 +398,66 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 
 	/*	Get the current tip position and update S_desired	*/
 	float S_desired[4];
-	//float S_initial[4];
+
 	S_desired[0] = 0; S_desired[1] = 0; S_desired[2] = 0; S_desired[3] = 0;
 	int tipHandle = info_ptr->targetHandle -1;
 	get_world_position_vrep(info_ptr, S_desired, tipHandle);
-	//S_initial[0] = S_desired[0] - info_ptr->armPosition[0];
-	//S_initial[1] = S_desired[1] - info_ptr->armPosition[1];
-	//S_initial[2] = S_desired[2] - info_ptr->armPosition[2];
-	printf("\nActual Tip Position:	%f %f %f\n", S_desired[0] - info_ptr->armPosition[0], S_desired[1] - info_ptr->armPosition[1], S_desired[2]);
 
-	S_desired[0] += (x - info_ptr->armPosition[0]);
-	S_desired[1] += (y - info_ptr->armPosition[1]);
+	printf("\nActual Tip Position:	%f %f %f\n", S_desired[0] - info_ptr->armPosition[0] , S_desired[1] - info_ptr->armPosition[1], S_desired[2]);
+
+	S_desired[0] = x - info_ptr->armPosition[0] + S_desired[0];
+	S_desired[1] = y - info_ptr->armPosition[1] + S_desired[1];
 	S_desired[2] += z;
-	J4_desired[0] += (x - info_ptr->armPosition[0]);
-	J4_desired[1] += (y - info_ptr->armPosition[1]);
+	J4_desired[0] = x - info_ptr->armPosition[0] + J4_desired[0];
+	J4_desired[1] = y - info_ptr->armPosition[1] + J4_desired[1];
 	J4_desired[2] += z;
 	
 	printf("\nDesired Tip Position:	%f %f %f\n", S_desired[0], S_desired[1], S_desired[2]);
 	printf("\nJoint 4 Position:	%f %f %f\n", J4_desired[0], J4_desired[1], J4_desired[2]);
 	/*	Initialise the control variables	*/
 	float S_error[4] = { 0, 0, 0, 0 };
-	double angles[6] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+	double initialAngles[6] = { move_ptr->currAng[0], move_ptr->currAng[1], move_ptr->currAng[2], move_ptr->currAng[3], 0.0, 0.0 };
+	double angles[6] = { 0, 0, 0, 0, 0, 0 };
 	int loop = 1;
-	printf("calculating");
+
+	#ifdef DEBUG
+		printf("calculating");
+	#endif // DEBUG
+			
 	for(int run = 0; run < 15; run++) {
-		printf(".");
+
 		/*	Update the desired Joint4 position	*/
 		float position[4] = { J4_desired[0] + S_error[0], J4_desired[1] + S_error[1], J4_desired[2] + S_error[2], 0.0 };
 		/*	update position with the calculated tip position 	*/
-		inverse_kinematics(move_ptr, info_ptr, position, angles);
-		
+		int errorCheck = inverse_kinematics(move_ptr, info_ptr, position, angles);
+		if (errorCheck == 1) {
+			printf("IK ERROR %d\n", errorCheck);
+			break;
+		}
+		else if (errorCheck == 2) {
+			if ((S_desired[0] / position[0] < 0) || (S_desired[1] / position[1] < 0)) {
+				// coordinate frame changed...
+				angles[0] = initialAngles[0];
+				angles[1] = initialAngles[1];
+				angles[2] = initialAngles[2];
+				angles[3] = initialAngles[3];
+				angles[4] = initialAngles[4];
+				angles[5] = initialAngles[5];
+				break;
+			}
+		}
+		else {
+			initialAngles[0] = angles[0];
+			initialAngles[1] = angles[1];
+			initialAngles[2] = angles[2];
+			initialAngles[3] = angles[3];
+			initialAngles[4] = angles[4];
+			initialAngles[5] = angles[5];
+		}
+
 		/*	check that the position is within 2cm of the desired tip position	*/
-		if ((fabs(S_desired[0] - position[0]) < 0.02) && (fabs(S_desired[1] - position[1]) < 0.02) && (fabs(S_desired[2] - position[2]) < 0.02)) {
+		if ((fabs(S_desired[0] - position[0]) < 0.02) && (fabs(S_desired[1] - position[1]) < 0.02) 
+				&& (fabs(S_desired[2] - position[2]) < 0.02)) {
 			loop = 0;
 			break;
 		}
@@ -330,26 +465,43 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 		/*	Add some proportionality to the error to ensure limited overshoot
 		*	between calculations
 		*/
-		S_error[0] += 0.1*(S_desired[0] - position[0]);
-		S_error[1] += 0.1*(S_desired[1] - position[1]);
+		S_error[0] += 0.2*(S_desired[0] - position[0]);
+		S_error[1] += 0.2*(S_desired[1] - position[1]);
 
 		if (((move_ptr->currAng[1] < 0.01) || (move_ptr->currAng[1] > 6.24)) &&
 			((move_ptr->currAng[2] < 0.01) || (move_ptr->currAng[2] > 6.24))) {
 			S_desired[2] = position[2];
+			// arm is fully extended
 			// there's no hope of reaching a higher arm position from joint4 pos
 		}
 		else {
 			S_error[2] += 0.1*(S_desired[2] - position[2]);
 		}
+		printf("S_error:	%f %f %f\n", S_error[0], S_error[1], S_error[2]);
 	}
 
 	/*	Got angles, move the arm	*/
-	//pause_communication_vrep(info_ptr, 1);
-	//double angle1 = 
-	set_joint_angle_vrep(info_ptr, move_ptr, 1, angles[0]);
+	//double jointTwoAngle = fmod(move_ptr->currAng[1] + 3.141592, 2*3.141592);
+	//printf("before: %f\n", jointTwoAngle);
+	//double newJointTwoAngle = fmod(angles[1] + 3.141592, 2 * 3.141592);
+	//printf("after: %f\n", newJointTwoAngle);
+	//
+	//if ((jointTwoAngle < 3.141592) && (newJointTwoAngle > 3.141592)) {
+	//	angles[1] -= 3.141592;
+	//	
+	//	printf("new angle: %f\n", angles[1]);
+	//}
+	//else if ((jointTwoAngle > 3.141592) && (newJointTwoAngle < 3.141592)) {
+	//	angles[1] += 3.141592;
+	//	printf("new angle: %f\n", angles[1]);
+	//}
+	
+	//exit(1);
+
+	pause_communication_vrep(info_ptr, 1);
 	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles[1]);
 	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles[2]);
-	//pause_communication_vrep(info_ptr, 0);
+	pause_communication_vrep(info_ptr, 0);
 }
 
 

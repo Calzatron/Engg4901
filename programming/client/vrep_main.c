@@ -20,7 +20,7 @@
 #include "Shlwapi.h"
 #include <direct.h>
 #include "kinematics.h"
-
+#include <time.h>
 /*	Global Definitions	*/
 #define BUFSIZE 4096 
 
@@ -404,7 +404,11 @@ void get_command(info* info_ptr, move* move_ptr){
 		*/
 		interpret_command_ik(info_ptr, move_ptr, true); 
 	}
-	printf("herr\n");
+
+	#ifdef DEBUG
+		printf("finished interpret_command_ik\n");
+	#endif // DEBUG
+
 }
 
 
@@ -441,6 +445,7 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		if (info_ptr->response[0] == 'd') { move_target_vrep(info_ptr, move_ptr, 'd', duty); }
 		if (info_ptr->response[0] == '-') { move_target_vrep(info_ptr, move_ptr, '-', duty); }
 		if (info_ptr->response[0] == '+') { move_target_vrep(info_ptr, move_ptr, '+', duty); }
+		
 	}
 	else {
 		/*	FK scene but given IK input
@@ -460,8 +465,11 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		if (info_ptr->response[0] == 'd') { move_tip_vrep(info_ptr, move_ptr, 'd', duty); }
 		if (info_ptr->response[0] == '-') { move_tip_vrep(info_ptr, move_ptr, '-', duty); }
 		if (info_ptr->response[0] == '+') { move_tip_vrep(info_ptr, move_ptr, '+', duty); }
-
-
+		if (info_ptr->response[0] == 'p') { move_tip_vrep(info_ptr, move_ptr, 'p', duty); }
+		if ((info_ptr->response[0] == 'f') && (info_ptr->response[1] == 'k')) {
+			/*	was asked to get the joint angles using the classic DH parameters and FK	*/
+			fk_classic(move_ptr, info_ptr);								// UPDATED
+		}
 		
 	}
 
@@ -629,14 +637,12 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	while (num < 6) {
 
 		if (info_ptr->isJoint[i]) {
-			//printf("is joint: %s\n", info_ptr->objectNames[i]);
 			info_ptr->jacoArmJointHandles[num] = info_ptr->objectHandles[i];
 			#ifdef DEBUG
 						printf("joint handle: %d\n", info_ptr->jacoArmJointHandles[num]);
 
 			#endif // DEBUG
 
-		//	printf("joint handle: %d\n", info_ptr->jacoArmJointHandles[num]);
 			++num;
 		}
 		++i;
@@ -649,14 +655,19 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	get_joint_angles_vrep(info_ptr, move_ptr);
 	if (strcmp(info_ptr->programMode, "fk") == 0) {
 		/*	set the arm into the upright position	*/
-		int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 5, simx_opmode_oneshot_wait);
-		ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 25, simx_opmode_oneshot_wait);
-		ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 0, simx_opmode_oneshot_wait);
+		//int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 5, simx_opmode_oneshot_wait);
+		//ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 25, simx_opmode_oneshot_wait);
+		//ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 0, simx_opmode_oneshot_wait);
 
-		ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 5, simx_opmode_oneshot_wait);
-		ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 25, simx_opmode_oneshot_wait);
-		ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 0, simx_opmode_oneshot_wait);
+		//ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 5, simx_opmode_oneshot_wait);
+		//ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 25, simx_opmode_oneshot_wait);
+		//ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 0, simx_opmode_oneshot_wait);
 	}
+	else if (strcmp(info_ptr->programMode, "ik") == 0) {
+		//move_joint_angle_vrep(info_ptr, move_ptr, 1, -90, false);
+		//move_joint_angle_vrep(info_ptr, move_ptr, 4, 90, false);
+	}
+
 	/*	Gets and stores the position of the jaco's base element relative to the world frame	*/
 	simxFloat position[3];
 	simxInt handle;
@@ -797,7 +808,10 @@ void read_object_info(info* info_ptr, char* filename) {
 			info_ptr->targetHandle = ob;
 		}
 	}
-	printf("This is the target's object handle: %d\n", info_ptr->targetHandle);
+	#ifdef DEBUG
+		printf("This is the target's object handle: %d\n", info_ptr->targetHandle);
+	#endif // DEBUG
+	
 }
 
 
@@ -835,15 +849,14 @@ void get_position_vrep(info* info_ptr, float* position, int handle) {
 
 
 void get_world_position_vrep(info* info_ptr, float* position, int handle) {
-	//printf("ffgh\n");
-	printf("get world at %f %f %f %d\n", position[0], position[1], position[2], handle); fflush(stdout);
-	//simxFloat* pos = malloc(sizeof(simxFloat) * 3);
 
 	simxFloat pos[3];
 	simxGetObjectPosition(info_ptr->clientID, handle, -1, &pos, simx_opmode_blocking);
 	position[0] = pos[0]; position[1] = pos[1]; position[2] = pos[2];
-	printf("get at %f %f %f %d\n", position[0], position[1], position[2], handle); fflush(stdout);
-	
+	#ifdef DEBUG
+		printf("world position: %f %f %f\n", position[0], position[1], position[2]);
+	#endif // DEBUG
+
 }
 
 
@@ -853,9 +866,11 @@ void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) 
 	pos[0] = position[0];
 	pos[1] = position[1];
 	pos[2] = position[2];
-	printf("Sending target %d to %f %f %f\n", objectHandle, pos[0], pos[1], pos[2]);
+	#ifdef DEBUG
+		printf("Sending target %d to %f %f %f\n", objectHandle, pos[0], pos[1], pos[2]);
+	#endif // DEBUG
+
 	simxSetObjectPosition(info_ptr->clientID, objectHandle, -1, &pos, simx_opmode_blocking);
-	
 }
 
 
@@ -908,10 +923,14 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 		jointAngle += 3.141592;
 	}
 	jointAngle = fmod(jointAngle, 2 * 3.141592);
-	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
-	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot);
-	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot);
-	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot);
+	#ifdef DEBUG
+		printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+	#endif // DEBUG
+
+	/*	Move the arm	*/
+	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
+	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 50, simx_opmode_oneshot_wait);
+	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
 }
 
 
@@ -926,11 +945,22 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 	if ((jointNum != 4) && (jointNum != 5)) {
 		jointAngle += 3.141592;
 	}
-	jointAngle = fmod(jointAngle, 2 * 3.141592);
+	//jointAngle = fmod(jointAngle, 2 * 3.141592);
 	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
-	int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 20, simx_opmode_oneshot_wait);
-	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot_wait);
-	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot_wait);
+	int ret;
+	if (jointNum == 2) {
+		int velocity = (25 * 410) / 207;
+		ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], velocity, simx_opmode_oneshot);
+	}
+	else if (jointNum == 3) {
+		int velocity = (25 * 207) / 410;
+		ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], velocity, simx_opmode_oneshot);
+	}
+	else {
+		ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot);
+	}
+	ret = simxSetJointForce(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], 25, simx_opmode_oneshot);
+	ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[jointNum - 1], jointAngle, simx_opmode_oneshot);
 }
 
 
@@ -1015,20 +1045,22 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	/*	Determines the next position the tip should be in from the commands
 	*	Command is w,s,a,d,-,+
 	*	duty is a decimal between 0->1 that scales the next position */
-#ifdef DEBUG
-	printf("in move_tip_vrep %c %f\n", command, duty); fflush(stdout);
-#endif // DEBUG
+	#ifdef DEBUG
+		printf("in move_tip_vrep %c %f\n", command, duty); fflush(stdout);
+	#endif // DEBUG
 
 
-	int parentHandle = 18;
-
-	for (int ob = 0; ob < info_ptr->objectCount; ob++) {
+	//int parentHandle = 18;
+	/*for (int ob = 0; ob < info_ptr->objectCount; ob++) {
 		if (info_ptr->isJoint[ob]) {
 			parentHandle = info_ptr->objectHandles[ob];
 			printf("parentHandle: %d\n", parentHandle);
 			break;
 		}
-	}
+	}*/
+	
+	// the joint handle struct exists and holds the base handle
+	int parentHandle = info_ptr->jacoArmJointHandles[1 - 1];
 
 	simxFloat position[3];
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
@@ -1039,95 +1071,168 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	position[0] -= worldPosition[0];
 	position[1] -= worldPosition[1];
 
+	simxFloat joint5Position[3];
+	simxGetObjectPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[5-1], -1, &joint5Position, simx_opmode_blocking);
+	joint5Position[0] -= worldPosition[0];
+	joint5Position[1] -= worldPosition[1];
 
+	float joint5Mag = joint5Position[0] * joint5Position[0] + joint5Position[1] * joint5Position[1];
+	float tipMag = position[0] * position[0] + position[1] * position[1];
+	if ((tipMag < joint5Mag) && (joint5Position[2] < position[2])) {
+		move_joint_angle_vrep(info_ptr, move_ptr, 4, 180, false);
+		while ((tipMag < joint5Mag) && (joint5Position[2] < position[2])) {
+			for (int wait = 0; wait < 200; wait++) { ; }
+			simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
+			tipMag = position[0] * position[0] + position[1] * position[1];
+			printf("...");
+		}
+	}
 
-
-	double tipAngle = 3.141592 - (double)(atan2f(position[1], position[0]));
+	double tipAngle = (double)(atan2f(position[1], position[0]));
+	if (tipAngle < 0) {
+		tipAngle = 2 * 3.141592 + tipAngle;
+	}
+	tipAngle = (3.141592 - fmod(tipAngle, 3.141592));
 
 	double changeAngle;
-	double jointAngle = fmod(move_ptr->currAng[0], 3.141592);
+	double jointAngle = move_ptr->currAng[0];// = fmod(move_ptr->currAng[0], 3.141592);
 	if (jointAngle < 0) {
-		jointAngle = 2 * 3.141592 - jointAngle;
+		jointAngle = 2 * 3.141592 + jointAngle;
 	}
-	printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, move_ptr->currAng[3], jointAngle);
+	jointAngle = fmod(jointAngle, 3.141592);
 
-	int notAligned = 1;
-	while (notAligned) {
+		#ifdef DEBUG
+			printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, move_ptr->currAng[3], jointAngle);
+		#endif // DEBUG
+
+
+	if (command == 'p') {
+		/*	Print out the orientation of the tip and base joint	*/
 		changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
-		if (fabs(changeAngle) > 3) {
-			printf("+changeAngle: %f\n", changeAngle);
-			//pause_communication_vrep(info_ptr, 1);
-			//move_joint_angle_vrep(info_ptr, move_ptr, 1, -changeAngle, true);
-			move_joint_angle_vrep(info_ptr, move_ptr, 4, 0.25*changeAngle, true);
-			for (int i = 0; i < 500; i++) {
-				;
-			}
-
-			simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
-			position[0] -= worldPosition[0];
-			position[1] -= worldPosition[1];
-			tipAngle = 3.141592 - (double)(atan2f(position[1], position[0]));
-			changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
-		}
-		else {
-			notAligned = 0;
-			break;
-		}
+		printf("tipAngle: %f,	base Angle: %f		change: %f\n", tipAngle, jointAngle, changeAngle);
+		return;
 	}
-	
 
+	if ((command != 'a') && (command != 'd')) {
+		/*	Ignore this correction if only the base joint is moving	*/
 
-	
-	
+		int notAligned = 1;
+		while (notAligned) {
 
-	printf("move_tip_vrep -> tip position: %f %f %f", position[0], position[1], position[2]);
-	
+			/*	Loop until the tip is aligned with the base orientation	*/
+			changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+			if (fabs(changeAngle) > 3) {
+				
+				#ifdef DEBUG
+					printf("Correction: changeAngle %f\n", changeAngle);
+				#endif // DEBUG
+
+				move_joint_angle_vrep(info_ptr, move_ptr, 4, 0.8 * changeAngle, true);
+				for (int i = 0; i < 700; i++) {
+					; // delay and wait for the arm to move
+				}
+
+				/*	Determine the position fo Joint4, it can get stuck if it is at 0 or pi
+				*	Because the error switches between +-MaxError	*/
+				simxFloat joint4Angle;
+				int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], &position, simx_opmode_blocking);
+
+				joint4Angle = fmodf(joint4Angle, 3.141592);
+				if (joint4Angle < 0.3 || joint4Angle > 6.0) {
+					/*	The arm is likely to be or is about to be stuck in correction
+					*	move the arm to a defined position and exit	*/
+					//move_joint_angle_vrep(info_ptr, move_ptr, 4, 90, false);
+					//break;
+				}
+
+				/*	Get the position of the tip and recalculate the angle to correct for	*/
+				simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
+				position[0] -= worldPosition[0];
+				position[1] -= worldPosition[1];
+				tipAngle = (double)(atan2f(position[1], position[0]));
+				
+				if (tipAngle < 0) {
+					/*	Ensure the angle is positive to the change in angle is accurate in direction	*/
+					tipAngle = 2 * 3.141592 + tipAngle;
+				}
+
+				/*	Modulate the tip angle as it doesn't matter which frame it is in	*/
+				tipAngle = (3.141592 - fmod(tipAngle, 3.141592));
+
+			}
+			else {
+				/*	The angle has been corrected, the joints are aligned	*/
+				notAligned = 0;
+				break;
+			}
+		}
+
+	}
+
+	/*	Display the current tip position	*/	
+	#ifdef DEBUG
+		printf("move_tip_vrep -> tip position: %f %f %f", position[0], position[1], position[2]);
+	#endif // DEBUG
+
 	if (command == 'w') {
+		/*	Move tip radially outwards	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) + (0.05*duty);
+		simxFloat hype = sqrtf(hype_2) + (0.03*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
 		position[1] = hype * sinf(angle) - position[1];
-
-		printf("begining control sequence\n");
+		#ifdef DEBUG
+				printf("begining control sequence\n");
+		#endif // DEBUG
+		/*	Move the arm to the desired location	*/
 		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
 
 	}
 	else if (command == 's') {
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) - (0.05*duty);
+		simxFloat hype = sqrtf(hype_2) - (0.03*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
 		position[1] = hype * sinf(angle) - position[1];
 
-		printf("begining control sequence\n");
+		#ifdef DEBUG
+			printf("begining control sequence\n");
+		#endif // DEBUG
 		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
 
 	}
-	else if (command == 'a') {
-
-		printf("Pivoting +\n");
+	else if (command == 'd') {
+		#ifdef DEBUG
+			printf("Pivoting +\n");
+		#endif // DEBUG
+	
 		move_joint_angle_vrep(info_ptr, move_ptr, 1, 4.0*duty, false);
 
 	}
-	else if (command == 'd') {
-
-		printf("Pivoting -\n");
+	else if (command == 'a') {
+		#ifdef DEBUG
+			printf("Pivoting -\n");
+		#endif // DEBUG
+					
 		move_joint_angle_vrep(info_ptr, move_ptr, 1, -4.0*duty, false);
 
 	}
 	else if (command == '+') {
 		
-		printf("begining control sequence\n");
+		#ifdef DEBUG
+			printf("begining control sequence\n");
+		#endif // DEBUG
 		control_kinematics(info_ptr, move_ptr, 0, 0, 0.04*duty);
 
 	}
 	else if (command == '-') {
 		
-		printf("begining control sequence\n");
+		#ifdef DEBUG
+			printf("begining control sequence\n");
+		#endif // DEBUG
 		control_kinematics(info_ptr, move_ptr, 0, 0, -0.04*duty);
 
 	}

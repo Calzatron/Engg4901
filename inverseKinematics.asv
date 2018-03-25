@@ -88,7 +88,7 @@ A_col = collect(A, [cos(q1), cos(q2), cos(q3), cos(q4), cos(q5), cos(q6), sin(q1
 
 % The position of Jaco_link4
 %p_initial = [ (-1000.033 - -1000.116); 9.987; 814.333; 1];
-p_initial = [ 72.33; -99.52; 480.016; 1];
+p_initial = [ 248.2; -308.19; 348.406; 1];
 px = p_initial(1);
 py = p_initial(2);
 pz = p_initial(3);
@@ -118,8 +118,8 @@ q_1 = 4.01426;%= atan2((p_initial(2)), p_initial(1)) - asin(e2 / ((px^2 + py^2)^
 q_3*180/pi
 q_2*180/pi
 
-q_4 = -1.570769%pi/4;
-q_5 = 0;%0.34828;
+q_4 = pi/4;
+q_5 = 0.34828;
 %%
 tic;
 % Geometrically move from point P, to R and then to S (tip coords)
