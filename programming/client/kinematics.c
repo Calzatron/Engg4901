@@ -108,6 +108,13 @@ void fk_classic(move* move_ptr, info* info_ptr) {
 	printf("Calc position of Tip at:		%f %f %f\n", T[0], T[1], T[2]);
 #endif // DEBUG
 
+
+	float tipPosition[3];
+	int handle = info_ptr->targetHandle - 1;
+	get_world_position_vrep(info_ptr, tipPosition,  handle);
+
+	printf("Found tip to be at:		%f %f %f\n", tipPosition[0] - info_ptr->armPosition[0], tipPosition[1] - info_ptr->armPosition[1], tipPosition[2]);
+
 }
 
 
@@ -392,9 +399,19 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 	
 	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
 	float J4_desired[4];
+	float J5_desired[4];
 	J4_desired[0] = 0; J4_desired[1] = 0; J4_desired[2] = 0; J4_desired[3] = 0;
-	int joint4Handle = 27;
+	J5_desired[0] = 0; J5_desired[1] = 0; J5_desired[2] = 0; J5_desired[3] = 0;
+	int joint4Handle = info_ptr->jacoArmJointHandles[4 - 1];//27;
+	int joint5Handle = info_ptr->jacoArmJointHandles[5 - 1];
 	get_world_position_vrep(info_ptr, J4_desired, joint4Handle);
+	get_world_position_vrep(info_ptr, J5_desired, joint5Handle);
+
+	J4_desired[0] -= info_ptr->armPosition[0];
+	J4_desired[1] -= info_ptr->armPosition[1];
+	J5_desired[0] -= info_ptr->armPosition[0];
+	J5_desired[1] -= info_ptr->armPosition[1];
+
 
 	/*	Get the current tip position and update S_desired	*/
 	float S_desired[4];
@@ -408,9 +425,10 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 	S_desired[0] = x - info_ptr->armPosition[0] + S_desired[0];
 	S_desired[1] = y - info_ptr->armPosition[1] + S_desired[1];
 	S_desired[2] += z;
-	J4_desired[0] = x - info_ptr->armPosition[0] + J4_desired[0];
-	J4_desired[1] = y - info_ptr->armPosition[1] + J4_desired[1];
-	J4_desired[2] += z;
+
+	J4_desired[0] = x + (J4_desired[0] + J5_desired[0]) / 2.0;
+	J4_desired[1] = y + (J4_desired[1] + J5_desired[1]) / 2.0;
+	J4_desired[2] = z + (J4_desired[2] + J5_desired[2]) / 2.0;
 	
 	printf("\nDesired Tip Position:	%f %f %f\n", S_desired[0], S_desired[1], S_desired[2]);
 	printf("\nJoint 4 Position:	%f %f %f\n", J4_desired[0], J4_desired[1], J4_desired[2]);
