@@ -6,7 +6,9 @@ The remote executable is stored in /programming/client/x64/Release/vrepClientPro
 Usage: vrepClientProgram.exe ik/fk [object filename] [IP Adress] [port]
 by default the IP Address and port are local host and 19999.
 
-ik and fk scenes containing the Jaco arm are found in the route folder.
+When the scene is fk, the input commands can be either fk or ik; `jointNumber Angle` or `[wasd+-]`. A prompt at the beginning will set the program to use fk or ik.
+
+ik and fk scenes containing the Jaco arm are found in the route folder. When using a fk scene with ik functionality, it is best to use the SimpleScene-fk_tip.ttt VREP file, as it positions the a dumby object at the point of determined by the transformation matrix.
 
 The joystick library used is SDL2-2.0.7, which is open source and has been modified for use.
 
@@ -22,3 +24,7 @@ Where jointNumber correspondes to joint 1 (base) to 6 (tip).
 Bugs: deleting objects from a scene will decrease the object count but not modify the objects
 handles, so if there's 100 objects, some may have handles >100. Thus loading in the handles is required
 for modified scenes, where loading from a file fails due to accessing elements > object count.
+
+_______________________________________________________________________________
+FK scene with IK inputs is slow and shouldnt be used with a Joystick. Moving over the 2*pi/0* line has undesirable effects, as well as when Joint4/Joint5 is in one quadrant and when the tip is in another.
+
