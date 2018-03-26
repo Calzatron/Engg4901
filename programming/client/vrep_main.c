@@ -58,8 +58,10 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty);
 
 /*	Program Functions	*/
 
+
+/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
 void initialise_program(info* info_ptr, char argc, char** argv) {
-	/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
+	
 	char inputBuffer[10];
 	int i = 0;
 	if (argc == 1) {
@@ -342,14 +344,16 @@ int main(int argc, char** argv){
 }
 
 
+/* Initialize a struct to store all the Vrep scene info */
 info* makeInfo(void){
-    /* Initialize a struct to store all the Vrep scene info */
+    
     info* info_ptr = malloc(sizeof(info));
     return info_ptr;
 }
 
+/* Initialize a struct to store all the Vrep scene info */
 move* makeMove(void) {
-	/* Initialize a struct to store all the Vrep scene info */
+	
 	move* move_ptr = malloc(sizeof(move));
 	return move_ptr;
 }
@@ -369,10 +373,11 @@ void ShutDown(void) // Shut down threads
 }
 
 
+/*	Prompts ready to receive command from stdin
+*	stores the input in the response buffer
+*	and sends it for interpreting	*/
 void get_command(info* info_ptr, move* move_ptr){
-    /*	Prompts ready to receive command from stdin
-	*	stores the input in the response buffer
-	*	and sends it for interpreting	*/
+    
     printf(">> ");
     int c;
     int i = 0;
@@ -411,7 +416,10 @@ void get_command(info* info_ptr, move* move_ptr){
 
 }
 
-
+/*
+	Interprets the input command in info_ptr->response given from a joystick or
+	commandline input
+*/
 void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 
 	float duty = 1.0;
@@ -478,6 +486,10 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 }
 
 
+/*
+	Interprets commands in info_ptr->response (from stdin) given
+	that the scene and program are in fk mode
+*/
 void interpret_command_fk(info* info_ptr, move* move_ptr) {
 	
 	#ifdef DEBUG
@@ -555,13 +567,14 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 }
 
 
+/*  Retrieves object names for corresponding object handle,
+*  stored in info struct
+*
+*  Calls a custom function in VRep main script, which takes in an
+*  object handle and returns the object's name.
+*/
 void get_object_names_vrep(info* info_ptr){
-    /*  Retrieves object names for corresponding object handle,
-     *  stored in info struct
-     *
-     *  Calls a custom function in VRep main script, which takes in an
-     *  object handle and returns the object's name.
-    */
+    
     int replySize[1] = {1};
     
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -618,10 +631,11 @@ void get_object_names_vrep(info* info_ptr){
 }
 
 
-
+/* Puts the arm into a starting pos, straight up, by rotating joints 4 and 5
+*  the joint handles are also found, and angles of each using get_joint_angles.
+*  When the program mode is ik, moves joint 4 so the tip and base are aligned */
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
-	/* puts the arm into a starting pos, straight up, by rotating joints 4 and 5
-	*  the joint handles are also found, and angles of each using get_joint_angles */
+	
 	#ifdef DEBUG
 		printf("initial_arm_config_vrep\n");
 	#endif // DEBUG
@@ -686,12 +700,11 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 }
 
 
+/*  Writes all the object handles and corresponding names to filename
+*  if filename already exists, it clears the file before writing
+*  filename is either an input argument or by default called "objects"
+*/
 void write_object_info(info* info_ptr, char* filename){
-
-    /*  Writes all the object handles and corresponding names to filename
-     *  if filename already exists, it clears the file before writing
-     *  filename is either an input argument or by default called "objects"
-     */
 
     FILE* object_fp = fopen(filename, "w+");
     if (object_fp == NULL){
@@ -815,8 +828,9 @@ void read_object_info(info* info_ptr, char* filename) {
 }
 
 
+/*	Updates the position vector with relativeHandle's orientation relative to the base of the arm	*/
 void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int relativeHandle) {
-	/*	Updates the position vector with relativeHandle's orientation relative to the base of the arm	*/
+	
 	int jointHandle1 = relativeHandle;
 	if (relativeHandle == -1) {
 		for (int i = 0; i < info_ptr->objectCount; i++) {
@@ -830,15 +844,17 @@ void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int re
 }
 
 
+/*	Updates the position vector with relativeHandle's position relative to the base of the arm.
+	Good for x,y coordinates, but not z as the base joint has an offset height
+*/
 void get_position_vrep(info* info_ptr, float* position, int handle) {
-	/*	Updates the position vector with relativeHandle's position relative to the base of the arm	*/
-	 
-	int jointHandle1 = 0;
-	for (int i = 0; i < info_ptr->objectCount; i++) {
+		 
+	int jointHandle1 = info_ptr->jacoArmJointHandles[0];
+	/*for (int i = 0; i < info_ptr->objectCount; i++) {
 		if (info_ptr->isJoint[i]) {
 			jointHandle1 = i;
 		}
-	}
+	}*/
 	simxFloat pos[3];
 	// get position of handle relative to jaco_joint_1
 	simxGetObjectPosition(info_ptr->clientID, handle, jointHandle1, &pos, simx_opmode_blocking);
@@ -847,7 +863,9 @@ void get_position_vrep(info* info_ptr, float* position, int handle) {
 
 }
 
-
+/*
+	Updates position vector with the world coordinates of the object given by handle
+*/
 void get_world_position_vrep(info* info_ptr, float* position, int handle) {
 
 	simxFloat pos[3];
@@ -860,6 +878,10 @@ void get_world_position_vrep(info* info_ptr, float* position, int handle) {
 }
 
 
+/*
+	Sets the position of an object given a position vector and object handle,
+	relative to the world frame.
+*/
 void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) {
 
 	simxFloat pos[3];
@@ -873,11 +895,11 @@ void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) 
 	simxSetObjectPosition(info_ptr->clientID, objectHandle, -1, &pos, simx_opmode_blocking);
 }
 
-
+/* Updates info struct with all jaco arm joint current angles
+*  joints 4 and 5 are initially adjusted to take on FK values,
+*  the other joints are offset by 180 degrees */
 void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
-	/* Updates info struct with all jaco arm joint current angles
-	*  joints 4 and 5 are initially adjusted to take on FK values,
-	*  the other joints are offset by 180 degrees */
+	
 	#ifdef DEBUG
 		printf("get_joint_angles_vrep\n");
 	#endif // DEBUG
@@ -910,11 +932,12 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 }
 
 
+/*	takes in a joint number between 1 and 6, these are translated into
+	object handles, and the arm is moved via external command
+	ang is in degrees and represents the change in angle to move the joint
+	specified by jointNum */
 void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang, bool getJointAngles) {
-	/* takes in a joint number between 1 and 6, these are translated into
-	*  object handles, and the arm is moved via external command 
-	*	ang is in degrees and represents the change in angle to move the joint
-		specified by jointNum */
+	
 	if (getJointAngles) {
 		get_joint_angles_vrep(info_ptr, move_ptr);
 	}
@@ -934,11 +957,11 @@ void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double 
 }
 
 
+/*	takes in a joint number between 1 and 6, these are translated into
+	object handles, and the arm is moved via external command
+	ang is in radians and represents the true position of the joint.
+	This differs to move_joint_angle_vrep which moves a change in angle (degrees) */
 void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang) {
-	/* takes in a joint number between 1 and 6, these are translated into
-	*  object handles, and the arm is moved via external command 
-	*  ang is in radians and represents the true position of the joint 
-	*	This differs to move_joint_angle_vrep which moves a change in angle (degrees) */
 
 
 	double jointAngle = ang;
@@ -964,11 +987,11 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 }
 
 
+/*	move's the target for the arm tip to follow
+	the movement is specified by direction, with a displacement scaled by duty	*/
 void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float duty)
 {
-	/*	move's the target for the arm tip to follow
-	*	the movement is specified by direction, with a displacement scaled by duty	*/
-
+	
 	#ifdef DEBUG
 		printf("move_target(), %d\n", info_ptr->targetHandle); fflush(stdout);
 	#endif // DEBUG
@@ -1041,74 +1064,88 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 }
 
 
+/*	Determines the next position the tip should be in from the commands
+	Command is w,s,a,d,-,+
+	Duty is a decimal between 0->1 that scales the next position 
+*/
 void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
-	/*	Determines the next position the tip should be in from the commands
-	*	Command is w,s,a,d,-,+
-	*	duty is a decimal between 0->1 that scales the next position */
+	
 	#ifdef DEBUG
 		printf("in move_tip_vrep %c %f\n", command, duty); fflush(stdout);
 	#endif // DEBUG
-
-
-	//int parentHandle = 18;
-	/*for (int ob = 0; ob < info_ptr->objectCount; ob++) {
-		if (info_ptr->isJoint[ob]) {
-			parentHandle = info_ptr->objectHandles[ob];
-			printf("parentHandle: %d\n", parentHandle);
-			break;
-		}
-	}*/
 	
-	// the joint handle struct exists and holds the base handle
-	int parentHandle = info_ptr->jacoArmJointHandles[1 - 1];
-
+	/*	Get the position of the tip in world frame	*/
 	simxFloat position[3];
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
 
+	/*	Get the position of the base in the world frame	*/
 	simxFloat worldPosition[3];
-	simxGetObjectPosition(info_ptr->clientID, parentHandle, -1, &worldPosition, simx_opmode_blocking);
-
+	worldPosition[0] = info_ptr->armPosition[0];
+	worldPosition[1] = info_ptr->armPosition[1];
+	worldPosition[2] = info_ptr->armPosition[2];
+	
+	/*	Get the position of the tip relative to the base, without z	*/
 	position[0] -= worldPosition[0];
 	position[1] -= worldPosition[1];
 
+	/*	Get the position of joint 5 relative to the base	*/
 	simxFloat joint5Position[3];
 	simxGetObjectPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[5-1], -1, &joint5Position, simx_opmode_blocking);
 	joint5Position[0] -= worldPosition[0];
 	joint5Position[1] -= worldPosition[1];
 
+	/*	Calculate the xy magnitude of joint 5 and that of the tip	*/
 	float joint5Mag = joint5Position[0] * joint5Position[0] + joint5Position[1] * joint5Position[1];
 	float tipMag = position[0] * position[0] + position[1] * position[1];
+
+	/*	Ensure the tip is lower than joint 5 and pointing outwards form the arm	*/
 	if ((tipMag < joint5Mag) && (joint5Position[2] < position[2])) {
+		/*	Need to turn the wrist around	*/	
 		move_joint_angle_vrep(info_ptr, move_ptr, 4, 180, false);
+		/*	Wait until it has moved into the right position	*/
 		while ((tipMag < joint5Mag) && (joint5Position[2] < position[2])) {
 			for (int wait = 0; wait < 200; wait++) { ; }
+			/*	Update tip position and check against criteria	*/	
 			simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
 			tipMag = position[0] * position[0] + position[1] * position[1];
 			printf("...");
 		}
 	}
 
+	/*	Calculate the position of the tip relative to +x and +y from world coordinates	*/	
 	double tipAngle = (double)(atan2f(position[1], position[0]));
+	tipAngle = (3.141592 - tipAngle);
 	if (tipAngle < 0) {
 		tipAngle = 2 * 3.141592 + tipAngle;
 	}
-	tipAngle = (3.141592 - fmod(tipAngle, 3.141592));
+	//fmod(tipAngle, 3.141592));
 
-	double changeAngle;
+	
+	/*	Get the current angle of the base	*/
 	double jointAngle = move_ptr->currAng[0];// = fmod(move_ptr->currAng[0], 3.141592);
 	if (jointAngle < 0) {
 		jointAngle = 2 * 3.141592 + jointAngle;
 	}
-	jointAngle = fmod(jointAngle, 3.141592);
+	//jointAngle = fmod(jointAngle, 3.141592);
 
-		#ifdef DEBUG
-			printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, move_ptr->currAng[3], jointAngle);
-		#endif // DEBUG
-
+	#ifdef DEBUG
+		printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, move_ptr->currAng[3], jointAngle);
+	#endif // DEBUG
+		
+	double changeAngle;
 
 	if (command == 'p') {
 		/*	Print out the orientation of the tip and base joint	*/
 		changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+		/*	Correct for zero crossing in both directions	*/
+		if (((jointAngle > 3.0*3.141592 / 2.0) && (tipAngle < 3.141592 / 2.0))
+			|| ((jointAngle < 0.0) && (tipAngle < 3.141592 / 2.0))) {
+			changeAngle = changeAngle - 360.0;
+		}
+		else if (((tipAngle > 3.0*3.141592 / 2.0) && (jointAngle < 3.141592 / 2.0))
+			|| ((tipAngle < 0.0) && (jointAngle < 3.141592 / 2.0))) {
+			changeAngle = changeAngle + 360.0;
+		}
 		printf("tipAngle: %f,	base Angle: %f		change: %f\n", tipAngle, jointAngle, changeAngle);
 		return;
 	}
@@ -1121,6 +1158,15 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 			/*	Loop until the tip is aligned with the base orientation	*/
 			changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+			/*	Correct for zero crossing in both directions	*/	
+			if (((jointAngle > 3.0*3.141592 / 2.0) && (tipAngle < 3.141592/2.0)) 
+				|| ((jointAngle < 0.0) && (tipAngle < 3.141592 / 2.0))) {
+				changeAngle = changeAngle - 360.0;
+			} else if (((tipAngle > 3.0*3.141592 / 2.0) && (jointAngle < 3.141592 / 2.0))
+				|| ((tipAngle < 0.0) && (jointAngle < 3.141592 / 2.0))) {
+				changeAngle = changeAngle + 360.0;
+			}
+
 			if (fabs(changeAngle) > 3) {
 				
 				#ifdef DEBUG
@@ -1150,14 +1196,15 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 				position[0] -= worldPosition[0];
 				position[1] -= worldPosition[1];
 				tipAngle = (double)(atan2f(position[1], position[0]));
-				
+				/*	Modulate the tip angle as it doesn't matter which frame it is in	*/
+				tipAngle = (3.141592 - tipAngle);
+
 				if (tipAngle < 0) {
 					/*	Ensure the angle is positive to the change in angle is accurate in direction	*/
 					tipAngle = 2 * 3.141592 + tipAngle;
 				}
 
-				/*	Modulate the tip angle as it doesn't matter which frame it is in	*/
-				tipAngle = (3.141592 - fmod(tipAngle, 3.141592));
+				
 
 			}
 			else {

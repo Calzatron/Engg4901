@@ -21,10 +21,12 @@ void ik_RRR_arm(move* move_ptr, char* plane);
 int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z);
 
+
+/*	Stores in memory the forward kinematic
+*	parameters of the Jaco arm as per the classic DH solution
+*/
 void define_classic_parameters(move* move_ptr) {
-	/*	Stores in memory the forward kinematic
-	*	parameters of the Jaco arm as per the classic DH solution
-	*/
+	
 
 	/* Define joint lengths */
 	move_ptr->lengthD = malloc(sizeof(double) * 7);
@@ -118,11 +120,11 @@ void fk_classic(move* move_ptr, info* info_ptr) {
 }
 
 
-
+/*	Calculates the position of the tip using classic DH parameters
+*	ret = T * pt
+*/
 void fk_classic_old(move* move_ptr, info* info_ptr) {
-	/*	Calculates the position of the tip using classic DH parameters
-	*	ret = T * pt
-	*/
+	
 
 	/* Get current angles*/
 	double q1, q2, q3, q4, q5, q6;
@@ -203,15 +205,13 @@ void fk_classic_old(move* move_ptr, info* info_ptr) {
 }
 
 
-
+/*	Uses the position of the fourth joint to calculate angles q_2 and q_3
+*	After, the position of S' is calculated (position of the tip for the given
+*	and current angles)
+*	The target is then moved to S' for the arm to follow
+*/
 int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles) {
-	/*	Uses the position of the fourth joint to calculate angles q_2 and q_3
-	*	After, the position of S' is calculated (position of the tip for the given 
-	*	and current angles)
-	*	The target is then moved to S' for the arm to follow
-	*/
-
-
+	
 	double pi = 3.141594;
 	//float position[4];// = malloc(sizeof(float) * 3);
 	//position[0] = 0; position[1] = 0; position[2] = 0; position[3] = 0;
@@ -394,7 +394,12 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 
 }
 
-
+/*	
+*	@brief calculates the desired tip position and localises the joint4 position
+*	to acheive this
+*	@param the information and movement structures with a change in coordinates to move
+*	@ret none
+*/
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z) {
 	
 	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
@@ -524,12 +529,10 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 
 
 
-
+/* Updates current position vector signing modified DH parameters
+*  and forward kinematics */
 void fk_mod(move* move_ptr) {
-	/* Updates current position vector signing modified DH parameters
-	*  and forward kinematics */
-
-
+	
 	/* Get current angles*/
 	double q1, q2, q3, q4, q5, q6;
 	q1 = move_ptr->currAng[0];

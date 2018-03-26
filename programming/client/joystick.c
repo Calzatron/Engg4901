@@ -50,8 +50,9 @@ uint8_t joystickEnabled(void);
 volatile uint8_t access;
 
 
+/*	Defines the buffer mutex	*/
 extern void initialise_joystick_mutex(void) {
-	/*	Defines the buffer mutex	*/
+	
 	bufferMutex = CreateMutex(NULL, FALSE, NULL);
 
 	if (bufferMutex == NULL)
@@ -61,11 +62,11 @@ extern void initialise_joystick_mutex(void) {
 }
 
 
-
+/*
+* Initialise our buffers
+*/
 void CreateChildProcess() {
-	/*
-	* Initialise our buffers
-	*/
+	
 	access = 0xFF;
 	out_insert_pos = 0;
 	bytes_in_out_buffer = 0;
@@ -169,15 +170,17 @@ int joystick_input_available(void) {
 }
 
 
+/* Just adjust our buffer data so it looks empty */
 void joystick_clear_input_buffer(void) {
-	/* Just adjust our buffer data so it looks empty */
+	
 	input_insert_pos = 0;
 	bytes_in_input_buffer = 0;
 }
 
 
+/* Wait until we've received a character */
 void joystick_get_char(info* info_ptr) {
-	/* Wait until we've received a character */
+	
 	while (bytes_in_input_buffer == 0) {
 		/* do nothing */
 		//printf(",,");
@@ -236,11 +239,10 @@ void joystick_get_char(info* info_ptr) {
 }
 
 
-
+// Read from a file and write its contents to the pipe for the child's STDIN.
+// Stop when there is no more data. 
 void WriteToPipe(void) {
-
-	// Read from a file and write its contents to the pipe for the child's STDIN.
-	// Stop when there is no more data. 
+	
 
 	printf("in WriteToPipe\n");
 	DWORD dwRead, dwWritten;
@@ -273,11 +275,10 @@ void WriteToPipe(void) {
 }
 
 
+// Read output from the child process's pipe for STDOUT
+// and write to the parent process's pipe for STDOUT. 
+// Stop when there is no more data. 
 void ReadFromPipe() {
-
-	// Read output from the child process's pipe for STDOUT
-	// and write to the parent process's pipe for STDOUT. 
-	// Stop when there is no more data. 
 
 	DWORD dwRead, dwWritten;
 	CHAR chBuf[BUFSIZE];
@@ -535,8 +536,9 @@ void interpret_joystick(char* buffer) {
 }
 
 
+/*	adds stuff to the buffer if the joystick is held	*/
 void add_to_buffer(void) {
-	/*	adds stuff to the buffer if the joystick is held	*/	
+	
 	while (1) {
 		if ((delay + 750 + ltime < clock()) && (joystickToggle) && (joystickCheck)) {
 			//while (!access) {
@@ -587,10 +589,9 @@ void add_to_buffer(void) {
 
 
 
-
+/*	Returns whether there is a joystick plugged in
+*	and ready for use	*/
 uint8_t joystickEnabled(void) {
-	/*	Returns whether there is a joystick plugged in
-	 *	and ready for use	*/
-
+	
 	return joystickEn;
 }
