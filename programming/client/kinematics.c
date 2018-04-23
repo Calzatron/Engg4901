@@ -12,6 +12,7 @@
 #include <string.h>
 #include "project.h"
 
+
 move* move_ptr;
 void define_classic_parameters(move* move_ptr);
 void fk_classic(move* move_ptr, info* info_ptr);

@@ -23,6 +23,8 @@
 #include <time.h>
 /*	Global Definitions	*/
 #define BUFSIZE 4096 
+#define DATA_STREAMING
+
 
 HANDLE  hConsoleOut;                 // Handle to the console   
 HANDLE  hRunMutex;                   // "Keep Running" mutex   
@@ -30,6 +32,18 @@ HANDLE  hScreenMutex;                // "Screen update" mutex
 int     ThreadNr;                    // Number of threads started   
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo; // Console information 
 
+HANDLE joint1Mutex; 
+HANDLE joint2Mutex;
+HANDLE joint3Mutex;
+HANDLE joint4Mutex;
+HANDLE joint5Mutex;
+struct jointThreads
+{
+	info* information_ptr;
+	move* movement_ptr;
+	HANDLE threadNumber;
+
+};
 
 /*	Function Definitions	*/
 info* makeInfo(void); 
@@ -54,8 +68,8 @@ void set_world_position_vrep(info* info_ptr, float* position, int objectHandle);
 void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang);
 void pause_communication_vrep(info* info_ptr, int status);
 void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty);
-
-
+void stream_joints(struct jointThreads *threadStruct);
+void handle_joint_threads(info* info_ptr, move* move_ptr);
 /*	Program Functions	*/
 
 
@@ -149,7 +163,6 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 		exit(1);
 	}
 
-	
 
 }
 
@@ -279,13 +292,20 @@ int main(int argc, char** argv){
 	hRunMutex = CreateMutex(NULL, TRUE, NULL);			// Set   
 	ThreadNr = 0;										//initialise threadcount
 	ThreadNr++;											// increment threadcount for command thread
-	_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the process to their new home
+	_beginthread(ReadFromPipe, 0, &ThreadNr);			// direct the thread to their new home
 	
 	
 	ThreadNr++;											// increment threadcount for command thread
-	_beginthread(add_to_buffer, 0, &ThreadNr);			// direct the process to their new home
+	_beginthread(add_to_buffer, 0, &ThreadNr);			// direct the thread to their new home
 	
 	
+	////////////////////////********* Under Construction **********//////////////////
+#ifdef DATA_STREAMING
+
+	handle_joint_threads(info_ptr, move_ptr);
+
+#endif //DATA_STEAMING
+
 
 	while (1) {
 		//printf(".");
@@ -342,6 +362,85 @@ int main(int argc, char** argv){
 
     return 0;
 }
+
+
+void handle_joint_threads(info* info_ptr, move* move_ptr) {
+
+
+	joint1Mutex = CreateMutex(NULL, FALSE, NULL);
+
+	if (joint1Mutex == NULL)
+	{
+		printf("CreateMutex error: %d\n", GetLastError());
+	}
+
+
+	struct jointThreads threadStruct;
+
+	threadStruct.information_ptr = &info_ptr;
+	threadStruct.movement_ptr = &move_ptr;
+	threadStruct.threadNumber = ThreadNr;					
+
+	ThreadNr++;												// increment threadcount for command thread
+	_beginthread(stream_joints, 0, &threadStruct);			// direct the process to their new home
+
+	while (1) { ; }
+}
+
+
+void stream_joints(struct jointThreads *threadStruct) {
+
+
+	int threadNumber = threadStruct->threadNumber;
+	info* info_ptr = &threadStruct->information_ptr;
+	move* move_ptr = &threadStruct->information_ptr;
+
+	int streamingID = simxStart((simxChar*)"127.0.0.1", 19999 - (threadNumber *1000), true, true, 5000, 5);
+
+	if (streamingID != -1) {
+		printf("Successfully connected to VREP: %d %d %d\n", info_ptr->clientID, streamingID, threadNumber);
+	}
+	else {
+		printf("Connection failed %d %d\n", info_ptr->clientID, streamingID);
+		exit(1);
+	}
+
+	
+
+	simxFloat position;
+	simxGetJointPosition(streamingID, info_ptr->jacoArmJointHandles[threadNumber - 2], &position, simx_opmode_streaming);
+
+#ifdef DEBUG
+	printf(".%d\n", info_ptr->jacoArmJointHandles[threadNumber - 2]);
+#endif // DEBUG
+
+	while (simxGetConnectionId(streamingID) != -1) { // while we are connected to the server..
+
+													 // Fetch the newest joint value from the inbox (func. returns immediately (non-blocking)):
+		if (simxGetJointPosition(streamingID, info_ptr->jacoArmJointHandles[threadNumber - 2], &position, simx_opmode_buffer) == simx_return_ok) {
+
+			// here we have the newest joint position in variable jointPosition!
+			move_ptr->currAng[threadNumber - 2] = 0;
+
+			move_ptr->currAng[threadNumber - 2] = (double)position - 3.141592;
+			if (move_ptr->currAng[threadNumber - 2] < 0) {
+				move_ptr->currAng[threadNumber - 2] += 2.0 * 3.141592;
+			}
+
+#ifdef DEBUG
+			printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[threadNumber - 2], position, move_ptr->currAng[threadNumber - 2]);
+#endif // DEBUG
+		}
+		else {
+			// once you have enabled data streaming, it will take a few ms until the first value has arrived. So if
+			// we landed in this code section, this does not always mean we have an error!!!
+		}
+	} printf("exited streaming\n");
+
+	_endthread();
+	
+}
+
 
 
 /* Initialize a struct to store all the Vrep scene info */
@@ -906,6 +1005,7 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 
 	int count = 0;
 	while (count < 6) {
+
 		#ifdef DEBUG
 			printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
 		#endif // DEBUG
