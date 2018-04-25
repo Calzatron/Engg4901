@@ -372,11 +372,17 @@ void approximate_angles_kinematics(float x, float y, float z, double* angles) {
 	double sq_2 = (-px * d3*sin(q_3) + (d2 + d3 * cos(q_3))*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
 	double q_2 = (pi / 2) - atan2(sq_2, cq_2);
 
-	double q_1 = atan2(py, px) - asin(e2 / (pow((pow(px, 2) + pow(py, 2)), .5)));
+	double q_1 = atan2(py, px);// -asin(e2 / (pow((pow(px, 2) + pow(py, 2)), .5)));
 
-	angles[0] = -pi - q_1;					//-1.0 * q_1;
+	printf("this is q_1: %f ", q_1);
+
+	angles[0] = pi - q_1;					//-1.0 * q_1;
 	angles[1] = -(pi / 2.0) + (q_2 + pi);	//q_2;
 	angles[2] = q_3 + (3.0 * pi / 2.0);
+	//angles[3] = 0;
+	//angles[4] = -1 * pi;
+
+	printf("after: %f\n", -pi - q_1);
 
 	//printf("this is q_3: %f", q_3);
 	/*q1 = -pi - q_1;
@@ -432,7 +438,6 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 	J4_desired[1] -= info_ptr->armPosition[1];
 	J5_desired[0] -= info_ptr->armPosition[0];
 	J5_desired[1] -= info_ptr->armPosition[1];
-
 
 	/*	Get the current tip position and update S_desired	*/
 	float S_desired[4];
@@ -506,17 +511,17 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 		error[3] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.1;
 		accumError[3] = (accumError[3] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.02;
 
-		double q_4 = error[3] + accumError[3];
+		double q_4 = error[3] + accumError[3] + current_angle(move_ptr, 3);
 
 		/*	joint 5	*/
 		error[4] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
 		accumError[4] = (accumError[4] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.150;
-		double q_5 = error[4] + accumError[4];
+		double q_5 = error[4] + accumError[4] + current_angle(move_ptr, 4) + (-1 * pi);
 
 		/*	joint 6	*/
 		error[5] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
 		accumError[5] = (accumError[5] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
-		double q_6 = error[5] + accumError[5];
+		double q_6 = error[5] + accumError[5] + current_angle(move_ptr, 5);
 
 		/*	Calculate new position from angles	*/
 		angles1[0] = q_1;// = { q_1, q_2, q_3, q_4, q_5, q_6 };
@@ -548,11 +553,30 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 	clock_t end = clock();
 	printf("Calculated new pos in %ld ms:	%f %f %f\n", end - start, actualPos[0], actualPos[1], actualPos[2]);
 
+	printf("Angles are %f %f %f %f %f %f\n", angles1[0], angles1[1], angles1[2], angles1[3], angles1[4], angles1[5]);
+
+	for (int ang = 0; ang < 6; ang++) {
+		if (angles1[ang] > 2 * 3.141592) {
+			angles1[ang] = fmod(angles1[ang], 2 * 3.141592);
+		}
+		else if (angles1[ang] < (-2 * 3.141592)) {
+			angles1[ang] = fmod(angles1[ang], -2 * 3.141592);
+		}
+	}
+
+	//-(pi / 2.0) + (q_2 + pi);
+	//q3 = (pi / 2.0) + (q_3 + pi);
+
+
+	printf("Angles are %f %f %f %f %f %f\n", angles1[0], angles1[1], angles1[2], angles1[3], angles1[4], angles1[5]);
+
+	// pi is added to angles that are not 4 or 5
+
 	/*	Got angles, move the arm	*/
 	pause_communication_vrep(info_ptr, 1);
-	set_joint_angle_vrep(info_ptr, move_ptr, 1, angles1[0] - 3.141592);
-	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles1[1] - 3.141592);
-	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles1[2] - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 1, angles1[0] + (3.141592 / 2.0) - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles1[1] + (pi / 2) - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles1[2] + (3.0*pi/2.0));
 	set_joint_angle_vrep(info_ptr, move_ptr, 4, angles1[3]);
 	set_joint_angle_vrep(info_ptr, move_ptr, 5, angles1[4]);
 	set_joint_angle_vrep(info_ptr, move_ptr, 6, angles1[5] - 3.141592);

@@ -840,8 +840,12 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 		//ret = simxSetJointTargetPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], 0, simx_opmode_oneshot_wait);
 	}
 	else if (strcmp(info_ptr->programMode, "ik") == 0) {
-		//move_joint_angle_vrep(info_ptr, move_ptr, 1, -90, false);
-		//move_joint_angle_vrep(info_ptr, move_ptr, 4, 90, false);
+		if ((move_ptr->currAng[0] < 0.1) && (move_ptr->currAng[0] > -0.1) && (move_ptr->currAng[3] < 3.2) && (move_ptr->currAng[3] > 3.1)){
+			move_joint_angle_vrep(info_ptr, move_ptr, 1, -45, false);
+			move_joint_angle_vrep(info_ptr, move_ptr, 4, 90, false);
+			move_joint_angle_vrep(info_ptr, move_ptr, 2, 10, false);
+			move_joint_angle_vrep(info_ptr, move_ptr, 3, -30, false);
+		}
 	}
 
 	/*	Gets and stores the position of the jaco's base element relative to the world frame	*/
@@ -1159,8 +1163,20 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 	if ((jointNum != 4) && (jointNum != 5)) {
 		jointAngle += 3.141592;
 	}
-	//jointAngle = fmod(jointAngle, 2 * 3.141592);
+	jointAngle = fmod(jointAngle, 2 * 3.141592);
+	//printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+
+	if (jointAngle < -0.1) {
+		jointAngle = 2 * 3.141592 + jointAngle;
+	}
+	else if (jointAngle > 2 * 3.141592) {
+		jointAngle = fmod(jointAngle, 2 * 3.141592);
+	}
+
 	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+
+	//return;
+
 	int ret;
 	if (jointNum == 2) {
 		int velocity = (25 * 410) / 207;
@@ -1313,7 +1329,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 	
 	/*	Get the current angle of the base	*/
-	double jointAngle = current_angle(move_ptr, 0);// = fmod(move_ptr->currAng[0], 3.141592);
+	double jointAngle = current_angle(move_ptr, 0);	// = fmod(move_ptr->currAng[0], 3.141592);
 	if (jointAngle < 0) {
 		jointAngle = 2 * 3.141592 + jointAngle;
 	}
@@ -1344,11 +1360,13 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	if ((command != 'a') && (command != 'd')) {
 		/*	Ignore this correction if only the base joint is moving	*/
 
+		tipAngle = fmod(tipAngle, 3.141592);
+
 		int notAligned = 1;
 		while (notAligned) {
 
 			/*	Loop until the tip is aligned with the base orientation	*/
-			changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+			changeAngle = 180.0*(fmod(jointAngle, 3.141592) - tipAngle) / 3.141592;
 			/*	Correct for zero crossing in both directions	*/	
 			if (((jointAngle > 3.0*3.141592 / 2.0) && (tipAngle < 3.141592/2.0)) 
 				|| ((jointAngle < 0.0) && (tipAngle < 3.141592 / 2.0))) {
@@ -1361,7 +1379,9 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 			if (fabs(changeAngle) > 3) {
 				
 				#ifdef DEBUG
-					printf("Correction: changeAngle %f\n", changeAngle);
+					printf("Correction: changeAngle		%f\n", changeAngle);
+					printf("Correction: tipAngle		%f\n", tipAngle);
+					printf("Correction: basejointAngle	%f\n", jointAngle);
 				#endif // DEBUG
 
 				move_joint_angle_vrep(info_ptr, move_ptr, 4, 0.8 * changeAngle, true);
@@ -1394,7 +1414,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 					/*	Ensure the angle is positive to the change in angle is accurate in direction	*/
 					tipAngle = 2 * 3.141592 + tipAngle;
 				}
-
+				tipAngle = fmod(tipAngle, 3.141592);
 				
 
 			}
