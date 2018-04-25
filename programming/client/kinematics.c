@@ -11,7 +11,7 @@
 #include <tchar.h>
 #include <string.h>
 #include "project.h"
-
+#include "time.h"
 
 move* move_ptr;
 void define_classic_parameters(move* move_ptr);
@@ -243,7 +243,7 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 	double j = pow(px, 2) + pow((pz - d1), 2) - (d2*d2) - (d3*d3);
 	double k = 2.0 * d2 * d3;
 
-	if (fabsf(j) > fabsf(k)) {
+	if (fabs(j) > fabs(k)) {
 		#ifdef DEBUG
 		printf("x,z,i,j:	%f %f %f %f\n", px, pz, j, k);
 		#endif // DEBUG
@@ -344,13 +344,232 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 
 }
 
+
+/*
+*	@brief: Approximates the angles q1, q2, and q3 for the arm, to reach
+*			the desired position.
+*	@param: 3 floating point numbers specifying desired position,
+*			and an array of angles to be updated
+**/
+void approximate_angles_kinematics(float x, float y, float z, double* angles) {
+
+	double pi = 3.141594;
+
+	double px = (double)((x)*1.0);
+	double py = (double)((y)*1.0);
+	double pz = (double)(z)*1.0;
+	double d1 = 197.13;
+	double d2 = 410.0;
+	double d3 = 207.3;
+	double e2 = 9.8;
+
+	double j = pow(px, 2) + pow((pz - d1), 2) - (d2*d2) - (d3*d3);
+	double k = 2.0 * d2 * d3;
+
+	double q_3 = 1 * acos(j / k);
+
+	double cq_2 = (px*(d2 + d3 * cos(q_3)) + d3 * sin(q_3)*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
+	double sq_2 = (-px * d3*sin(q_3) + (d2 + d3 * cos(q_3))*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
+	double q_2 = (pi / 2) - atan2(sq_2, cq_2);
+
+	double q_1 = atan2(py, px) - asin(e2 / (pow((pow(px, 2) + pow(py, 2)), .5)));
+
+	angles[0] = -pi - q_1;					//-1.0 * q_1;
+	angles[1] = -(pi / 2.0) + (q_2 + pi);	//q_2;
+	angles[2] = q_3 + (3.0 * pi / 2.0);
+
+	//printf("this is q_3: %f", q_3);
+	/*q1 = -pi - q_1;
+	//q1 = -q_1;
+	//q1 = q1 + pi;
+	q2 = -(pi / 2.0) + (q_2 + pi);
+	q3 = (pi / 2.0) + (q_3 + pi);*/
+}
+
+
+/*	
+*	@brief: approximates the position of the tip from the joint angles given
+*
+*	@param: array of 6 doubles containing the angles to move, and an array of doubles
+*			to store the position output
+*/
+void get_position_from_angles(double* angles, double* positionVect) {
+
+	double q1 = angles[0];
+	double q2 = angles[1];
+	double q3 = angles[2];
+	double q4 = angles[3];
+	double q5 = angles[4];
+	double q6 = angles[5];
+
+	double x_a = 9.8*sin(q1) + 410.0*cos(q1)*cos(q2) - 161.90703230275506147226218323136*cos(q4)*sin(q1) + 175.614064605510166451876962007*sin(q5)*(1.0*sin(q1)*sin(q4) - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))) - 161.90703230275506147226218323136*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 175.614064605510166451876962007*cos(q5)*(0.5*cos(q4)*sin(q1) + 0.5*sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)) - 0.86602540378443864676372317075294*cos(q1)*cos(q2)*sin(q3) + 0.86602540378443864676372317075294*cos(q1)*cos(q3)*sin(q2)) - 343.55872363064032981583295622841*cos(q1)*cos(q2)*sin(q3) + 343.55872363064032981583295622841*cos(q1)*cos(q3)*sin(q2);
+	double y_a = 161.90703230275506147226218323136*cos(q1)*cos(q4) - 9.8*cos(q1) + 410.0*cos(q2)*sin(q1) + 175.614064605510166451876962007*cos(q5)*(0.5*cos(q1)*cos(q4) - 0.5*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) + 0.86602540378443864676372317075294*cos(q2)*sin(q1)*sin(q3) - 0.86602540378443864676372317075294*cos(q3)*sin(q1)*sin(q2)) - 175.614064605510166451876962007*sin(q5)*(1.0*cos(q1)*sin(q4) + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))) - 161.90703230275506147226218323136*sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)) - 343.55872363064032981583295622841*cos(q2)*sin(q1)*sin(q3) + 343.55872363064032981583295622841*cos(q3)*sin(q1)*sin(q2);
+	double z_a = 410.0*sin(q2) - 343.55872363064032981583295622841*cos(q2)*cos(q3) - 343.55872363064032981583295622841*sin(q2)*sin(q3) + 175.614064605510166451876962007*cos(q5)*(0.86602540378443864676372317075294*cos(q2)*cos(q3) + 0.86602540378443864676372317075294*sin(q2)*sin(q3) + 0.5*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2))) + 161.90703230275506147226218323136*sin(q4)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 175.614064605510166451876962007*cos(q4)*sin(q5)*(1.0*cos(q2)*sin(q3) - 1.0*cos(q3)*sin(q2)) + 197.13;
+
+
+	positionVect[0] = x_a;
+	positionVect[1] = y_a;
+	positionVect[2] = z_a;
+
+}
+
+
+void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z) {
+
+	double pi = 3.141592;
+
+	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
+	float J4_desired[4];
+	float J5_desired[4];
+	J4_desired[0] = 0; J4_desired[1] = 0; J4_desired[2] = 0; J4_desired[3] = 0;
+	J5_desired[0] = 0; J5_desired[1] = 0; J5_desired[2] = 0; J5_desired[3] = 0;
+	int joint4Handle = info_ptr->jacoArmJointHandles[4 - 1]; //27;
+	int joint5Handle = info_ptr->jacoArmJointHandles[5 - 1];
+	get_world_position_vrep(info_ptr, J4_desired, joint4Handle);
+	get_world_position_vrep(info_ptr, J5_desired, joint5Handle);
+
+	J4_desired[0] -= info_ptr->armPosition[0];
+	J4_desired[1] -= info_ptr->armPosition[1];
+	J5_desired[0] -= info_ptr->armPosition[0];
+	J5_desired[1] -= info_ptr->armPosition[1];
+
+
+	/*	Get the current tip position and update S_desired	*/
+	float S_desired[4];
+
+	S_desired[0] = 0; S_desired[1] = 0; S_desired[2] = 0; S_desired[3] = 0;
+	int tipHandle = info_ptr->targetHandle - 1;
+	get_world_position_vrep(info_ptr, S_desired, tipHandle);
+
+	printf("\nActual Tip Position:	%f %f %f\n", S_desired[0] - info_ptr->armPosition[0], S_desired[1] - info_ptr->armPosition[1], S_desired[2]);
+
+	S_desired[0] = (x - info_ptr->armPosition[0] + S_desired[0]) * 1000.0;
+	S_desired[1] = (y - info_ptr->armPosition[1] + S_desired[1]) * 1000.0;
+	S_desired[2] = (S_desired[2] + z) * 1000.0;
+
+	printf("\nDesired Tip Position:	%f %f %f\n", S_desired[0], S_desired[1], S_desired[2]);
+
+
+	/*	Start of control sequence	*/
+
+	double desHypot = pow(S_desired[0] * S_desired[0] + S_desired[1] * S_desired[1], 0.5);
+
+	double desiredAngXY = atan2f(S_desired[1], S_desired[0]);
+	double desiredAngZ = atan2f(S_desired[2], desHypot);
+
+	double actHypot = 0;
+	double actAngXY = desiredAngXY;
+	double actAngZ = desiredAngZ;
+
+	double accumError[6] = { 0, 0, 0, 0, 0, 0 };
+
+	double error[6] = { 0, 0, 0, 0, 0, 0 };
+
+	double angles[6] = { 0, 0, 0, 0, 0, 0 };
+
+	double actualPos[3] = { 0, 0, 0 };
+
+	double angles1[6] = { 0, 0, 0, 0, 0, 0 };
+
+	approximate_angles_kinematics(S_desired[0], S_desired[1], S_desired[2], angles);
+
+	printf("proposed angles are:	%f %f %f\n", angles[0], angles[1], angles[2]);
+
+	clock_t start = clock();
+
+	for (int loop = 0; loop < 1000; loop++) {
+
+		/*	Calculate error in X and Y, and XY and Z planes	*/
+		double errorAngXY = desiredAngXY - actAngXY;
+		double errorAngZ = desiredAngZ - actAngZ;
+
+		/*	Calculate the angles to input	*/
+		/*	joint 1	*/
+		error[0] = errorAngXY * 0.02; //0.08; //*0.01
+		accumError[0] = (accumError[0] + errorAngXY) * 0.99;//0.95;//1.25; //1.1;//0.85;
+
+		double q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
+		
+		/*	joint 2	*/
+		error[1] = 0.95 * errorAngZ;
+		accumError[1] = (accumError[1] + errorAngZ) * 0.995;
+
+		double q_2 = error[1] + accumError[1] + angles[1];
+
+		/*	joint 3	*/
+		error[2] = 0.8 * errorAngZ;
+		accumError[2] = (accumError[2] + errorAngZ) * 0.827;
+
+		double q_3 = error[2] + accumError[2] + angles[2];
+
+		/*	joint 4	*/
+		error[3] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.1;
+		accumError[3] = (accumError[3] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.02;
+
+		double q_4 = error[3] + accumError[3];
+
+		/*	joint 5	*/
+		error[4] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
+		accumError[4] = (accumError[4] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.150;
+		double q_5 = error[4] + accumError[4];
+
+		/*	joint 6	*/
+		error[5] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
+		accumError[5] = (accumError[5] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
+		double q_6 = error[5] + accumError[5];
+
+		/*	Calculate new position from angles	*/
+		angles1[0] = q_1;// = { q_1, q_2, q_3, q_4, q_5, q_6 };
+		angles1[1] = q_2;
+		angles1[2] = q_3;// = { q_1, q_2, q_3, q_4, q_5, q_6 };
+		angles1[3] = q_4;
+		angles1[4] = q_5;// = { q_1, q_2, q_3, q_4, q_5, q_6 };
+		angles1[5] = q_6;
+		
+		get_position_from_angles(angles1, actualPos);
+
+		/*	Calculate the new plane positions	*/
+		actHypot = pow(actualPos[0] * actualPos[0] + actualPos[1] * actualPos[1], 0.5);
+
+		actAngXY = atan2f(actualPos[1], actualPos[0]);
+		actAngZ = atan2f(actualPos[2], actHypot);
+
+		#ifdef DEBUG
+			if (!(loop % 40)) {
+				printf("%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+			}
+			if (loop == 0) {
+				printf("#%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+			}
+		#endif
+
+	}
+	
+	clock_t end = clock();
+	printf("Calculated new pos in %ld ms:	%f %f %f\n", end - start, actualPos[0], actualPos[1], actualPos[2]);
+
+	/*	Got angles, move the arm	*/
+	pause_communication_vrep(info_ptr, 1);
+	set_joint_angle_vrep(info_ptr, move_ptr, 1, angles1[0] - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles1[1] - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles1[2] - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 4, angles1[3]);
+	set_joint_angle_vrep(info_ptr, move_ptr, 5, angles1[4]);
+	set_joint_angle_vrep(info_ptr, move_ptr, 6, angles1[5] - 3.141592);
+	pause_communication_vrep(info_ptr, 0);
+
+
+}
+
+
+
 /*	
 *	@brief calculates the desired tip position and localises the joint4 position
 *	to acheive this
 *	@param the information and movement structures with a change in coordinates to move
 *	@ret none
 */
-void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z) {
+void control_kinematics_v1(info* info_ptr, move* move_ptr, float x, float y, float z) {
 	
 	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
 	float J4_desired[4];
