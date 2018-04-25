@@ -21,6 +21,8 @@
 #include <direct.h>
 #include "kinematics.h"
 #include <time.h>
+
+
 /*	Global Definitions	*/
 #define BUFSIZE 4096 
 
@@ -30,12 +32,6 @@ HANDLE  hRunMutex;                   // "Keep Running" mutex
 HANDLE  hScreenMutex;                // "Screen update" mutex  
 int     ThreadNr;                    // Number of threads started   
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo; // Console information 
-
-//HANDLE joint1Mutex; 
-//HANDLE joint2Mutex;
-//HANDLE joint3Mutex;
-//HANDLE joint4Mutex;
-//HANDLE joint5Mutex;
 
 HANDLE jointMutexes[5];
 
