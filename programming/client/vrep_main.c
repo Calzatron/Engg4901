@@ -23,7 +23,6 @@
 #include <time.h>
 /*	Global Definitions	*/
 #define BUFSIZE 4096 
-#define DATA_STREAMING
 
 
 HANDLE  hConsoleOut;                 // Handle to the console   
@@ -32,15 +31,18 @@ HANDLE  hScreenMutex;                // "Screen update" mutex
 int     ThreadNr;                    // Number of threads started   
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo; // Console information 
 
-HANDLE joint1Mutex; 
-HANDLE joint2Mutex;
-HANDLE joint3Mutex;
-HANDLE joint4Mutex;
-HANDLE joint5Mutex;
+//HANDLE joint1Mutex; 
+//HANDLE joint2Mutex;
+//HANDLE joint3Mutex;
+//HANDLE joint4Mutex;
+//HANDLE joint5Mutex;
+
+HANDLE jointMutexes[5];
+
 struct jointThreads
 {
-	info* information_ptr;
-	move* movement_ptr;
+	info *information_ptr;
+	move *movement_ptr;
 	HANDLE threadNumber;
 
 };
@@ -70,6 +72,8 @@ void pause_communication_vrep(info* info_ptr, int status);
 void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty);
 void stream_joints(struct jointThreads *threadStruct);
 void handle_joint_threads(info* info_ptr, move* move_ptr);
+double current_angle(move* move_ptr, int jointNum);
+
 /*	Program Functions	*/
 
 
@@ -300,11 +304,12 @@ int main(int argc, char** argv){
 	
 	
 	////////////////////////********* Under Construction **********//////////////////
-#ifdef DATA_STREAMING
+	#ifdef DATA_STREAMING
 
-	handle_joint_threads(info_ptr, move_ptr);
+		handle_joint_threads(info_ptr, move_ptr);
 
-#endif //DATA_STEAMING
+	#endif //DATA_STEAMING
+	/////////////////////////////////////////////////////////////////////////////////
 
 
 	while (1) {
@@ -366,79 +371,122 @@ int main(int argc, char** argv){
 
 void handle_joint_threads(info* info_ptr, move* move_ptr) {
 
+	/*	Create a thread for each joint	*/
+	for (int i = 0; i < 5; i++) {
 
-	joint1Mutex = CreateMutex(NULL, FALSE, NULL);
+		/*	Create the mutex for this joint	*/
+		jointMutexes[i] = CreateMutex(NULL, FALSE, NULL);
 
-	if (joint1Mutex == NULL)
-	{
-		printf("CreateMutex error: %d\n", GetLastError());
+		if (jointMutexes[i] == NULL) {
+			printf("CreateMutex error: %d\n", GetLastError());
+			continue;
+		}
+
+		//printf("before struct: %d\n", info_ptr->clientID);
+
+		/*	Copy the struct information	*/
+		struct jointThreads threadStruct;
+
+		threadStruct.information_ptr = info_ptr;
+		threadStruct.movement_ptr = move_ptr;
+		threadStruct.threadNumber = (HANDLE)(ThreadNr);
+
+		//printf("before thread: %d\n", threadStruct.information_ptr->clientID);
+
+		//printf("this is angle before: %d, %f\n", info_ptr->jacoArmJointHandles[0], current_angle(move_ptr, 0));
+
+		/*	Generate a new thread to stream data	*/
+		ThreadNr++;												// increment threadcount for command thread
+		_beginthread(stream_joints, 0, &threadStruct);			// direct the process to their new home
+		clock_t current_time = clock();
+		while (current_time + 2000 > clock()) {
+			;
+		}
 	}
 
+	#ifdef THREAD_DEBUG
+		while (1) {
+			for (int j = 0; j < 50000; j++) {
 
-	struct jointThreads threadStruct;
+				printf("this is angle after: %d, %f\n", info_ptr->jacoArmJointHandles[0], current_angle(move_ptr, 0));
+			}
+		}
+	#endif // THREAD_DEBUG
 
-	threadStruct.information_ptr = &info_ptr;
-	threadStruct.movement_ptr = &move_ptr;
-	threadStruct.threadNumber = ThreadNr;					
-
-	ThreadNr++;												// increment threadcount for command thread
-	_beginthread(stream_joints, 0, &threadStruct);			// direct the process to their new home
-
-	while (1) { ; }
 }
 
 
 void stream_joints(struct jointThreads *threadStruct) {
 
+	/*	Regain the information from the input struct	*/
+	int threadNumber = (int)(threadStruct->threadNumber) - 1;
+	info* info_ptr = threadStruct->information_ptr;
+	move* move_ptr = threadStruct->information_ptr;
 
-	int threadNumber = threadStruct->threadNumber;
-	info* info_ptr = &threadStruct->information_ptr;
-	move* move_ptr = &threadStruct->information_ptr;
+	//printf("thread %d\n", threadNumber);
 
-	int streamingID = simxStart((simxChar*)"127.0.0.1", 19999 - (threadNumber *1000), true, true, 5000, 5);
+	/*	Generate a new stream to receive data from	*/
+	int streamingID = simxStart((simxChar*)"127.0.0.1", 19999 - (threadNumber *1000), true, true, 5000, 50);
 
 	if (streamingID != -1) {
 		printf("Successfully connected to VREP: %d %d %d\n", info_ptr->clientID, streamingID, threadNumber);
 	}
 	else {
-		printf("Connection failed %d %d\n", info_ptr->clientID, streamingID);
-		exit(1);
+		printf("Connection failed %d %d %d\n", info_ptr->clientID, streamingID, threadNumber);
+		_endthread();
 	}
-
 	
-
+	/*	Set-up streaming of joint data	*/
 	simxFloat position;
-	simxGetJointPosition(streamingID, info_ptr->jacoArmJointHandles[threadNumber - 2], &position, simx_opmode_streaming);
 
-#ifdef DEBUG
-	printf(".%d\n", info_ptr->jacoArmJointHandles[threadNumber - 2]);
-#endif // DEBUG
+	simxGetJointPosition(streamingID, info_ptr->jacoArmJointHandles[threadNumber - 1], &position, simx_opmode_streaming);
 
+	#ifdef THREAD_DEBUG
+			printf(".%d\n", info_ptr->jacoArmJointHandles[threadNumber - 1]);
+	#endif // DEBUG
+
+	/*	When connected, stream data	*/
 	while (simxGetConnectionId(streamingID) != -1) { // while we are connected to the server..
 
-													 // Fetch the newest joint value from the inbox (func. returns immediately (non-blocking)):
-		if (simxGetJointPosition(streamingID, info_ptr->jacoArmJointHandles[threadNumber - 2], &position, simx_opmode_buffer) == simx_return_ok) {
+		// Fetch the newest joint value from the inbox (func. returns immediately (non-blocking)):
+		if (simxGetJointPosition(streamingID, info_ptr->jacoArmJointHandles[threadNumber - 1], &position, simx_opmode_buffer) == simx_return_ok) {
 
-			// here we have the newest joint position in variable jointPosition!
-			move_ptr->currAng[threadNumber - 2] = 0;
+			/*	Received new value, toggle mutex to enter value	*/
+			DWORD bufferWaitResult = WaitForSingleObject(jointMutexes[threadNumber - 1], INFINITE);  // no time-out interval
 
-			move_ptr->currAng[threadNumber - 2] = (double)position - 3.141592;
-			if (move_ptr->currAng[threadNumber - 2] < 0) {
-				move_ptr->currAng[threadNumber - 2] += 2.0 * 3.141592;
+			if (bufferWaitResult == WAIT_ABANDONED) {
+				printf("Mutex in indeterminate state");
 			}
+			else if (bufferWaitResult == WAIT_OBJECT_0) {
 
-#ifdef DEBUG
-			printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[threadNumber - 2], position, move_ptr->currAng[threadNumber - 2]);
-#endif // DEBUG
+				// here we have the newest joint position in variable jointPosition!
+				move_ptr->currAng[threadNumber - 1] = 0;
+
+				move_ptr->currAng[threadNumber - 1] = (double)position - 3.141592;
+				if (move_ptr->currAng[threadNumber - 1] < 0) {
+					move_ptr->currAng[threadNumber - 1] += 2.0 * 3.141592;
+				}
+
+				#ifdef THREAD_DEBUG
+					printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[threadNumber - 1], position, move_ptr->currAng[threadNumber - 2]);
+				#endif // DEBUG
+
+
+				if (!ReleaseMutex(jointMutexes[threadNumber - 1]))
+				{
+					// Handle error.
+					printf("Could not release Mutex %d\n", GetCurrentThreadId());
+				}
+			}
 		}
 		else {
 			// once you have enabled data streaming, it will take a few ms until the first value has arrived. So if
 			// we landed in this code section, this does not always mean we have an error!!!
 		}
-	} printf("exited streaming\n");
+	} printf("%d exited streaming\n", threadNumber);
 
+	/*	No reason to stay in this thread, exit	*/
 	_endthread();
-	
 }
 
 
@@ -560,7 +608,11 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		#ifdef DEBUG
 			printf("going to get_joint_angles_vrep\n"); fflush(stdout);
 		#endif // DEBUG
-		get_joint_angles_vrep(info_ptr, move_ptr);
+
+		#ifndef DATA_STREAMING
+			get_joint_angles_vrep(info_ptr, move_ptr);
+		#endif // !DATA_STREAMING
+
 		#ifdef DEBUG
 			printf("going to move_tip_vrep\n"); fflush(stdout);
 		#endif // DEBUG
@@ -765,7 +817,22 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 		}
 	}
 
-	get_joint_angles_vrep(info_ptr, move_ptr);
+	#ifndef DATA_STREAMING
+		/*	Create a mutex for each joint	*/
+		for (int i = 0; i < 5; i++) {
+
+			jointMutexes[i] = CreateMutex(NULL, FALSE, NULL);
+
+			if (jointMutexes[i] == NULL) {
+				printf("CreateMutex error: %d\n", GetLastError());
+				continue;
+			}
+		}
+
+		get_joint_angles_vrep(info_ptr, move_ptr);
+	#endif // !DATA_STREAMING
+
+	
 	if (strcmp(info_ptr->programMode, "fk") == 0) {
 		/*	set the arm into the upright position	*/
 		//int ret = simxSetJointTargetVelocity(info_ptr->clientID, info_ptr->jacoArmJointHandles[5 - 1], 5, simx_opmode_oneshot_wait);
@@ -994,11 +1061,13 @@ void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) 
 	simxSetObjectPosition(info_ptr->clientID, objectHandle, -1, &pos, simx_opmode_blocking);
 }
 
+
 /* Updates info struct with all jaco arm joint current angles
 *  joints 4 and 5 are initially adjusted to take on FK values,
 *  the other joints are offset by 180 degrees */
 void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	
+
 	#ifdef DEBUG
 		printf("get_joint_angles_vrep\n");
 	#endif // DEBUG
@@ -1006,28 +1075,51 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	int count = 0;
 	while (count < 6) {
 
-		#ifdef DEBUG
-			printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
-		#endif // DEBUG
 
-		simxFloat position;
-		int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[count], &position, simx_opmode_blocking);
-		move_ptr->currAng[count] = 0;
-		if ((count == (5 - 1)) || (count == (4 - 1))) {
-			move_ptr->currAng[count] = (double)position;
+		#ifdef DATA_STREAMING
+
+
+		/*	Received new value, toggle mutex to enter value	*/
+		DWORD bufferWaitResult = WaitForSingleObject(jointMutexes[count], INFINITE);  // no time-out interval
+
+		if (bufferWaitResult == WAIT_ABANDONED) {
+			printf("Mutex in indeterminate state");
 		}
-		else {
-			move_ptr->currAng[count] = (double)position - 3.141592;
-			if (move_ptr->currAng[count] < 0) {
-				move_ptr->currAng[count] += 2 * 3.141592;
+		else if (bufferWaitResult == WAIT_OBJECT_0) {
+		#endif // DATA_STREAMING
+
+			#ifdef DEBUG
+				printf(".%d\n", info_ptr->jacoArmJointHandles[count]);
+			#endif // DEBUG
+
+			simxFloat position;
+			int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[count], &position, simx_opmode_blocking);
+			move_ptr->currAng[count] = 0;
+			if ((count == (5 - 1)) || (count == (4 - 1))) {
+				move_ptr->currAng[count] = (double)position;
+			}
+			else {
+				move_ptr->currAng[count] = (double)position - 3.141592;
+				if (move_ptr->currAng[count] < 0) {
+					move_ptr->currAng[count] += 2 * 3.141592;
+				}
+			}
+
+			#ifdef DEBUG
+				printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[count], position, move_ptr->currAng[count]);
+			#endif // DEBUG
+
+			++count;
+
+		#ifdef DATA_STREAMING
+			/*	Release Mutex for this joint	*/
+			if (!ReleaseMutex(jointMutexes[count]))
+			{
+				// Handle error.
+				printf("Could not release Mutex %d\n", GetCurrentThreadId());
 			}
 		}
-
-		#ifdef DEBUG
-				printf("this is angle: %d, %f, %f\n", info_ptr->jacoArmJointHandles[count], position, move_ptr->currAng[count]);
-		#endif // DEBUG
-
-		++count;
+		#endif // DATA_STREAMING
 	}
 }
 
@@ -1039,9 +1131,12 @@ void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 void move_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double ang, bool getJointAngles) {
 	
 	if (getJointAngles) {
-		get_joint_angles_vrep(info_ptr, move_ptr);
+		#ifndef DATA_STREAMING
+			get_joint_angles_vrep(info_ptr, move_ptr);
+		#endif // !DATA_STREAMING
 	}
-	double jointAngle = move_ptr->currAng[jointNum - 1] + (ang*3.141592 / 180.0);
+
+	double jointAngle = current_angle(move_ptr, jointNum - 1) + (ang*3.141592 / 180.0);
 	if ((jointNum != 4) && (jointNum != 5)) {
 		jointAngle += 3.141592;
 	}
@@ -1222,14 +1317,14 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 	
 	/*	Get the current angle of the base	*/
-	double jointAngle = move_ptr->currAng[0];// = fmod(move_ptr->currAng[0], 3.141592);
+	double jointAngle = current_angle(move_ptr, 0);// = fmod(move_ptr->currAng[0], 3.141592);
 	if (jointAngle < 0) {
 		jointAngle = 2 * 3.141592 + jointAngle;
 	}
 	//jointAngle = fmod(jointAngle, 3.141592);
 
 	#ifdef DEBUG
-		printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, move_ptr->currAng[3], jointAngle);
+		printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, current_angle(move_ptr, 3), jointAngle);
 	#endif // DEBUG
 		
 	double changeAngle;
@@ -1396,5 +1491,45 @@ void pause_communication_vrep(info* info_ptr, int status) {
 	else {
 		simxPauseCommunication(info_ptr->clientID, 0);
 	}
+
+}
+
+
+
+double current_angle(move* move_ptr, int jointNum) {
+
+	double returnAngle = 0.0;
+
+
+#ifdef DATA_STREAMING
+
+	/*	Received new value, toggle mutex to enter value	*/
+	DWORD bufferWaitResult = WaitForSingleObject(jointMutexes[jointNum], INFINITE);  // no time-out interval
+
+	if (bufferWaitResult == WAIT_ABANDONED) {
+		printf("Mutex in indeterminate state");
+	}
+	else if (bufferWaitResult == WAIT_OBJECT_0) {
+
+		returnAngle = move_ptr->currAng[jointNum];
+
+		/*	Release Mutex for this joint	*/
+		if (!ReleaseMutex(jointMutexes[jointNum]))
+		{
+			// Handle error.
+			printf("Could not release Mutex %d\n", GetCurrentThreadId());
+		}
+	}
+
+	
+#else
+
+
+	returnAngle = move_ptr->currAng[jointNum];
+
+	
+#endif // !DATA_STREAMING
+
+	return returnAngle;
 
 }

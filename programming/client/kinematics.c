@@ -261,7 +261,7 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 
 	printf("c,s,q_2:	%f %f %f\n", cq_2, sq_2, q_2);
 
-	if (((move_ptr->currAng[3 - 1] - pi / 4 < q_3) && (move_ptr->currAng[3 - 1] + pi / 4 > q_3)) ||
+	if (((current_angle(move_ptr, 3 - 1) - pi / 4 < q_3) && (current_angle(move_ptr, 3 - 1) + pi / 4 > q_3)) ||
 				((q_2 < 0) && (q_3 > 0)) || ((q_2 > 0) && (q_3 < 0))){
 		/*	the new q_3 is within reach of the current joint 3's position	*/
 	#ifdef DEBUG
@@ -281,9 +281,9 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 	//Instead of calculating q_1 should read from vrep
 	//double q_1 = atan2f(py, px) - asin((e2) / (pow(pow(px, 2) + pow(py, 2), .5)));
 	//double q_1 = tan(py / px) - sin((100.0 + e2) / (pow(pow(px,2) + pow(py,2), .5)));
-	double q_1 = move_ptr->currAng[1 - 1];
-	double q_4 = move_ptr->currAng[4 - 1];
-	double q_5 = move_ptr->currAng[5 - 1];
+	double q_1 = current_angle(move_ptr, 1 - 1);
+	double q_4 = current_angle(move_ptr, 4 - 1);
+	double q_5 = current_angle(move_ptr, 5 - 1);
 	#ifdef DEBUG
 		printf("Angles are:		%f %f %f %f %f\n", q_1, q_2, q_3, q_4, q_5);
 	#endif // DEBUG
@@ -440,7 +440,7 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 	printf("\nJoint 4 Position:	%f %f %f\n", J4_desired[0], J4_desired[1], J4_desired[2]);
 	/*	Initialise the control variables	*/
 	float S_error[4] = { 0, 0, 0, 0 };
-	double initialAngles[6] = { move_ptr->currAng[0], move_ptr->currAng[1], move_ptr->currAng[2], move_ptr->currAng[3], 0.0, 0.0 };
+	double initialAngles[6] = { current_angle(move_ptr, 0), current_angle(move_ptr, 1), current_angle(move_ptr, 2), current_angle(move_ptr, 3), 0.0, 0.0 };
 	double angles[6] = { 0, 0, 0, 0, 0, 0 };
 	int loop = 1;
 
@@ -492,8 +492,8 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 		S_error[0] += 0.2*(S_desired[0] - position[0]);
 		S_error[1] += 0.2*(S_desired[1] - position[1]);
 
-		if (((move_ptr->currAng[1] < 0.01) || (move_ptr->currAng[1] > 6.24)) &&
-			((move_ptr->currAng[2] < 0.01) || (move_ptr->currAng[2] > 6.24))) {
+		if (((current_angle(move_ptr, 1) < 0.01) || (current_angle(move_ptr, 1) > 6.24)) &&
+			((current_angle(move_ptr, 2) < 0.01) || (current_angle(move_ptr, 2) > 6.24))) {
 			S_desired[2] = position[2];
 			// arm is fully extended
 			// there's no hope of reaching a higher arm position from joint4 pos
