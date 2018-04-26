@@ -1436,7 +1436,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		/*	Move tip radially outwards	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) + (0.003*duty);
+		simxFloat hype = sqrtf(hype_2) + (0.008*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1450,7 +1450,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	}
 	else if (command == 's') {
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) - (0.003*duty);
+		simxFloat hype = sqrtf(hype_2) - (0.008*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1483,7 +1483,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 			printf("begining control sequence\n");
 		#endif // DEBUG
-		control_kinematics(info_ptr, move_ptr, 0, 0, 0.003*duty);
+		control_kinematics(info_ptr, move_ptr, 0, 0, 0.008*duty);
 
 	}
 	else if (command == '-') {
@@ -1491,7 +1491,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 			printf("begining control sequence\n");
 		#endif // DEBUG
-		control_kinematics(info_ptr, move_ptr, 0, 0, -0.003*duty);
+		control_kinematics(info_ptr, move_ptr, 0, 0, -0.008*duty);
 
 	}
 
