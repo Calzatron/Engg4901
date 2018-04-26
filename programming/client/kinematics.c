@@ -459,8 +459,13 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 
 	double desHypot = pow(S_desired[0] * S_desired[0] + S_desired[1] * S_desired[1], 0.5);
 
-	double desiredAngXY = atan2f(S_desired[1], S_desired[0]);
-	double desiredAngZ = atan2f(S_desired[2], desHypot);
+	double S_D1 = (double)(S_desired[1]);
+	double S_D0 = (double)(S_desired[0]);
+	double S_D2 = (double)(S_desired[2]);
+
+
+	double desiredAngXY = atan2(S_D1, S_D0);
+	double desiredAngZ = atan2(S_D2, desHypot);
 
 	double actHypot = 0;
 	double actAngXY = desiredAngXY;
@@ -483,9 +488,27 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 
 	printf("proposed angles are:	%f %f %f\n", angles[0], angles[1], angles[2]);
 
+	printf("desired angles:		XY: %f	Z: %f\n", desiredAngXY, desiredAngZ);
+	///////////////////// 
+	///*
+	FILE* object_fp = fopen("pid_data.txt", "w+");
+	if (object_fp == NULL) {
+		fprintf(stdout, "Failed to generate file\n");
+		exit(1);
+	}
+
+
+	char line1[256];
+	sprintf(line1, "errorXY, errorZ, posX, posY, posZ, q_1, q_2, q_3, q_4, q_5, q_6\n");
+	fputs(line1, object_fp);
+
+	//*/ /////////////////////
+
+
+
 	clock_t start = clock();
 
-	for (int loop = 0; loop < 50; loop++) {
+	for (int loop = 0; loop < 400; loop++) {
 
 		/*	Calculate error in X and Y, and XY and Z planes	*/
 		double errorAngXY = desiredAngXY - actAngXY;
@@ -493,20 +516,20 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 
 		/*	Calculate the angles to input	*/
 		/*	joint 1	*/
-		error[0] = errorAngXY * 0.025;							//0.08; //*0.01
+		error[0] = errorAngXY * 0.03;							//0.08; //*0.01
 		accumError[0] = (accumError[0] + errorAngXY) * 0.99;	//0.95;//1.25; //1.1;//0.85;
 
 		double q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
 		
 		/*	joint 2	*/
-		error[1] = 0.8 * errorAngZ;
-		accumError[1] = (accumError[1] + errorAngZ) * 0.995;
+		error[1] = 0.55 * errorAngZ;
+		accumError[1] = (accumError[1] + errorAngZ) * 0.51;
 
 		double q_2 = error[1] + accumError[1] + angles[1];
 
 		/*	joint 3	*/
-		error[2] = 0.98 * errorAngZ;
-		accumError[2] = (accumError[2] + errorAngZ) * 0.827;
+		error[2] = 1.1 * errorAngZ;
+		accumError[2] = (accumError[2] + errorAngZ) * 1.01;
 
 		double q_3 = error[2] + accumError[2] + angles[2];
 
@@ -539,25 +562,38 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 		/*	Calculate the new plane positions	*/
 		actHypot = pow(actualPos[0] * actualPos[0] + actualPos[1] * actualPos[1], 0.5);
 
-		actAngXY = atan2f(actualPos[1], actualPos[0]);
-		actAngZ = atan2f(actualPos[2], actHypot);
+		actAngXY = atan2(actualPos[1], actualPos[0]);
+		actAngZ = atan2(actualPos[2], actHypot);
 
 		#ifdef DEBUG
-			if (!(loop % 2)) {
-				//printf("%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
-				printf("%f  %f  %f  %f  %f\n", q_1, q_2, q_3, q_4, q_5);
+			if (!(loop % 40)) {
+				//printf("%f %f	%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+				//printf("%f  %f  %f  %f  %f\n", q_1, q_2, q_3, q_4, q_5);
+				printf("Act:		%f %f\n", actAngXY, actAngZ);
 			}
-			if (loop == 0) {
-				printf("#%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
-			}
+
+			///*
+			char line2[256];
+			sprintf(line2, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2], q_1, q_2, q_3, q_4, q_5, q_6);
+			fputs(line2, object_fp);
+			//*/
+
+			//if (loop == 0) {
+			//	printf("#%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+			//}
 		#endif
 
 	}
 	
+	///*
+	fflush(object_fp);
+	fclose(object_fp);
+	//*/
+
 	clock_t end = clock();
 	printf("Calculated new pos in %ld ms:	%f %f %f\n", end - start, actualPos[0], actualPos[1], actualPos[2]);
-
-	printf("Angles are %f %f %f %f %f %f\n", angles1[0], angles1[1], angles1[2], angles1[3], angles1[4], angles1[5]);
+	printf("Final angles:		XY: %f	Z: %f\n", actAngXY, actAngZ);
+	//printf("Angles are %f %f %f %f %f %f\n", angles1[0], angles1[1], angles1[2], angles1[3], angles1[4], angles1[5]);
 
 	for (int ang = 0; ang < 6; ang++) {
 		if (angles1[ang] > 2 * 3.141592) {
@@ -572,18 +608,18 @@ void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float 
 	//q3 = (pi / 2.0) + (q_3 + pi);
 
 
-	printf("Angles are %f %f %f %f %f %f\n", angles1[0], angles1[1], angles1[2], angles1[3], angles1[4], angles1[5]);
+	//printf("Angles are %f %f %f %f %f %f\n", angles1[0], angles1[1], angles1[2], angles1[3], angles1[4], angles1[5]);
 
 	// pi is added to angles that are not 4 or 5
 
 	/*	Got angles, move the arm	*/
 	pause_communication_vrep(info_ptr, 1);
-	set_joint_angle_vrep(info_ptr, move_ptr, 1, -angles1[0] - 2 * pi);	//(3.141592 / 2.0) - 3.141592);
-	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles1[1]);// - pi/2.0); // +pi / 2.0 - pi);				//angles1[1] + pi - pi);//(pi / 2) - pi);
-	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles1[2] - 3.0*pi/2.0); // -pi - pi / 2.0);//(3.0 * pi / 2.0));
+	set_joint_angle_vrep(info_ptr, move_ptr, 1, -angles1[0] - pi);// -2 * pi);	//(3.141592 / 2.0) - 3.141592);
+	set_joint_angle_vrep(info_ptr, move_ptr, 2, angles1[1] + pi/2.0 - pi);// - pi/2.0); // +pi / 2.0 - pi);				//angles1[1] + pi - pi);//(pi / 2) - pi);
+	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles1[2] -3.0*pi / 2.0); // -pi - pi / 2.0);//(3.0 * pi / 2.0));
 	set_joint_angle_vrep(info_ptr, move_ptr, 4, angles1[3]);			//angles1[3]);
-	set_joint_angle_vrep(info_ptr, move_ptr, 5, angles1[4] + pi);
-	set_joint_angle_vrep(info_ptr, move_ptr, 6, angles1[5] + pi - pi);
+	set_joint_angle_vrep(info_ptr, move_ptr, 5, angles1[4] +pi);
+	set_joint_angle_vrep(info_ptr, move_ptr, 6, angles1[5] +pi - pi);
 	pause_communication_vrep(info_ptr, 0);
 
 
