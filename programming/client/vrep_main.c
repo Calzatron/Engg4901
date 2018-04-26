@@ -1163,7 +1163,7 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 	if ((jointNum != 4) && (jointNum != 5)) {
 		jointAngle += 3.141592;
 	}
-	jointAngle = fmod(jointAngle, 2 * 3.141592);
+	//jointAngle = fmod(jointAngle, 2 * 3.141592);
 	//printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
 
 	if (jointAngle < -0.1) {
@@ -1175,7 +1175,7 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 
 	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
 
-	//return;
+	return;
 
 	int ret;
 	if (jointNum == 2) {
@@ -1436,7 +1436,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		/*	Move tip radially outwards	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) + (0.03*duty);
+		simxFloat hype = sqrtf(hype_2) + (0.015*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1450,7 +1450,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	}
 	else if (command == 's') {
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) - (0.03*duty);
+		simxFloat hype = sqrtf(hype_2) - (0.015*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1483,7 +1483,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 			printf("begining control sequence\n");
 		#endif // DEBUG
-		control_kinematics(info_ptr, move_ptr, 0, 0, 0.04*duty);
+		control_kinematics(info_ptr, move_ptr, 0, 0, 0.02*duty);
 
 	}
 	else if (command == '-') {
@@ -1491,7 +1491,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 			printf("begining control sequence\n");
 		#endif // DEBUG
-		control_kinematics(info_ptr, move_ptr, 0, 0, -0.04*duty);
+		control_kinematics(info_ptr, move_ptr, 0, 0, -0.02*duty);
 
 	}
 
