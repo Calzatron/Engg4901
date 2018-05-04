@@ -2,7 +2,7 @@
 #ifndef PROJECT_H_
 #define PROJECT_H_
 
-#define DEBUG	1
+//#define DEBUG	1
 //#define DATA_STREAMING
 
 /*	Define motion struct	*/

@@ -529,6 +529,7 @@ void get_command(info* info_ptr, move* move_ptr){
     while((c = getchar()) != '\n'){
         response[i] = c;
         ++i;
+		Sleep(20);
     }
 
     response[i] = '\0';
@@ -1213,6 +1214,8 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 		printf("%f %f %f	%f %f %f\n", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2]); fflush(stdout);
 	#endif // DEBUG
 
+	clock_t start = clock();
+
 	/*	Determine new position to move from input	*/
 	if (direction == 'w') {			//position[1] += (simxFloat)(0.01 * duty); }
 		/*	moves the tip away from the arm's base	*/
@@ -1268,6 +1271,13 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 	/*	write to VREP the new position	*/
 	simxSetObjectPosition(info_ptr->clientID, info_ptr->targetHandle, sim_handle_parent, &position, simx_opmode_oneshot);
 
+	clock_t stop = clock();
+	printf("INV Kinematics took: %ld	%ld ms\n", stop, stop - start);
+	simxFloat positionTip[3];
+	simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &positionTip, simx_opmode_blocking);
+	printf("Tip at: %f %f %f\n", positionTip[0], positionTip[1], positionTip[2]);
+	printf("Target moved to: %f %f %f\n", position[0], position[1], position[2]);
+	
 }
 
 
@@ -1392,8 +1402,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 				/*	Determine the position fo Joint4, it can get stuck if it is at 0 or pi
 				*	Because the error switches between +-MaxError	*/
 				simxFloat joint4Angle;
-				int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], &position, simx_opmode_blocking);
-
+				int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], &joint4Angle, simx_opmode_blocking);
 				joint4Angle = fmodf(joint4Angle, 3.141592);
 				if (joint4Angle < 0.3 || joint4Angle > 6.0) {
 					/*	The arm is likely to be or is about to be stuck in correction
@@ -1436,7 +1445,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		/*	Move tip radially outwards	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) + (0.008*duty);
+		simxFloat hype = sqrtf(hype_2) + (0.02*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1445,12 +1454,14 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 				printf("begining control sequence\n");
 		#endif // DEBUG
 		/*	Move the arm to the desired location	*/
+		
+			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
-
+		//control_kinematics_v2(info_ptr, move_ptr, position[0], position[1], 0);
 	}
 	else if (command == 's') {
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
-		simxFloat hype = sqrtf(hype_2) - (0.008*duty);
+		simxFloat hype = sqrtf(hype_2) - (0.02*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
@@ -1483,7 +1494,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 			printf("begining control sequence\n");
 		#endif // DEBUG
-		control_kinematics(info_ptr, move_ptr, 0, 0, 0.008*duty);
+		control_kinematics(info_ptr, move_ptr, 0, 0, 0.02*duty);
 
 	}
 	else if (command == '-') {
@@ -1491,7 +1502,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 			printf("begining control sequence\n");
 		#endif // DEBUG
-		control_kinematics(info_ptr, move_ptr, 0, 0, -0.008*duty);
+		control_kinematics(info_ptr, move_ptr, 0, 0, -0.02*duty);
 
 	}
 

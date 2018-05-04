@@ -12,6 +12,11 @@
 #include <string.h>
 #include "project.h"
 #include "time.h"
+#include <conio.h>
+
+
+
+
 
 move* move_ptr;
 void define_classic_parameters(move* move_ptr);
@@ -21,6 +26,12 @@ int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
 int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z);
+
+float determinant(float matrix[25][25], float size);
+void cofactor(float matrix[25][25], float size, float det);
+void transpose(float matrix[25][25], float matrix_cofactor[25][25], float size, float det);
+
+
 
 
 /*	Stores in memory the forward kinematic
@@ -252,15 +263,15 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 	}
 
 	double q_3 = 1 * acos( j / k );
-
-	printf("i,j,q_3:	%f %f %f\n", j, k, q_3);
-
+	#ifdef DEBUG
+		printf("i,j,q_3:	%f %f %f\n", j, k, q_3);
+	#endif // DEBUG
 	double cq_2 = (px*(d2 + d3 * cos(q_3)) + d3 * sin(q_3)*(pz - d1)) / (pow(d2,2) + pow(d3,2) + 2 * d2*d3*cos(q_3));
 	double sq_2 = (-px * d3*sin(q_3) + (d2 + d3 * cos(q_3))*(pz - d1)) / (pow(d2, 2) + pow(d3, 2) + 2 * d2*d3*cos(q_3));
 	double q_2 = (pi / 2) - atan2(sq_2, cq_2);
-
-	printf("c,s,q_2:	%f %f %f\n", cq_2, sq_2, q_2);
-
+	#ifdef DEBUG
+		printf("c,s,q_2:	%f %f %f\n", cq_2, sq_2, q_2);
+	#endif // DEBUG
 	if (((current_angle(move_ptr, 3 - 1) - pi / 4 < q_3) && (current_angle(move_ptr, 3 - 1) + pi / 4 > q_3)) ||
 				((q_2 < 0) && (q_3 > 0)) || ((q_2 > 0) && (q_3 < 0))){
 		/*	the new q_3 is within reach of the current joint 3's position	*/
@@ -331,15 +342,16 @@ int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* 
 	if ((T[0] / position[0] > 0) && (T[1] / position[1] > 0)) {
 #ifdef DEBUG
 		printf("GGG");
+		
+#endif //
 		return 0;
-#endif // 
 
 	}
 	else {
 #		ifdef DEBUG
 		printf("HHH");
-		return 2;
 #endif // DEBUG
+		return 2;
 	}
 
 }
@@ -374,16 +386,17 @@ void approximate_angles_kinematics(float x, float y, float z, double* angles) {
 
 	double q_1 = atan2(py, px);// -asin(e2 / (pow((pow(px, 2) + pow(py, 2)), .5)));
 
+#ifdef DEBUG
 	printf("this is q_1: %f ", q_1);
-
+#endif
 	angles[0] = pi - q_1;					//-1.0 * q_1;
 	angles[1] = -(pi / 2.0) + (q_2 + pi);	//q_2;
 	angles[2] = q_3 + (3.0 * pi / 2.0);
 	//angles[3] = 0;
 	//angles[4] = -1 * pi;
-
+#ifdef DEBUG
 	printf("after: %f\n", -pi - q_1);
-
+#endif
 	//printf("this is q_3: %f", q_3);
 	/*q1 = -pi - q_1;
 	//q1 = -q_1;
@@ -490,7 +503,7 @@ void control_kinematics_xy(info* info_ptr, move* move_ptr, float x, float y, flo
 
 	printf("desired angles:		XY: %f	Z: %f\n", desiredAngXY, desiredAngZ);
 	///////////////////// 
-	///*
+	/*
 	FILE* object_fp = fopen("pid_data.txt", "w+");
 	if (object_fp == NULL) {
 		fprintf(stdout, "Failed to generate file\n");
@@ -572,11 +585,11 @@ void control_kinematics_xy(info* info_ptr, move* move_ptr, float x, float y, flo
 				printf("Act:	%f %f	Q_3 Error	%f	Accum	%f\n", actAngXY, actAngZ, error[2], accumError[2]);
 			}
 
-			///*
+			/*
 			char line2[256];
 			sprintf(line2, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2], q_1, q_2, q_3, q_4, q_5, q_6);
 			fputs(line2, object_fp);
-			//*/
+			*/
 
 			//if (loop == 0) {
 			//	printf("#%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
@@ -585,10 +598,10 @@ void control_kinematics_xy(info* info_ptr, move* move_ptr, float x, float y, flo
 
 	}
 	
-	///*
+	/*
 	fflush(object_fp);
 	fclose(object_fp);
-	//*/
+	*/
 
 	clock_t end = clock();
 	printf("Calculated new pos in %ld ms:	%f %f %f\n", end - start, actualPos[0], actualPos[1], actualPos[2]);
@@ -697,20 +710,21 @@ void control_kinematics_z(info* info_ptr, move* move_ptr, float x, float y, floa
 
 	printf("desired angles:		XY: %f	Z: %f\n", desiredAngXY, desiredAngZ);
 	///////////////////// 
-	///*
-	FILE* object_fp = fopen("pid_data.txt", "w+");
-	if (object_fp == NULL) {
-		fprintf(stdout, "Failed to generate file\n");
-		exit(1);
-	}
+	#ifdef DEBUG
+		///*
+		FILE* object_fp = fopen("pid_data.txt", "w+");
+		if (object_fp == NULL) {
+			fprintf(stdout, "Failed to generate file\n");
+			exit(1);
+		}
 
 
-	char line1[256];
-	sprintf(line1, "errorXY, errorZ, posX, posY, posZ, q_1, q_2, q_3, q_4, q_5, q_6\n");
-	fputs(line1, object_fp);
+		char line1[256];
+		sprintf(line1, "errorXY, errorZ, posX, posY, posZ, q_1, q_2, q_3, q_4, q_5, q_6\n");
+		fputs(line1, object_fp);
 
-	//*/ /////////////////////
-
+		//*/ /////////////////////
+	#endif // DEBUG
 
 
 	clock_t start = clock();
@@ -772,30 +786,32 @@ void control_kinematics_z(info* info_ptr, move* move_ptr, float x, float y, floa
 		actAngXY = atan2(actualPos[1], actualPos[0]);
 		actAngZ = atan2(actualPos[2], actHypot);
 
-#ifdef DEBUG
-		if (!(loop % 40)) {
-			//printf("%f %f	%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
-			//printf("%f  %f  %f  %f  %f\n", q_1, q_2, q_3, q_4, q_5);
-			printf("Act:	%f %f	Q_3 Error	%f	Accum	%f\n", actAngXY, actAngZ, error[2], accumError[2]);
-		}
+		#ifdef DEBUG
+			if (!(loop % 40)) {
+				//printf("%f %f	%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+				//printf("%f  %f  %f  %f  %f\n", q_1, q_2, q_3, q_4, q_5);
+				printf("Act:	%f %f	Q_3 Error	%f	Accum	%f\n", actAngXY, actAngZ, error[2], accumError[2]);
+			}
 
-		///*
-		char line2[256];
-		sprintf(line2, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2], q_1, q_2, q_3, q_4, q_5, q_6);
-		fputs(line2, object_fp);
-		//*/
+			///*
+			char line2[256];
+			sprintf(line2, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2], q_1, q_2, q_3, q_4, q_5, q_6);
+			fputs(line2, object_fp);
+			//*/
 
-		//if (loop == 0) {
-		//	printf("#%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
-		//}
-#endif
+			//if (loop == 0) {
+			//	printf("#%f %f		%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+			//}
+		#endif
 
 	}
 
-	///*
-	fflush(object_fp);
-	fclose(object_fp);
-	//*/
+	#ifdef DEBUG
+		///*
+		fflush(object_fp);
+		fclose(object_fp);
+		//*/
+	#endif //DEBUG
 
 	clock_t end = clock();
 	printf("Calculated new pos in %ld ms:	%f %f %f\n", end - start, actualPos[0], actualPos[1], actualPos[2]);
@@ -840,8 +856,10 @@ void control_kinematics_z(info* info_ptr, move* move_ptr, float x, float y, floa
 *	@param the information and movement structures with a change in coordinates to move
 *	@ret none
 */
-void control_kinematics_v1(info* info_ptr, move* move_ptr, float x, float y, float z) {
+void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z) {
 	
+	clock_t start = clock();
+
 	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
 	float J4_desired[4];
 	float J5_desired[4];
@@ -879,6 +897,7 @@ void control_kinematics_v1(info* info_ptr, move* move_ptr, float x, float y, flo
 	printf("\nJoint 4 Position:	%f %f %f\n", J4_desired[0], J4_desired[1], J4_desired[2]);
 	/*	Initialise the control variables	*/
 	float S_error[4] = { 0, 0, 0, 0 };
+	float S_accumError[4] = { 0, 0, 0, 0 };
 	double initialAngles[6] = { current_angle(move_ptr, 0), current_angle(move_ptr, 1), current_angle(move_ptr, 2), current_angle(move_ptr, 3), 0.0, 0.0 };
 	double angles[6] = { 0, 0, 0, 0, 0, 0 };
 	int loop = 1;
@@ -886,11 +905,25 @@ void control_kinematics_v1(info* info_ptr, move* move_ptr, float x, float y, flo
 	#ifdef DEBUG
 		printf("calculating");
 	#endif // DEBUG
+
+	/*
+	FILE* object_fp = fopen("pi_data.txt", "w+");
+	if (object_fp == NULL) {
+		fprintf(stdout, "Failed to generate file\n");
+		exit(1);
+	}
+
+
+	char line1[256];
+	sprintf(line1, "errorX errorY errorZ accumErrorX accumErrorY accumErrorZ PosX PosY PosZ desX desY desZ\n");
+	fputs(line1, object_fp);
+	*/
+
 			
-	for(int run = 0; run < 15; run++) {
+	for(int run = 0; run < 20; run++) {
 
 		/*	Update the desired Joint4 position	*/
-		float position[4] = { J4_desired[0] + S_error[0], J4_desired[1] + S_error[1], J4_desired[2] + S_error[2], 0.0 };
+		float position[4] = { J4_desired[0] + S_error[0] + S_accumError[0], J4_desired[1] + S_error[1] + S_accumError[1], J4_desired[2] + S_error[2] + S_accumError[2], 0.0 };
 
 		/*	update position with the calculated tip position 	*/
 		int errorCheck = inverse_kinematics(move_ptr, info_ptr, position, angles);
@@ -922,17 +955,26 @@ void control_kinematics_v1(info* info_ptr, move* move_ptr, float x, float y, flo
 		}
 
 		/*	check that the position is within 2cm of the desired tip position	*/
-		if ((fabs(S_desired[0] - position[0]) < 0.02) && (fabs(S_desired[1] - position[1]) < 0.02) 
-				&& (fabs(S_desired[2] - position[2]) < 0.02)) {
+		if ((fabs(S_desired[0] - position[0]) < 0.006) && (fabs(S_desired[1] - position[1]) < 0.006) 
+				&& (fabs(S_desired[2] - position[2]) < 0.006)) {
 			loop = 0;
+
+			/*
+			char line3[256];
+			sprintf(line3, "%f %f %f %f %f %f %f %f %f %f %f %f\n", S_error[0], S_error[1], S_error[2], S_accumError[0], S_accumError[1], S_accumError[2], position[0], position[1], position[2], S_desired[0], S_desired[1], S_desired[2]);
+			fputs(line3, object_fp);
+			*/
+
 			break;
 		}
 
 		/*	Add some proportionality to the error to ensure limited overshoot
 		*	between calculations
 		*/
-		S_error[0] += 0.2*(S_desired[0] - position[0]);
-		S_error[1] += 0.2*(S_desired[1] - position[1]);
+		S_accumError[0] += 0.2*(S_desired[0] - position[0]);
+		S_accumError[1] += 0.2*(S_desired[1] - position[1]);
+		S_error[0] = 0.08*(S_desired[0] - position[0]);
+		S_error[1] = 0.08*(S_desired[1] - position[1]);
 
 		if (((current_angle(move_ptr, 1) < 0.01) || (current_angle(move_ptr, 1) > 6.24)) &&
 			((current_angle(move_ptr, 2) < 0.01) || (current_angle(move_ptr, 2) > 6.24))) {
@@ -941,10 +983,29 @@ void control_kinematics_v1(info* info_ptr, move* move_ptr, float x, float y, flo
 			// there's no hope of reaching a higher arm position from joint4 pos
 		}
 		else {
-			S_error[2] += 0.1*(S_desired[2] - position[2]);
+			S_accumError[2] += 0.1*(S_desired[2] - position[2]);
+			S_error[1] = 0.08*(S_desired[1] - position[1]);
 		}
-		printf("S_error:	%f %f %f\n", S_error[0], S_error[1], S_error[2]);
+		#ifdef DEBUG
+			printf("S_error:	%f %f %f\n", S_error[0], S_error[1], S_error[2]);
+		#endif // DEBUG
+		/*
+		char line2[256];
+		sprintf(line2, "%f %f %f %f %f %f %f %f %f %f %f %f\n", S_error[0], S_error[1], S_error[2], S_accumError[0], S_accumError[1], S_accumError[2], position[0], position[1], position[2], S_desired[0], S_desired[1], S_desired[2]);
+		fputs(line2, object_fp);
+		*/
+
+
 	}
+
+	/*
+	fflush(object_fp);
+	fclose(object_fp);
+	*/
+
+	clock_t end = clock();
+
+	printf("Calculated INV K in %ld ms\n", end - start);
 
 	/*	Got angles, move the arm	*/
 	pause_communication_vrep(info_ptr, 1);
@@ -1015,6 +1076,252 @@ void fk_mod(move* move_ptr) {
 	ret[2][0] = move_ptr->currPos[2];
 
 }
+
+
+
+/*
+*	@brief calculates the desired tip position and localises the joint4 position
+*	to acheive this using the Jacobian matrix at the current angle position, and 
+*	calculating the change in angles required for a small change in position
+*	@param the information and movement structures with a change in coordinates to move
+*	@ret none
+*/
+void control_kinematics_v2(info* info_ptr, move* move_ptr, float x, float y, float z) {
+
+	/*	Need to make x,y,z * 1000	*/
+
+
+	double pi = 3.141592;
+	double q1 = -pi - move_ptr->currAng[0];
+	double q2 = (-pi/2.0) + pi + move_ptr->currAng[1];
+	double q3 = (pi/2.0) + pi + move_ptr->currAng[2];
+	double q4 = move_ptr->currAng[3];
+	double q5 = -pi + move_ptr->currAng[4];
+	double q6 = pi;
+
+	printf("Q: %f %f %f %f %f %f\n", q1, q2, q3, q4, q5, q6);
+
+	double J_JT[5][5];
+	J_JT[1 - 1][1 - 1] = pow(sin(q1)*-9.8 - cos(q1)*cos(q2)*4.1E2 + cos(q4)*sin(q1)*1.619070323027551E2 - sin(q1)*sin(q4)*sin(q5)*1.756140646055102E2 + cos(q2 - q3)*cos(q1)*sin(q4)*1.619070323027551E2 + cos(q1)*cos(q2)*sin(q3)*3.435587236306403E2 - cos(q1)*cos(q3)*sin(q2)*3.435587236306403E2 + cos(q4)*cos(q5)*sin(q1)*8.780703230275508E1 - cos(q1)*cos(q2)*cos(q5)*sin(q3)*1.520862412102134E2 + cos(q1)*cos(q3)*cos(q5)*sin(q2)*1.520862412102134E2 + cos(q1)*cos(q2)*cos(q3)*cos(q4)*sin(q5)*1.756140646055102E2 + cos(q1)*cos(q2)*cos(q3)*cos(q5)*sin(q4)*8.780703230275508E1 + cos(q1)*cos(q4)*sin(q2)*sin(q3)*sin(q5)*1.756140646055102E2 + cos(q1)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*8.780703230275508E1, 2.0) + pow(cos(q1)*9.8 - cos(q1)*cos(q4)*1.619070323027551E2 - cos(q2)*sin(q1)*4.1E2 + cos(q2 - q3)*sin(q1)*sin(q4)*1.619070323027551E2 - cos(q1)*cos(q4)*cos(q5)*8.780703230275508E1 + cos(q2)*sin(q1)*sin(q3)*3.435587236306403E2 - cos(q3)*sin(q1)*sin(q2)*3.435587236306403E2 + cos(q1)*sin(q4)*sin(q5)*1.756140646055102E2 - cos(q2)*cos(q5)*sin(q1)*sin(q3)*1.520862412102134E2 + cos(q3)*cos(q5)*sin(q1)*sin(q2)*1.520862412102134E2 + cos(q2)*cos(q3)*cos(q4)*sin(q1)*sin(q5)*1.756140646055102E2 + cos(q2)*cos(q3)*cos(q5)*sin(q1)*sin(q4)*8.780703230275508E1 + cos(q4)*sin(q1)*sin(q2)*sin(q3)*sin(q5)*1.756140646055102E2 + cos(q5)*sin(q1)*sin(q2)*sin(q3)*sin(q4)*8.780703230275508E1, 2.0);
+
+	J_JT[1 - 1][2 - 1] = sin(q2)*-4.018E3 + cos(q2)*cos(q3)*3.366875491580275E3 + cos(q4)*sin(q2)*6.638188324412958E4 + sin(q2)*sin(q3)*3.366875491580275E3 - sin(q2)*sin(q4)*sin(q5)*7.200176648825917E4 - cos(q2)*cos(q3)*cos(q4)*5.562457336475938E4 - cos(q2)*cos(q3)*cos(q5)*1.490445163860092E3 + cos(q4)*cos(q5)*sin(q2)*3.600088324412958E4 - cos(q2)*sin(q3)*sin(q4)*1.586688916567E3 + cos(q3)*sin(q2)*sin(q4)*1.586688916567E3 - cos(q4)*sin(q2)*sin(q3)*5.562457336475938E4 - cos(q2)*sin(q3)*sin(q5)*2.843315203090245E4 + cos(q3)*sin(q2)*sin(q5)*2.843315203090245E4 - cos(q5)*sin(q2)*sin(q3)*1.490445163860092E3 + cos(q2)*cos(q3)*cos(q4)*pow(cos(q5), 2.0)*1.335424149474981E4 + cos(q2)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*5.68663040618049E4 - cos(q3)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*5.68663040618049E4 + cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.335424149474981E4 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*5.543039975302317E3 - cos(q2)*cos(q4)*sin(q3)*sin(q4)*4.626412578182928E3 + cos(q3)*cos(q4)*sin(q2)*sin(q4)*4.626412578182928E3 + cos(q2)*cos(q3)*sin(q4)*sin(q5)*6.033374388745788E4 - cos(q2)*cos(q4)*sin(q3)*sin(q5)*1.721017833134E3 - cos(q2)*cos(q5)*sin(q3)*sin(q4)*8.605089165669998E2 + cos(q3)*cos(q4)*sin(q2)*sin(q5)*1.721017833134E3 + cos(q3)*cos(q5)*sin(q2)*sin(q4)*8.605089165669998E2 - cos(q4)*cos(q5)*sin(q2)*sin(q3)*5.543039975302317E3 - cos(q2)*cos(q5)*sin(q3)*sin(q5)*1.542014984363415E4 + cos(q3)*cos(q5)*sin(q2)*sin(q5)*1.542014984363415E4 + sin(q2)*sin(q3)*sin(q4)*sin(q5)*6.033374388745788E4 + cos(q2)*cos(q4)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*3.855037460908537E4 - cos(q3)*cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*3.855037460908537E4 + cos(q2)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*3.08402996872683E4 - cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*3.08402996872683E4 + cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q4)*2.843315203090245E4 - cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q4)*2.843315203090245E4 - cos(q2)*cos(q3)*cos(q5)*sin(q4)*sin(q5)*2.670848298949963E4 - cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.670848298949963E4;
+
+	J_JT[1 - 1][3 - 1] = cos(q2)*cos(q3)*-3.366875491580275E3 - sin(q2)*sin(q3)*3.366875491580275E3 + cos(q2)*cos(q3)*cos(q4)*5.562457336475938E4 + cos(q2)*cos(q3)*cos(q5)*1.490445163860092E3 + cos(q2)*sin(q3)*sin(q4)*1.586688916567E3 - cos(q3)*sin(q2)*sin(q4)*1.586688916567E3 + cos(q4)*sin(q2)*sin(q3)*5.562457336475938E4 + cos(q2)*sin(q3)*sin(q5)*2.843315203090245E4 - cos(q3)*sin(q2)*sin(q5)*2.843315203090245E4 + cos(q5)*sin(q2)*sin(q3)*1.490445163860092E3 - cos(q2)*cos(q3)*cos(q4)*pow(cos(q5), 2.0)*1.335424149474981E4 - cos(q2)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*5.68663040618049E4 + cos(q3)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*5.68663040618049E4 - cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.335424149474981E4 + cos(q2)*cos(q3)*cos(q4)*cos(q5)*5.543039975302317E3 + cos(q2)*cos(q4)*sin(q3)*sin(q4)*4.626412578182928E3 - cos(q3)*cos(q4)*sin(q2)*sin(q4)*4.626412578182928E3 - cos(q2)*cos(q3)*sin(q4)*sin(q5)*6.033374388745788E4 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*1.721017833134E3 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*8.605089165669998E2 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*1.721017833134E3 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*8.605089165669998E2 + cos(q4)*cos(q5)*sin(q2)*sin(q3)*5.543039975302317E3 + cos(q2)*cos(q5)*sin(q3)*sin(q5)*1.542014984363415E4 - cos(q3)*cos(q5)*sin(q2)*sin(q5)*1.542014984363415E4 - sin(q2)*sin(q3)*sin(q4)*sin(q5)*6.033374388745788E4 - cos(q2)*cos(q4)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*3.855037460908537E4 + cos(q3)*cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*3.855037460908537E4 - cos(q2)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*3.08402996872683E4 + cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*3.08402996872683E4 - cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q4)*2.843315203090245E4 + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q4)*2.843315203090245E4 + cos(q2)*cos(q3)*cos(q5)*sin(q4)*sin(q5)*2.670848298949963E4 + cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.670848298949963E4;
+
+	J_JT[1 - 1][4 - 1] = cos(q2)*cos(q3)*5.705418679635367E4 - cos(q2)*sin(q4)*6.638188324412958E4 + sin(q2)*sin(q3)*5.705418679635367E4 - cos(q2)*cos(q3)*pow(cos(q5), 2.0)*2.313022476545122E4 - pow(cos(q5), 2.0)*sin(q2)*sin(q3)*2.313022476545122E4 - cos(q2)*cos(q3)*cos(q4)*1.586688916567E3 + cos(q2)*cos(q3)*cos(q5)*2.843315203090245E4 - cos(q2)*cos(q4)*sin(q5)*7.200176648825917E4 - cos(q2)*cos(q5)*sin(q4)*3.600088324412958E4 + cos(q2)*sin(q3)*sin(q4)*5.562457336475938E4 - cos(q3)*sin(q2)*sin(q4)*5.562457336475938E4 - cos(q4)*sin(q2)*sin(q3)*1.586688916567E3 + cos(q5)*sin(q2)*sin(q3)*2.843315203090245E4 - cos(q2)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*1.335424149474981E4 + cos(q3)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*1.335424149474981E4 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*8.605089165669998E2 + cos(q2)*cos(q3)*sin(q4)*sin(q5)*1.721017833134E3 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*6.033374388745788E4 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*5.543039975302317E3 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*6.033374388745788E4 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*5.543039975302317E3 - cos(q4)*cos(q5)*sin(q2)*sin(q3)*8.605089165669998E2 + sin(q2)*sin(q3)*sin(q4)*sin(q5)*1.721017833134E3 - cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*2.670848298949963E4 + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*2.670848298949963E4;
+
+	J_JT[1 - 1][5 - 1] = cos(q2)*cos(q3)*1.542014984363415E4 + sin(q2)*sin(q3)*1.542014984363415E4 + cos(q2)*cos(q3)*cos(q5)*2.843315203090245E4 - cos(q2)*cos(q4)*sin(q5)*3.600088324412958E4 - cos(q2)*cos(q5)*sin(q4)*7.200176648825917E4 - cos(q2)*sin(q3)*sin(q4)*2.670848298949963E4 + cos(q3)*sin(q2)*sin(q4)*2.670848298949963E4 - cos(q2)*sin(q3)*sin(q5)*1.490445163860092E3 + cos(q3)*sin(q2)*sin(q5)*1.490445163860092E3 + cos(q5)*sin(q2)*sin(q3)*2.843315203090245E4 - cos(q2)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*1.0E-28 + cos(q3)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*1.0E-28 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*1.721017833134E3 + cos(q2)*cos(q3)*sin(q4)*sin(q5)*8.605089165669998E2 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*5.479070391215557E4 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*6.033374388745788E4 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*5.479070391215557E4 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*6.033374388745788E4 - cos(q4)*cos(q5)*sin(q2)*sin(q3)*1.721017833134E3 + sin(q2)*sin(q3)*sin(q4)*sin(q5)*8.605089165669998E2 - cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*2.659964638814754E-29 + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*2.659964638814754E-29;
+	
+	J_JT[2 - 1][1 - 1] = sin(q2)*-4.018E3 + cos(q2)*cos(q3)*3.366875491580275E3 + cos(q4)*sin(q2)*6.638188324412958E4 + sin(q2)*sin(q3)*3.366875491580275E3 - sin(q2)*sin(q4)*sin(q5)*7.200176648825917E4 - cos(q2)*cos(q3)*cos(q4)*5.562457336475938E4 - cos(q2)*cos(q3)*cos(q5)*1.490445163860092E3 + cos(q4)*cos(q5)*sin(q2)*3.600088324412958E4 - cos(q2)*sin(q3)*sin(q4)*1.586688916567E3 + cos(q3)*sin(q2)*sin(q4)*1.586688916567E3 - cos(q4)*sin(q2)*sin(q3)*5.562457336475938E4 - cos(q2)*sin(q3)*sin(q5)*2.843315203090245E4 + cos(q3)*sin(q2)*sin(q5)*2.843315203090245E4 - cos(q5)*sin(q2)*sin(q3)*1.490445163860092E3 + cos(q2)*cos(q3)*cos(q4)*pow(cos(q5), 2.0)*1.335424149474981E4 + cos(q2)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*5.68663040618049E4 - cos(q3)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*5.68663040618049E4 + cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.335424149474981E4 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*5.543039975302317E3 - cos(q2)*cos(q4)*sin(q3)*sin(q4)*4.626412578182928E3 + cos(q3)*cos(q4)*sin(q2)*sin(q4)*4.626412578182928E3 + cos(q2)*cos(q3)*sin(q4)*sin(q5)*6.033374388745788E4 - cos(q2)*cos(q4)*sin(q3)*sin(q5)*1.721017833134E3 - cos(q2)*cos(q5)*sin(q3)*sin(q4)*8.605089165669998E2 + cos(q3)*cos(q4)*sin(q2)*sin(q5)*1.721017833134E3 + cos(q3)*cos(q5)*sin(q2)*sin(q4)*8.605089165669998E2 - cos(q4)*cos(q5)*sin(q2)*sin(q3)*5.543039975302317E3 - cos(q2)*cos(q5)*sin(q3)*sin(q5)*1.542014984363415E4 + cos(q3)*cos(q5)*sin(q2)*sin(q5)*1.542014984363415E4 + sin(q2)*sin(q3)*sin(q4)*sin(q5)*6.033374388745788E4 + cos(q2)*cos(q4)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*3.855037460908537E4 - cos(q3)*cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*3.855037460908537E4 + cos(q2)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*3.08402996872683E4 - cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*3.08402996872683E4 + cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q4)*2.843315203090245E4 - cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q4)*2.843315203090245E4 - cos(q2)*cos(q3)*cos(q5)*sin(q4)*sin(q5)*2.670848298949963E4 - cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.670848298949963E4;
+
+	J_JT[2 - 1][2 - 1] = pow(cos(q1), 2.0)*pow(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32, 2.0)*4.0E-62 + pow(sin(q1), 2.0)*pow(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32, 2.0)*4.0E-62 + pow(sin(q2 - q3)*3.435587236306403E2 + cos(q2)*4.1E2 - cos(q2 - q3)*sin(q4 + q5)*8.780703230275508E1 - cos(q2 - q3)*sin(q4)*1.619070323027551E2 + cos(q2 - q3)*sin(q4 - q5)*8.780703230275508E1 - cos(q5)*(sin(q2 - q3)*1.520862412102134E2 + cos(q2 - q3)*sin(q4)*8.780703230275508E1), 2.0);
+
+	J_JT[2 - 1][3 - 1] = cos(q5)*7.606795779302279E4 + sin(q3)*1.408590766885625E5 + cos(q3)*sin(q4)*6.638188324412958E4 - cos(q5)*sin(q3)*6.235535889618751E4 - pow(cos(q4), 2.0)*4.626412578182928E3 - pow(cos(q5), 2.0)*3.08402996872683E4 + pow(cos(q4), 2.0)*cos(q5)*2.843315203090245E4 - pow(cos(q2), 2.0)*pow(cos(q5), 2.0)*8.0E-29 - pow(cos(q3), 2.0)*pow(cos(q5), 2.0)*8.0E-29 + pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*3.855037460908537E4 - pow(cos(q2), 2.0)*cos(q5)*sin(q3)*2.0E-28 + cos(q3)*cos(q4)*sin(q5)*7.200176648825917E4 + cos(q3)*cos(q5)*sin(q4)*3.600088324412958E4 + pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*pow(cos(q5), 2.0)*1.6E-28 - pow(cos(q2), 2.0)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*2.0E-29 - pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*2.0E-29 - cos(q4)*sin(q4)*sin(q5)*5.68663040618049E4 + pow(cos(q2), 2.0)*cos(q3)*cos(q5)*sin(q4)*1.0E-28 + pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*4.0E-29 + cos(q2)*cos(q3)*cos(q5)*sin(q2)*2.0E-28 + cos(q2)*cos(q3)*sin(q2)*sin(q3)*1.0E-27 - cos(q2)*cos(q5)*sin(q2)*sin(q4)*1.0E-28 + cos(q3)*cos(q5)*sin(q3)*sin(q4)*1.0E-28 - cos(q4)*cos(q5)*sin(q4)*sin(q5)*3.08402996872683E4 - cos(q2)*cos(q3)*pow(cos(q4), 2.0)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*cos(q3)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*pow(cos(q3), 2.0)*cos(q5)*sin(q2)*sin(q4)*2.0E-28 - pow(cos(q2), 2.0)*cos(q3)*cos(q5)*sin(q3)*sin(q4)*2.0E-28 - cos(q2)*cos(q3)*cos(q5)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*1.0E-28 - cos(q3)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*1.0E-28 + cos(q2)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*1.0E-28 + cos(q2)*cos(q3)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q3)*1.0E-28 - cos(q2)*pow(cos(q3), 2.0)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*2.0E-28 + pow(cos(q2), 2.0)*cos(q3)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*2.0E-28 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.0E-28 - 1.442464836918001E5;
+
+	J_JT[2 - 1][4 - 1] = sin(q1)*(cos(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q1)*cos(q4)*1.0 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4)*5.0E-1 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1)*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31 - cos(q1)*(sin(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(sin(q1)*sin(q4)*5.0E-1 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1)*1.756140646055102E2 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1)*1.0 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31 - sin(q2 - q3)*(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33)*(sin(q2 - q3)*3.435587236306403E2 + cos(q2)*4.1E2 - cos(q2 - q3)*sin(q4 + q5)*8.780703230275508E1 - cos(q2 - q3)*sin(q4)*1.619070323027551E2 + cos(q2 - q3)*sin(q4 - q5)*8.780703230275508E1 - cos(q5)*(sin(q2 - q3)*1.520862412102134E2 + cos(q2 - q3)*sin(q4)*8.780703230275508E1))*1.0E-31;
+
+	J_JT[2 - 1][5 - 1] = -(cos(q2 - q3)*sin(q5)*1.520862412102134E2 + sin(q2 - q3)*cos(q4)*cos(q5)*1.756140646055102E2 - sin(q2 - q3)*sin(q4)*sin(q5)*8.780703230275508E1)*(sin(q2 - q3)*3.435587236306403E2 + cos(q2)*4.1E2 - cos(q2 - q3)*sin(q4 + q5)*8.780703230275508E1 - cos(q2 - q3)*sin(q4)*1.619070323027551E2 + cos(q2 - q3)*sin(q4 - q5)*8.780703230275508E1 - cos(q5)*(sin(q2 - q3)*1.520862412102134E2 + cos(q2 - q3)*sin(q4)*8.780703230275508E1)) + sin(q1)*(sin(q5)*(cos(q1)*cos(q4)*5.0E-1 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1 + cos(q2)*sin(q1)*sin(q3)*8.660254037844386E-1 - cos(q3)*sin(q1)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2 + cos(q5)*(cos(q1)*sin(q4)*1.0 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31 - cos(q1)*(cos(q5)*(sin(q1)*sin(q4)*1.0 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2 + sin(q5)*(cos(q4)*sin(q1)*5.0E-1 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1 - cos(q1)*cos(q2)*sin(q3)*8.660254037844386E-1 + cos(q1)*cos(q3)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31;
+	
+	J_JT[3 - 1][1 - 1] = cos(q2)*cos(q3)*-3.366875491580275E3 - sin(q2)*sin(q3)*3.366875491580275E3 + cos(q2)*cos(q3)*cos(q4)*5.562457336475938E4 + cos(q2)*cos(q3)*cos(q5)*1.490445163860092E3 + cos(q2)*sin(q3)*sin(q4)*1.586688916567E3 - cos(q3)*sin(q2)*sin(q4)*1.586688916567E3 + cos(q4)*sin(q2)*sin(q3)*5.562457336475938E4 + cos(q2)*sin(q3)*sin(q5)*2.843315203090245E4 - cos(q3)*sin(q2)*sin(q5)*2.843315203090245E4 + cos(q5)*sin(q2)*sin(q3)*1.490445163860092E3 - cos(q2)*cos(q3)*cos(q4)*pow(cos(q5), 2.0)*1.335424149474981E4 - cos(q2)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*5.68663040618049E4 + cos(q3)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*5.68663040618049E4 - cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.335424149474981E4 + cos(q2)*cos(q3)*cos(q4)*cos(q5)*5.543039975302317E3 + cos(q2)*cos(q4)*sin(q3)*sin(q4)*4.626412578182928E3 - cos(q3)*cos(q4)*sin(q2)*sin(q4)*4.626412578182928E3 - cos(q2)*cos(q3)*sin(q4)*sin(q5)*6.033374388745788E4 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*1.721017833134E3 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*8.605089165669998E2 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*1.721017833134E3 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*8.605089165669998E2 + cos(q4)*cos(q5)*sin(q2)*sin(q3)*5.543039975302317E3 + cos(q2)*cos(q5)*sin(q3)*sin(q5)*1.542014984363415E4 - cos(q3)*cos(q5)*sin(q2)*sin(q5)*1.542014984363415E4 - sin(q2)*sin(q3)*sin(q4)*sin(q5)*6.033374388745788E4 - cos(q2)*cos(q4)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*3.855037460908537E4 + cos(q3)*cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*3.855037460908537E4 - cos(q2)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*3.08402996872683E4 + cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*3.08402996872683E4 - cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q4)*2.843315203090245E4 + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q4)*2.843315203090245E4 + cos(q2)*cos(q3)*cos(q5)*sin(q4)*sin(q5)*2.670848298949963E4 + cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.670848298949963E4;
+
+	J_JT[3 - 1][2 - 1] = cos(q5)*7.606795779302279E4 + sin(q3)*1.408590766885625E5 + cos(q3)*sin(q4)*6.638188324412958E4 - cos(q5)*sin(q3)*6.235535889618751E4 - pow(cos(q4), 2.0)*4.626412578182928E3 - pow(cos(q5), 2.0)*3.08402996872683E4 + pow(cos(q4), 2.0)*cos(q5)*2.843315203090245E4 - pow(cos(q2), 2.0)*pow(cos(q5), 2.0)*8.0E-29 - pow(cos(q3), 2.0)*pow(cos(q5), 2.0)*8.0E-29 + pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*3.855037460908537E4 - pow(cos(q2), 2.0)*cos(q5)*sin(q3)*2.0E-28 + cos(q3)*cos(q4)*sin(q5)*7.200176648825917E4 + cos(q3)*cos(q5)*sin(q4)*3.600088324412958E4 + pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*pow(cos(q5), 2.0)*1.6E-28 - pow(cos(q2), 2.0)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*2.0E-29 - pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*2.0E-29 - cos(q4)*sin(q4)*sin(q5)*5.68663040618049E4 + pow(cos(q2), 2.0)*cos(q3)*cos(q5)*sin(q4)*1.0E-28 + pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*4.0E-29 + cos(q2)*cos(q3)*cos(q5)*sin(q2)*2.0E-28 + cos(q2)*cos(q3)*sin(q2)*sin(q3)*1.0E-27 - cos(q2)*cos(q5)*sin(q2)*sin(q4)*1.0E-28 + cos(q3)*cos(q5)*sin(q3)*sin(q4)*1.0E-28 - cos(q4)*cos(q5)*sin(q4)*sin(q5)*3.08402996872683E4 - cos(q2)*cos(q3)*pow(cos(q4), 2.0)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*cos(q3)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*pow(cos(q3), 2.0)*cos(q5)*sin(q2)*sin(q4)*2.0E-28 - pow(cos(q2), 2.0)*cos(q3)*cos(q5)*sin(q3)*sin(q4)*2.0E-28 - cos(q2)*cos(q3)*cos(q5)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*1.0E-28 - cos(q3)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*1.0E-28 + cos(q2)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*1.0E-28 + cos(q2)*cos(q3)*pow(cos(q4), 2.0)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*1.0E-28 + cos(q2)*cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q3)*1.0E-28 - cos(q2)*pow(cos(q3), 2.0)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*2.0E-28 + pow(cos(q2), 2.0)*cos(q3)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*2.0E-28 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.0E-28 - 1.442464836918001E5;
+
+	J_JT[3 - 1][3 - 1] = pow(cos(q5)*(sin(q4)*(cos(q2)*sin(q1)*sin(q3) - cos(q3)*sin(q1)*sin(q2))*5.0E-1 + sin(q1)*sin(q2)*sin(q3)*8.660254037844386E-1 + cos(q2)*cos(q3)*sin(q1)*8.660254037844386E-1)*1.756140646055102E2 + sin(q4)*(cos(q2)*sin(q1)*sin(q3) - cos(q3)*sin(q1)*sin(q2))*1.619070323027551E2 - sin(q1)*sin(q2)*sin(q3)*3.435587236306403E2 + cos(q4)*sin(q5)*(cos(q2)*sin(q1)*sin(q3) - cos(q3)*sin(q1)*sin(q2))*1.756140646055102E2 - cos(q2)*cos(q3)*sin(q1)*3.435587236306403E2, 2.0) + pow(cos(q5)*(sin(q4)*(cos(q1)*cos(q2)*sin(q3) - cos(q1)*cos(q3)*sin(q2))*5.0E-1 + cos(q1)*cos(q2)*cos(q3)*8.660254037844386E-1 + cos(q1)*sin(q2)*sin(q3)*8.660254037844386E-1)*1.756140646055102E2 + sin(q4)*(cos(q1)*cos(q2)*sin(q3) - cos(q1)*cos(q3)*sin(q2))*1.619070323027551E2 + cos(q4)*sin(q5)*(cos(q1)*cos(q2)*sin(q3) - cos(q1)*cos(q3)*sin(q2))*1.756140646055102E2 - cos(q1)*cos(q2)*cos(q3)*3.435587236306403E2 - cos(q1)*sin(q2)*sin(q3)*3.435587236306403E2, 2.0) + pow(sin(q2 - q3)*-3.435587236306403E2 + cos(q2 - q3)*sin(q4)*1.619070323027551E2 + sin(q2 - q3)*cos(q5)*1.520862412102134E2 + cos(q2 - q3)*cos(q4)*sin(q5)*1.756140646055102E2 + cos(q2 - q3)*cos(q5)*sin(q4)*8.780703230275508E1, 2.0);
+
+	J_JT[3 - 1][4 - 1] = sin(q2 - q3)*(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33)*(sin(q2 - q3)*-3.435587236306403E2 + cos(q2 - q3)*sin(q4)*1.619070323027551E2 + sin(q2 - q3)*cos(q5)*1.520862412102134E2 + cos(q2 - q3)*cos(q4)*sin(q5)*1.756140646055102E2 + cos(q2 - q3)*cos(q5)*sin(q4)*8.780703230275508E1)*-1.0E-31 + sin(q1)*(cos(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4) + cos(q2)*cos(q3)*cos(q4)*sin(q1) + cos(q4)*sin(q1)*sin(q2)*sin(q3))*8.780703230275508E1 - sin(q5)*(-cos(q1)*cos(q4) + cos(q2)*cos(q3)*sin(q1)*sin(q4) + sin(q1)*sin(q2)*sin(q3)*sin(q4))*1.756140646055102E2 + cos(q2 - q3)*cos(q4)*sin(q1)*1.619070323027551E2)*(cos(q2)*cos(q3)*8.588968090766008E63 + sin(q2)*sin(q3)*8.588968090766008E63 - cos(q2)*cos(q3)*cos(q5)*3.802156030255336E63 - cos(q2)*sin(q3)*sin(q4)*4.047675807568877E63 + cos(q3)*sin(q2)*sin(q4)*4.047675807568877E63 - cos(q5)*sin(q2)*sin(q3)*3.802156030255336E63 - cos(q2)*cos(q4)*sin(q3)*sin(q5)*4.390351615137754E63 - cos(q2)*cos(q5)*sin(q3)*sin(q4)*2.195175807568877E63 + cos(q3)*cos(q4)*sin(q2)*sin(q5)*4.390351615137754E63 + cos(q3)*cos(q5)*sin(q2)*sin(q4)*2.195175807568877E63)*4.0E-62 - cos(q1)*(sin(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1) + cos(q1)*cos(q2)*cos(q3)*sin(q4) + cos(q1)*sin(q2)*sin(q3)*sin(q4))*1.756140646055102E2 - cos(q5)*(sin(q1)*sin(q4)*-1.0 + cos(q1)*cos(q2)*cos(q3)*cos(q4) + cos(q1)*cos(q4)*sin(q2)*sin(q3))*8.780703230275508E1 - cos(q2 - q3)*cos(q1)*cos(q4)*1.619070323027551E2)*(cos(q2)*cos(q3)*8.588968090766008E63 + sin(q2)*sin(q3)*8.588968090766008E63 - cos(q2)*cos(q3)*cos(q5)*3.802156030255336E63 - cos(q2)*sin(q3)*sin(q4)*4.047675807568877E63 + cos(q3)*sin(q2)*sin(q4)*4.047675807568877E63 - cos(q5)*sin(q2)*sin(q3)*3.802156030255336E63 - cos(q2)*cos(q4)*sin(q3)*sin(q5)*4.390351615137754E63 - cos(q2)*cos(q5)*sin(q3)*sin(q4)*2.195175807568877E63 + cos(q3)*cos(q4)*sin(q2)*sin(q5)*4.390351615137754E63 + cos(q3)*cos(q5)*sin(q2)*sin(q4)*2.195175807568877E63)*4.0E-62;
+
+	J_JT[3 - 1][5 - 1] = cos(q4)*-2.670848298949963E4 + cos(q4)*cos(q5)*6.033374388745788E4 - sin(q4)*sin(q5)*5.479070391215557E4 + pow(cos(q2), 2.0)*cos(q4)*1.0E-28 + pow(cos(q3), 2.0)*cos(q4)*1.0E-28 + cos(q4)*pow(cos(q5), 2.0)*1.0E-28 - pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*cos(q4)*2.0E-28 - pow(cos(q2), 2.0)*cos(q4)*pow(cos(q5), 2.0)*2.0E-28 - pow(cos(q3), 2.0)*cos(q4)*pow(cos(q5), 2.0)*2.0E-28 - cos(q2)*sin(q2)*sin(q5)*2.0E-28 + cos(q3)*sin(q3)*sin(q5)*2.0E-28 - cos(q5)*sin(q4)*sin(q5)*1.0E-28 + cos(q2)*pow(cos(q3), 2.0)*sin(q2)*sin(q5)*4.0E-28 + cos(q2)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*1.0E-28 - pow(cos(q2), 2.0)*cos(q3)*sin(q3)*sin(q5)*4.0E-28 - cos(q3)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*1.0E-28 + pow(cos(q2), 2.0)*cos(q5)*sin(q4)*sin(q5)*2.0E-28 + pow(cos(q3), 2.0)*cos(q5)*sin(q4)*sin(q5)*2.0E-28 + pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*cos(q4)*pow(cos(q5), 2.0)*4.0E-28 + cos(q2)*cos(q5)*sin(q2)*sin(q5)*6.0E-29 - cos(q3)*cos(q5)*sin(q3)*sin(q5)*6.0E-29 - cos(q2)*pow(cos(q3), 2.0)*cos(q5)*sin(q2)*sin(q5)*1.2E-28 + cos(q2)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*4.0E-29 + pow(cos(q2), 2.0)*cos(q3)*cos(q5)*sin(q3)*sin(q5)*1.2E-28 - cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*4.0E-29 - cos(q2)*pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*2.0E-28 + pow(cos(q2), 2.0)*cos(q3)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*2.0E-28 - pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*cos(q5)*sin(q4)*sin(q5)*4.0E-28 - cos(q2)*cos(q3)*cos(q4)*sin(q2)*sin(q3)*1.0E-28 - cos(q2)*pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*8.0E-29 + pow(cos(q2), 2.0)*cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*8.0E-29 + cos(q2)*cos(q3)*cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*2.0E-28 - cos(q2)*cos(q3)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.0E-28;
+
+	J_JT[4 - 1][1 - 1] = cos(q2)*cos(q3)*5.705418679635367E4 - cos(q2)*sin(q4)*6.638188324412958E4 + sin(q2)*sin(q3)*5.705418679635367E4 - cos(q2)*cos(q3)*pow(cos(q5), 2.0)*2.313022476545122E4 - pow(cos(q5), 2.0)*sin(q2)*sin(q3)*2.313022476545122E4 - cos(q2)*cos(q3)*cos(q4)*1.586688916567E3 + cos(q2)*cos(q3)*cos(q5)*2.843315203090245E4 - cos(q2)*cos(q4)*sin(q5)*7.200176648825917E4 - cos(q2)*cos(q5)*sin(q4)*3.600088324412958E4 + cos(q2)*sin(q3)*sin(q4)*5.562457336475938E4 - cos(q3)*sin(q2)*sin(q4)*5.562457336475938E4 - cos(q4)*sin(q2)*sin(q3)*1.586688916567E3 + cos(q5)*sin(q2)*sin(q3)*2.843315203090245E4 - cos(q2)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*1.335424149474981E4 + cos(q3)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*1.335424149474981E4 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*8.605089165669998E2 + cos(q2)*cos(q3)*sin(q4)*sin(q5)*1.721017833134E3 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*6.033374388745788E4 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*5.543039975302317E3 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*6.033374388745788E4 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*5.543039975302317E3 - cos(q4)*cos(q5)*sin(q2)*sin(q3)*8.605089165669998E2 + sin(q2)*sin(q3)*sin(q4)*sin(q5)*1.721017833134E3 - cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*2.670848298949963E4 + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*2.670848298949963E4;
+
+	J_JT[4 - 1][2 - 1] = sin(q1)*(cos(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q1)*cos(q4)*1.0 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4)*5.0E-1 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1)*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31 - cos(q1)*(sin(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(sin(q1)*sin(q4)*5.0E-1 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1)*1.756140646055102E2 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1)*1.0 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31 - sin(q2 - q3)*(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33)*(sin(q2 - q3)*3.435587236306403E2 + cos(q2)*4.1E2 - cos(q2 - q3)*sin(q4 + q5)*8.780703230275508E1 - cos(q2 - q3)*sin(q4)*1.619070323027551E2 + cos(q2 - q3)*sin(q4 - q5)*8.780703230275508E1 - cos(q5)*(sin(q2 - q3)*1.520862412102134E2 + cos(q2 - q3)*sin(q4)*8.780703230275508E1))*1.0E-31;
+
+	J_JT[4 - 1][3 - 1] = sin(q2 - q3)*(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33)*(sin(q2 - q3)*-3.435587236306403E2 + cos(q2 - q3)*sin(q4)*1.619070323027551E2 + sin(q2 - q3)*cos(q5)*1.520862412102134E2 + cos(q2 - q3)*cos(q4)*sin(q5)*1.756140646055102E2 + cos(q2 - q3)*cos(q5)*sin(q4)*8.780703230275508E1)*-1.0E-31 + sin(q1)*(cos(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4) + cos(q2)*cos(q3)*cos(q4)*sin(q1) + cos(q4)*sin(q1)*sin(q2)*sin(q3))*8.780703230275508E1 - sin(q5)*(-cos(q1)*cos(q4) + cos(q2)*cos(q3)*sin(q1)*sin(q4) + sin(q1)*sin(q2)*sin(q3)*sin(q4))*1.756140646055102E2 + cos(q2 - q3)*cos(q4)*sin(q1)*1.619070323027551E2)*(cos(q2)*cos(q3)*8.588968090766008E63 + sin(q2)*sin(q3)*8.588968090766008E63 - cos(q2)*cos(q3)*cos(q5)*3.802156030255336E63 - cos(q2)*sin(q3)*sin(q4)*4.047675807568877E63 + cos(q3)*sin(q2)*sin(q4)*4.047675807568877E63 - cos(q5)*sin(q2)*sin(q3)*3.802156030255336E63 - cos(q2)*cos(q4)*sin(q3)*sin(q5)*4.390351615137754E63 - cos(q2)*cos(q5)*sin(q3)*sin(q4)*2.195175807568877E63 + cos(q3)*cos(q4)*sin(q2)*sin(q5)*4.390351615137754E63 + cos(q3)*cos(q5)*sin(q2)*sin(q4)*2.195175807568877E63)*4.0E-62 - cos(q1)*(sin(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1) + cos(q1)*cos(q2)*cos(q3)*sin(q4) + cos(q1)*sin(q2)*sin(q3)*sin(q4))*1.756140646055102E2 - cos(q5)*(sin(q1)*sin(q4)*-1.0 + cos(q1)*cos(q2)*cos(q3)*cos(q4) + cos(q1)*cos(q4)*sin(q2)*sin(q3))*8.780703230275508E1 - cos(q2 - q3)*cos(q1)*cos(q4)*1.619070323027551E2)*(cos(q2)*cos(q3)*8.588968090766008E63 + sin(q2)*sin(q3)*8.588968090766008E63 - cos(q2)*cos(q3)*cos(q5)*3.802156030255336E63 - cos(q2)*sin(q3)*sin(q4)*4.047675807568877E63 + cos(q3)*sin(q2)*sin(q4)*4.047675807568877E63 - cos(q5)*sin(q2)*sin(q3)*3.802156030255336E63 - cos(q2)*cos(q4)*sin(q3)*sin(q5)*4.390351615137754E63 - cos(q2)*cos(q5)*sin(q3)*sin(q4)*2.195175807568877E63 + cos(q3)*cos(q4)*sin(q2)*sin(q5)*4.390351615137754E63 + cos(q3)*cos(q5)*sin(q2)*sin(q4)*2.195175807568877E63)*4.0E-62;
+
+	J_JT[4 - 1][4 - 1] = pow(sin(q2 - q3), 2.0)*pow(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33, 2.0)*1.0E-62 + pow(sin(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(sin(q1)*sin(q4)*5.0E-1 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1)*1.756140646055102E2 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1)*1.0 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2, 2.0) + pow(cos(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q1)*cos(q4)*1.0 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4)*5.0E-1 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1)*1.756140646055102E2, 2.0);
+
+	J_JT[4 - 1][5 - 1] = (cos(q5)*(sin(q1)*sin(q4)*1.0 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2 + sin(q5)*(cos(q4)*sin(q1)*5.0E-1 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1 - cos(q1)*cos(q2)*sin(q3)*8.660254037844386E-1 + cos(q1)*cos(q3)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2)*(sin(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(sin(q1)*sin(q4)*5.0E-1 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1)*1.756140646055102E2 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1)*1.0 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2) + (sin(q5)*(cos(q1)*cos(q4)*5.0E-1 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1 + cos(q2)*sin(q1)*sin(q3)*8.660254037844386E-1 - cos(q3)*sin(q1)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2 + cos(q5)*(cos(q1)*sin(q4)*1.0 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2)*(cos(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q1)*cos(q4)*1.0 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4)*5.0E-1 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1)*1.756140646055102E2) + sin(q2 - q3)*(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33)*(cos(q2 - q3)*sin(q5)*1.520862412102134E2 + sin(q2 - q3)*cos(q4)*cos(q5)*1.756140646055102E2 - sin(q2 - q3)*sin(q4)*sin(q5)*8.780703230275508E1)*1.0E-31;
+	
+	J_JT[5 - 1][1 - 1] = cos(q2)*cos(q3)*1.542014984363415E4 + sin(q2)*sin(q3)*1.542014984363415E4 + cos(q2)*cos(q3)*cos(q5)*2.843315203090245E4 - cos(q2)*cos(q4)*sin(q5)*3.600088324412958E4 - cos(q2)*cos(q5)*sin(q4)*7.200176648825917E4 - cos(q2)*sin(q3)*sin(q4)*2.670848298949963E4 + cos(q3)*sin(q2)*sin(q4)*2.670848298949963E4 - cos(q2)*sin(q3)*sin(q5)*1.490445163860092E3 + cos(q3)*sin(q2)*sin(q5)*1.490445163860092E3 + cos(q5)*sin(q2)*sin(q3)*2.843315203090245E4 - cos(q2)*pow(cos(q5), 2.0)*sin(q3)*sin(q4)*1.0E-28 + cos(q3)*pow(cos(q5), 2.0)*sin(q2)*sin(q4)*1.0E-28 - cos(q2)*cos(q3)*cos(q4)*cos(q5)*1.721017833134E3 + cos(q2)*cos(q3)*sin(q4)*sin(q5)*8.605089165669998E2 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*5.479070391215557E4 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*6.033374388745788E4 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*5.479070391215557E4 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*6.033374388745788E4 - cos(q4)*cos(q5)*sin(q2)*sin(q3)*1.721017833134E3 + sin(q2)*sin(q3)*sin(q4)*sin(q5)*8.605089165669998E2 - cos(q2)*cos(q4)*cos(q5)*sin(q3)*sin(q5)*2.659964638814754E-29 + cos(q3)*cos(q4)*cos(q5)*sin(q2)*sin(q5)*2.659964638814754E-29;
+
+	J_JT[5 - 1][2 - 1] = -(cos(q2 - q3)*sin(q5)*1.520862412102134E2 + sin(q2 - q3)*cos(q4)*cos(q5)*1.756140646055102E2 - sin(q2 - q3)*sin(q4)*sin(q5)*8.780703230275508E1)*(sin(q2 - q3)*3.435587236306403E2 + cos(q2)*4.1E2 - cos(q2 - q3)*sin(q4 + q5)*8.780703230275508E1 - cos(q2 - q3)*sin(q4)*1.619070323027551E2 + cos(q2 - q3)*sin(q4 - q5)*8.780703230275508E1 - cos(q5)*(sin(q2 - q3)*1.520862412102134E2 + cos(q2 - q3)*sin(q4)*8.780703230275508E1)) + sin(q1)*(sin(q5)*(cos(q1)*cos(q4)*5.0E-1 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1 + cos(q2)*sin(q1)*sin(q3)*8.660254037844386E-1 - cos(q3)*sin(q1)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2 + cos(q5)*(cos(q1)*sin(q4)*1.0 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31 - cos(q1)*(cos(q5)*(sin(q1)*sin(q4)*1.0 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2 + sin(q5)*(cos(q4)*sin(q1)*5.0E-1 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1 - cos(q1)*cos(q2)*sin(q3)*8.660254037844386E-1 + cos(q1)*cos(q3)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2)*(sin(q2)*2.05E33 - cos(q2)*cos(q3)*1.717793618153202E33 - sin(q2)*sin(q3)*1.717793618153202E33 + cos(q2)*cos(q3)*cos(q5)*7.604312060510672E32 + cos(q2)*sin(q3)*sin(q4)*8.095351615137753E32 - cos(q3)*sin(q2)*sin(q4)*8.095351615137753E32 + cos(q5)*sin(q2)*sin(q3)*7.604312060510672E32 + cos(q2)*cos(q4)*sin(q3)*sin(q5)*8.780703230275508E32 + cos(q2)*cos(q5)*sin(q3)*sin(q4)*4.390351615137754E32 - cos(q3)*cos(q4)*sin(q2)*sin(q5)*8.780703230275508E32 - cos(q3)*cos(q5)*sin(q2)*sin(q4)*4.390351615137754E32)*2.0E-31;
+
+	J_JT[5 - 1][3 - 1] = cos(q4)*-2.670848298949963E4 + cos(q4)*cos(q5)*6.033374388745788E4 - sin(q4)*sin(q5)*5.479070391215557E4 + pow(cos(q2), 2.0)*cos(q4)*1.0E-28 + pow(cos(q3), 2.0)*cos(q4)*1.0E-28 + cos(q4)*pow(cos(q5), 2.0)*1.0E-28 - pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*cos(q4)*2.0E-28 - pow(cos(q2), 2.0)*cos(q4)*pow(cos(q5), 2.0)*2.0E-28 - pow(cos(q3), 2.0)*cos(q4)*pow(cos(q5), 2.0)*2.0E-28 - cos(q2)*sin(q2)*sin(q5)*2.0E-28 + cos(q3)*sin(q3)*sin(q5)*2.0E-28 - cos(q5)*sin(q4)*sin(q5)*1.0E-28 + cos(q2)*pow(cos(q3), 2.0)*sin(q2)*sin(q5)*4.0E-28 + cos(q2)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*1.0E-28 - pow(cos(q2), 2.0)*cos(q3)*sin(q3)*sin(q5)*4.0E-28 - cos(q3)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*1.0E-28 + pow(cos(q2), 2.0)*cos(q5)*sin(q4)*sin(q5)*2.0E-28 + pow(cos(q3), 2.0)*cos(q5)*sin(q4)*sin(q5)*2.0E-28 + pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*cos(q4)*pow(cos(q5), 2.0)*4.0E-28 + cos(q2)*cos(q5)*sin(q2)*sin(q5)*6.0E-29 - cos(q3)*cos(q5)*sin(q3)*sin(q5)*6.0E-29 - cos(q2)*pow(cos(q3), 2.0)*cos(q5)*sin(q2)*sin(q5)*1.2E-28 + cos(q2)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*4.0E-29 + pow(cos(q2), 2.0)*cos(q3)*cos(q5)*sin(q3)*sin(q5)*1.2E-28 - cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*4.0E-29 - cos(q2)*pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*sin(q2)*sin(q5)*2.0E-28 + pow(cos(q2), 2.0)*cos(q3)*pow(cos(q4), 2.0)*sin(q3)*sin(q5)*2.0E-28 - pow(cos(q2), 2.0)*pow(cos(q3), 2.0)*cos(q5)*sin(q4)*sin(q5)*4.0E-28 - cos(q2)*cos(q3)*cos(q4)*sin(q2)*sin(q3)*1.0E-28 - cos(q2)*pow(cos(q3), 2.0)*pow(cos(q4), 2.0)*cos(q5)*sin(q2)*sin(q5)*8.0E-29 + pow(cos(q2), 2.0)*cos(q3)*pow(cos(q4), 2.0)*cos(q5)*sin(q3)*sin(q5)*8.0E-29 + cos(q2)*cos(q3)*cos(q4)*pow(cos(q5), 2.0)*sin(q2)*sin(q3)*2.0E-28 - cos(q2)*cos(q3)*cos(q5)*sin(q2)*sin(q3)*sin(q4)*sin(q5)*2.0E-28;
+
+	J_JT[5 - 1][4 - 1] = (cos(q5)*(sin(q1)*sin(q4)*1.0 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2 + sin(q5)*(cos(q4)*sin(q1)*5.0E-1 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1 - cos(q1)*cos(q2)*sin(q3)*8.660254037844386E-1 + cos(q1)*cos(q3)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2)*(sin(q1)*sin(q4)*1.619070323027551E2 + cos(q5)*(sin(q1)*sin(q4)*5.0E-1 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1)*1.756140646055102E2 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*1.619070323027551E2 + sin(q5)*(cos(q4)*sin(q1)*1.0 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2) + (sin(q5)*(cos(q1)*cos(q4)*5.0E-1 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1 + cos(q2)*sin(q1)*sin(q3)*8.660254037844386E-1 - cos(q3)*sin(q1)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2 + cos(q5)*(cos(q1)*sin(q4)*1.0 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2)*(cos(q1)*sin(q4)*1.619070323027551E2 + sin(q5)*(cos(q1)*cos(q4)*1.0 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*1.619070323027551E2 + cos(q5)*(cos(q1)*sin(q4)*5.0E-1 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1)*1.756140646055102E2) + sin(q2 - q3)*(cos(q4)*1.619070323027551E33 + cos(q4)*cos(q5)*8.780703230275508E32 - sin(q4)*sin(q5)*1.756140646055102E33)*(cos(q2 - q3)*sin(q5)*1.520862412102134E2 + sin(q2 - q3)*cos(q4)*cos(q5)*1.756140646055102E2 - sin(q2 - q3)*sin(q4)*sin(q5)*8.780703230275508E1)*1.0E-31;
+
+	J_JT[5 - 1][5 - 1] = pow(sin(q5)*(cos(q1)*cos(q4)*5.0E-1 - sin(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1))*5.0E-1 + cos(q2)*sin(q1)*sin(q3)*8.660254037844386E-1 - cos(q3)*sin(q1)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2 + cos(q5)*(cos(q1)*sin(q4)*1.0 + cos(q4)*(sin(q1)*sin(q2)*sin(q3) + cos(q2)*cos(q3)*sin(q1)))*1.756140646055102E2, 2.0) + pow(cos(q5)*(sin(q1)*sin(q4)*1.0 - cos(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3)))*1.756140646055102E2 + sin(q5)*(cos(q4)*sin(q1)*5.0E-1 + sin(q4)*(cos(q1)*cos(q2)*cos(q3) + cos(q1)*sin(q2)*sin(q3))*5.0E-1 - cos(q1)*cos(q2)*sin(q3)*8.660254037844386E-1 + cos(q1)*cos(q3)*sin(q2)*8.660254037844386E-1)*1.756140646055102E2, 2.0) + pow(cos(q2 - q3)*sin(q5)*1.520862412102134E2 + sin(q2 - q3)*cos(q4)*cos(q5)*1.756140646055102E2 - sin(q2 - q3)*sin(q4)*sin(q5)*8.780703230275508E1, 2.0);
+
+
+	float JJT_F[5][5];
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			JJT_F[i][j] = (float)(J_JT[i][j]);
+		}
+	}
+
+	/*	now need to invert J*J^T	*/
+	printf("%e\n", JJT_F[0][0]);
+	printf("%e\n", JJT_F[0][1]);
+	printf("%e\n", JJT_F[0][2]);
+	printf("%e\n", JJT_F[0][3]);
+	printf("%e\n", JJT_F[0][4]);
+	printf("%e\n", JJT_F[1][0]);
+	printf("%e\n", JJT_F[1][1]);
+	printf("%e\n", JJT_F[1][2]);
+	printf("%e\n", JJT_F[1][3]);
+	printf("%e\n", JJT_F[1][4]);
+	printf("%e\n", JJT_F[2][0]);
+	printf("%e\n", JJT_F[2][1]);
+	printf("%e\n", JJT_F[2][2]);
+	printf("%e\n", JJT_F[2][3]);
+	printf("%e\n", JJT_F[2][4]);
+	printf("%e\n", JJT_F[3][0]);
+	printf("%e\n", JJT_F[3][1]);
+	printf("%e\n", JJT_F[3][2]);
+	printf("%e\n", JJT_F[3][3]);
+	printf("%e\n", JJT_F[3][4]);
+	printf("%e\n", JJT_F[4][0]);
+	printf("%e\n", JJT_F[4][1]);
+	printf("%e\n", JJT_F[4][2]);
+	printf("%e\n", JJT_F[4][3]);
+	printf("%e\n", JJT_F[4][4]);
+
+
+
+	float d = determinant(JJT_F, 5);
+	printf("\n\n    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\n\n\tDeterminant of the Matrix = %f\n", d);
+	if (d == 0.0E-50)
+	{
+		printf("\n\n    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\n\n\tInverse not exsist\n\n");
+		printf("\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+		printf("\n* * * * * * * * * * * * * * * * * THE END * * * * * * * * * * * * * * * * * * *");
+		printf("\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+	}
+	else { cofactor(JJT_F, 5, d); }
+
+}
+
+/* For calculating Determinant of the Matrix . this function is recursive */
+float determinant(float matrix[25][25], float size)
+{
+
+	float s = 1, det = 0, m_minor[25][25];
+	int i, j, m, n, c;
+	if (size == 1)
+	{
+
+		return (matrix[0][0]);
+	}
+	else
+	{
+		det = 0.0;
+		for (c = 0; c<size; c++)
+		{
+			m = 0;
+			n = 0;
+			for (i = 0; i<size; i++)
+			{
+				for (j = 0; j<size; j++)
+				{
+					m_minor[i][j] = 0;
+					if (i != 0 && j != c)
+					{
+						m_minor[m][n] = matrix[i][j];
+						if (n<(size - 2))
+							n++;
+						else
+						{
+							n = 0;
+							m++;
+						}
+					}
+				}
+			}
+			det = det + s * (matrix[0][c] * determinant(m_minor, size - 1));
+			s = -1 * s;
+		}
+	}
+
+	return (det);
+}
+
+/*calculate cofactor of matrix*/
+void cofactor(float matrix[25][25], float size, float det) {
+	float m_cofactor[25][25], matrix_cofactor[25][25];
+	int p, q, m, n, i, j;
+	for (q = 0; q<size; q++)
+	{
+		for (p = 0; p<size; p++)
+		{
+			m = 0;
+			n = 0;
+			for (i = 0; i<size; i++)
+			{
+				for (j = 0; j<size; j++)
+				{
+					if (i != q && j != p)
+					{
+						m_cofactor[m][n] = matrix[i][j];
+						if (n<(size - 2))
+							n++;
+						else
+						{
+							n = 0;
+							m++;
+						}
+					}
+				}
+			}
+			matrix_cofactor[q][p] = powf(-1.0, q + p) * determinant(m_cofactor, size - 1);
+		}
+	}
+	transpose(matrix, matrix_cofactor, size, det);
+}
+
+/*Finding transpose of cofactor of matrix*/
+void transpose(float matrix[25][25], float matrix_cofactor[25][25], float size, float det)
+{
+	int i, j;
+	float m_transpose[25][25], m_inverse[25][25], d;
+
+	for (i = 0; i<size; i++)
+	{
+		for (j = 0; j<size; j++)
+		{
+			m_transpose[i][j] = matrix_cofactor[j][i];
+		}
+	}
+	d = det;//determinant(matrix, size);
+
+	printf("\n#%e\n", d);
+
+	for (i = 0; i<size; i++)
+	{
+		for (j = 0; j<size; j++)
+		{
+			m_inverse[i][j] = m_transpose[i][j] / d;
+		}
+	}
+	printf("\n\n\t* * * * * * * * * * * * * * * * * * * * * * * \n\n\tThe inverse of matrix is : \n\n");
+
+	for (i = 0; i<size; i++)
+	{
+		for (j = 0; j<size; j++)
+		{
+			printf(" %e", m_inverse[i][j]);
+		}
+		printf("\n\n");
+	}
+	printf("\n\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+	printf("\n* * * * * * * * * * * * * * * * * THE END * * * * * * * * * * * * * * * * * * *");
+	printf("\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+}
+
+
+
+
+
 
 
 

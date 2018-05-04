@@ -1,5 +1,5 @@
 \documentclass[12pt,openany,a4paper]{book}
-\usepackage{graphics}	% if you want encapsulated PS figures.
+\usepackage{graphicx}	% if you want encapsulated PS figures.
 
 % If you use a macro file called macros.tex :
 % \input{macros}
@@ -148,16 +148,22 @@
 
 \begin{titlepage}
 \renewcommand{\baselinestretch}{1.0}
+
 \begin{center}
-\vspace*{35mm}
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{UQLogo.png}
+\end{figure}
+
+\vspace*{12mm}
 \Huge\bf
-		TITLE\\
-		OF YOUR\\
-		MAGNUM OPUS\\
+		CONNECTING VIRTUAL ROBOTICS\\
+		TO AN\\
+		EXPERIMENTAL PLATFORM\\
 \vspace{20mm}
 \large\sl
 		by\\
-		AUTHOR'S NAME
+		Callum Rohweder
 		\medskip\\
 \rm
 		School of Information Technology and Electrical Engineering,\\
@@ -167,43 +173,37 @@
 		Bachelor of Engineering
 		\smallskip\\
 \normalsize
-		in the field of \ldots
+		in the field of Mechatronics
 		\medskip\\
 \large
-		MONTH \& YEAR.		
+		June \& 2018.		
 \end{center}
 \end{titlepage}
 
 \cleardoublepage
 
 \begin{flushright}
-	ADDRESS LINE 1\\
-	ADDRESS LINE 2\\
-	Tel.\ (07) nnnn nnnn\\
+	52 KENNIGO STREET\\
+	SPRING HILL, QLD, 4000\\
+	Tel.\ 0404 639 174\\
 	\medskip
 	\today
 \end{flushright}
 \begin{flushleft}
-  Prof Paul Strooper\\
+  Professor Shazia Sadiq\\
   Head of School\\
   School of Information Technology and Electrical Engineering\\
   The University of Queensland\\
   St Lucia, Q 4072\\
   \bigskip\bigskip
-  Dear Professor Strooper,
+  Dear Professor Sadiq,
 \end{flushleft}
 
 In accordance with the requirements of the degree of Bachelor of
 Engineering in the division of 
-Electrical Engineering,
-Electrical and Biomedical Engineering,
-Electrical and Computer Engineering,
-Software Engineering,
 Mechatronic Engineering,
 I present the
-following thesis entitled ``\ldots''.  This work was performed [in
-partnership with Mr/Ms \ldots\ and] under the supervision of
-Mr/Ms/Dr/A/Prof./Prof.~\ldots.
+following thesis entitled `Connecting Virtual Robotics To An Experimental Platform`.  This work was performed under the supervision of Dr Surya Singh.\\
 
 I declare that the work submitted in this thesis is my own, except as
 acknowledged in the text and footnotes, and has not been previously
@@ -213,22 +213,18 @@ institution.
 \begin{flushright}
 	Yours sincerely,\\
 	\medskip
-	\emph{Author's Signature}\\
+
 	\medskip
-	AUTHOR'S NAME.
+	Callum Rohweder.
 \end{flushright}
 
 \cleardoublepage
 
-% Dedication (if you want it):
-\vspace*{70mm}
-\begin{center}
-\renewcommand{\baselinestretch}{1.0}
-\sl
-	To \ldots
-\end{center}
-
 \chapter{Acknowledgments}
+
+I specifically would like to thank my fellow students in the school of ITEE for assisting me during this project; for listening to the software issues I faced and giving useful insight and direction.
+
+The product of this thesis was created in complete self-sufficiency, with functionality specified by my supervisor.
 
 Acknowledge your supervisor, preferably with a few short and specific
 statements about his/her contribution to the content and direction of
@@ -294,6 +290,27 @@ your thesis, seek advice from your supervisor.
 %	\include{theory}
 
 \chapter{Introduction}
+%% Introduction of thesis problem and thesis
+Remotely controlling a robot or robotic manipulator is a desirable objective with large complications to still be overcome. It is proposed that doing this through a virtual environment can eliminate collisions or undesirable actions that may incidentally occur due to the nature of long distance control, whilst providing the benefits of virtual simulations. Specifically, this thesis focuses on the development a remote interface to a 'Virtual Robotics Environment Platform', VREP. VREP can be used to simulate robotic arms and processes, and includes the commonly used wheel-chair based Kinova Jaco arm which is available at the University of Queensland. The remote interface, otherwise known as the 'client program' (given that it treats VREP as the server), was designed to take input from a user by either keyboard or joystick, and have the motion played out in VREP, corrected for any obstructions, and then control the movement of the Jaco arm through the Kinova Software Development Kit.
+
+%% Introduction to virtual simuations
+In all engineering disciplines, virtual simulations allow one to view and interact with an environment or process in a non-destructive manner. Simulations can provide a realistic rendering of an event, whilst providing further detail into physical phenomena that establish design constraints, and optimization techniques. Robotics makes use of lumped electromechanical components to interact with an environment in a desirable manner. Thus, virtual robotics is a necessary field for growth in engineering, as it allows the testing of interactions with an environment whilst giving unforeseen insight.
+
+%% Introduction to robotics
+Companies such as those in manufacturing, technical experts in the fields of medicine and surgery, and persons with disabilities all benefit from the capability of robotic manipulators. In most circumstances it is expected that these manipulators can be controlled by a user in real time, however this ability is restricted by inherent delay in the process of receiving an input, calculating an action, and actuating. Further expectations of robotics include optimality and customisation; where it may be desirable for movements of a robot to minimize the energy used in a given process or a robotic arm to pick up a glass a in a certain manner. This provides interconnected layers of desired functionality for a robot; a layer dedicated to moving the manipulator, a layer designed to create movements that meet the user's needs whilst minimizing design criteria, and a monitoring layer that focuses on aspects such as physical constraints and robotic learning.
+
+%% Introduction to remote robotics
+With the invention of the internet to provide long range data-resourcing, came a desire to move the control of manipulators and processes to a remote location. The concept of remote robotics is no different to the typical method of controlling manipulators, an input has a desired output, however at some time in between, data is processed and sent through the internet. Given factors such as time to send, packet loss, processing time, and internet traffic, a significant amount of undesirable delay is added and decreases the satisfaction of real-time control. This produces large complications in areas such as remote robotic surgery, where reaction delay may have harmful effects.
+
+%% Introduction to thesis hypothesis
+Virtual robotic environments can simulate the true movements of a manipulator given its physical attributes. VREP in particular can calculate the joint angles required to be able to move the hand from one position to another using a physics engine and accuracy of choice. It is believed that allowing a virtual environment to compute the movements required by a remote user will increase the accuracy in movement and decrease the chance of collision of the physical robot.
+
+%% Introduction to thesis scope
+Although this thesis does not go into large detail on the testing of the complete product, remote user to physical robotic arm movement, it does go through the design of the remote interface. The problems faced in controlling a robotic arm, design strategies tested, and the future improvements of the client program are presented. This interface was crucial to the success of the whole system, and it was important to refine before interfacing with a physical arm. % list scope
+
+%% Introduction to thesis objectives
+
+
 
 The introductory chapter describes the importance of the field and the
 scope and significance of your project.  It usually ends with an
@@ -303,6 +320,9 @@ Notice that Arabic page numbering begins with Chapter 1.  Preceding
 pages (known as ``frontmatter'') have Roman numbering.  The
 \texttt{book} document class in \LaTeX\ follows this numbering
 convention by default (see Lamport~\cite{lamport}, p.\,80).
+
+
+
 
 \chapter{Literature review / prior art}
 

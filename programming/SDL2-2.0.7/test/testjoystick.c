@@ -131,6 +131,9 @@ loop(void *arg)
                 break;
             }
         }
+
+		Sleep(50);
+
         /* Update visual joystick state */
        // SDL_SetRenderDrawColor(screen, 0x00, 0xFF, 0x00, SDL_ALPHA_OPAQUE);
       //  for (i = 0; i < SDL_JoystickNumButtons(joystick); ++i) {

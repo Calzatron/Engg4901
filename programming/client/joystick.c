@@ -306,6 +306,7 @@ void ReadFromPipe() {
 				//printf("Buffer going in:	#%s#\n", buffer); fflush(stdout);
 				//buffer[strlen(line)] = '\0';
 				interpret_joystick(buffer);
+
 				free(buffer);
 
 				line = strtok(NULL, "\n");
@@ -313,8 +314,9 @@ void ReadFromPipe() {
 			free(fullBuffer);
 			
 		}
-		if (!bSuccess) { printf("failed writing to stdout\n"); break; }
+		if (!bSuccess) { printf("failed reading from stdin\n"); break; }
 		memset(chBuf, 0, BUFSIZE);
+
 	}
 }
 
@@ -330,15 +332,18 @@ void interpret_joystick(char* buffer) {
 		if ((buffer[0] == 'N') && (buffer[1] == 'o') && (buffer[3] == 'J')){
 			/*	Joystick is not plugged in, look to command prompt for inputs	*/
 			joystickEn = 0x00;
+			joystickCheck = 0xFF;
 			printf("Keyboard\n"); fflush(stdout);
+			ExitThread(1);
 		}
 		else {
 			/*	Joystick is enabled and running as expected	*/
+			joystickCheck = 0xFF;
 			joystickEn = 0xFF;
 			printf("Joystick\n"); fflush(stdout);
 			
 		}
-		joystickCheck = 0xFF;
+		
 		return;
 	}
 
@@ -533,6 +538,9 @@ void interpret_joystick(char* buffer) {
 			}
 		}
 	}
+
+	Sleep(10);
+
 }
 
 
@@ -581,8 +589,18 @@ void add_to_buffer(void) {
 					// Handle error.
 					printf("Could not release mutex %d\n", GetCurrentThreadId());
 				}
+
+				
+
 			}
 		}
+
+		if ((joystickCheck) && (!joystickEn)) {
+			ExitThread(1);
+		}
+
+		Sleep(50);
+
 	}
 	
 }
