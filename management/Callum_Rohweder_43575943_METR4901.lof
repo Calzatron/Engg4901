@@ -2,6 +2,11 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Motor Torque Control System}}{6}
+\contentsline {figure}{\numberline {2.2}{\ignorespaces smrobot Simscape Model}}{7}
+\contentsline {figure}{\numberline {2.3}{\ignorespaces smrobot Simscape Model Visualisation}}{8}
+\contentsline {figure}{\numberline {2.4}{\ignorespaces Simulink Model of Motor Control Loop}}{8}
+\contentsline {figure}{\numberline {2.5}{\ignorespaces Simulink Model of Motor Controllers}}{9}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

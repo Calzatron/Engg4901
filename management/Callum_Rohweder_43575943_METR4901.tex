@@ -306,34 +306,161 @@ With the invention of the internet to provide long range data-resourcing, came a
 Virtual robotic environments can simulate the true movements of a manipulator given its physical attributes. VREP in particular can calculate the joint angles required to be able to move the hand from one position to another using a physics engine and accuracy of choice. It is believed that allowing a virtual environment to compute the movements required by a remote user will increase the accuracy in movement and decrease the chance of collision of the physical robot.
 
 %% Introduction to thesis scope
-Although this thesis does not go into large detail on the testing of the complete product, remote user to physical robotic arm movement, it does go through the design of the remote interface. The problems faced in controlling a robotic arm, design strategies tested, and the future improvements of the client program are presented. This interface was crucial to the success of the whole system, and it was important to refine before interfacing with a physical arm. % list scope
+Although this thesis does not go into large detail on the testing of the complete product, remote user to physical robotic arm movement, it does go through the design of the remote interface. The problems faced in controlling a robotic arm, design strategies tested, and the future improvements of the client program are presented. This interface was crucial to the success of the whole system, and it was important to refine before interfacing with a physical arm. Included in this document is:
+
+\begin{itemize}
+	\item A comparison of different approaches for moving a robotic arm, along with the calculations and methods for refining accuracy and decreasing processing time.
+	\item An overview of VREP, and how its features were used to replicate the true movements of the Jaco arm. This includes a comparison of the available physics engines, the use of PID motor control for arm joints and Inverse Kinematics (IK) functionality. 
+	\item Validity of using VREP as a real-time simulation tool, looking into aspects such as rendering delay and communication techniques.
+	\item The features included in client program and how its functionality was shaped, and the limitations associated with a real-time program performing large amounts of calculations based off user inputs and a remote server.
+	\item An overview of the Jaco Kinova arm and it's software development kit, which can be used to control the Jaco arm from VREP or the client program.
+
+
+\end{itemize}
+% list scope
+
 
 %% Introduction to thesis objectives
+To accomplish the task of remotely controlling the Jaco arm with collision avoidance, the project was broken into four main stages. The long-term objectives to acheive the aforementioned goals, presented in \label{Original Objectives}, are:
+
+\begin{itemize}
+	\item to configure the external simulation control of VREP and the Jaco arm within. This included retrieving all of the arm's joint information on start-up, so the correct joints can be referenced during connection. The central purpose of this objective was to achieve control of the arm in simulation, getting it to move its gripper to desired coordinates.
+	\item using the information from VREP of the arm, and the current joint angles from the physical Jaco arm using the SDK, achieve movement replication between the the physical and virtual systems. The purpose of this was that it would allow tuning of the VREP simulation to mimic the way the physical arm moves and responds to commands.
+	\item with VREP tuned appropriately, allow the movement of the physical arm by controlling movement in the simulation. It was predicted that movement in the simulation would come from keyboard commands or on-screen mouse presses.
+	\item detect collision, move objects in the laboratory and interact with the environment in simulation, with the Jaco arm replicating the motion.
+
+\end{itemize}
 
 
+Due to unforeseen circumstances, the objectives presented in this project changed to focus on the different ways of interacting with the virtual arm through VREP's remote API. It's primary focus is the validity of using a remote client to interact with VREP, and whether a good interface with the aforementioned requirements can be created. The objectives of this thesis were to:
 
-The introductory chapter describes the importance of the field and the
-scope and significance of your project.  It usually ends with an
-overview of the remainder of the thesis.
+\begin{itemize}
+	\item Create a user friendly interface for controlling a robotic arm in VREP, robust to arm location within a scene and mode of the virtual arm (forward kinematics or inverse kinematics modes)
+	\item Allow the user to give input types as they desire, such as moving the Jaco arm gripper from point to point, or controlling the joint angles individually; with keyboard input or joystick input.
+	\item Experiment with different mathematical solutions and physics engines to achieve accurate and fast movement of the virtual robotic arm
+	\item Experiment and outline the different functionality VREP has to offer, which may be utilised in the development of the over-arching objectives.
+\end{itemize}
 
-Notice that Arabic page numbering begins with Chapter 1.  Preceding
-pages (known as ``frontmatter'') have Roman numbering.  The
-\texttt{book} document class in \LaTeX\ follows this numbering
-convention by default (see Lamport~\cite{lamport}, p.\,80).
+% leading introduction statement
+From here, a variety of challenges will be pondered as mathematical formulas are derived to describe the motion of a 6 degree of freedom (DOF) arm, and a remote interface is created for allowing real-time movement within VREP.\\
+
+%% default intro
+%The introductory chapter describes the importance of the field and the
+%scope and significance of your project.  It usually ends with an
+%overview of the remainder of the thesis.%
+%
+%Notice that Arabic page numbering begins with Chapter 1.  Preceding
+%pages (known as ``frontmatter'') have Roman numbering.  The
+%\texttt{book} document class in \LaTeX\ follows this numbering
+%convention by default (see Lamport~\cite{lamport}, p.\,80).
+%%
+%%\chapter{Literature review / prior art}
+%
+%You will need to review previous work in the field, which may include
+%books and papers (``literature''), patents and commercial products
+%(``prior art''), and earlier work in your Department.  This
+%information is usually (but not always) collected in a single chapter,
+%whose title should preferably be more specific and interesting than
+%the one above.
+\chapter{Programming Robots to Move}
+%% Go through case studies of how robots have been programmed to move in the past
+In order to move a robotic arm, two layers of control are required, the motor position control for each joint, and the system that depicts how much the joints need to change angle when moving from one arm configuration to another. Following are some case studies that present methods of controlling a robotic arm, where the maths behind them are left for the theory section of this report.
+
+\section{MATLAB Toolboxes}
+Matlab provides an extraordinary amount of support for calculating the important properties required for the control of a robotic manipulator. Below is a sample of some of the useful libraries available that were, and further could be, beneficial to creating an interface for controlling the virtual Kinova Jaco arm remotely.
+
+\subsection{Robotics Toolbox}
+%https://robotacademy.net.au/masterclass/inverse-kinematics-and-robot-motion/?lesson=301
+Professor Peter Corke, the Director of the Australian Centre for Robotic Vision (ACRV), has designed a Matlab specific toolbox for computing the mechanics associated with robotic manipulators. Included is easy to use functions for creating robotic arms, and calculating parameters such as forward and inverse kinematics, trajectory generation and control systems for motor control. Within the Queensland University of Technology's Robot Academy is 'Master Classes' on using the toolbox through examples of simple manipulators and the theory behind the complex calculus being performed.\\
+
+There are dozens of object files containing the parameters of robotic manipulators; including the 6 DOF puma560 and limited information on the 6DOF Kinova Jaco arm. The parameters within these files contain the link times of the arm, the Denavit-Hartenberg parameters (DH parameters - theory section of this report), and can contain inertial and angle properties for each link. These properties are helpful in computing the forward kinematics, inverse kinematics, and dynamic equation representing the motion and torques on the arm.
+
+With this, the toolbox allows the viewing of the manipulator in desired angles, the movement of the arm between two desired end-effector positions, and the building of the control system controlling the torque at each motor given the current arm configuration. The latter of which is crucially important in providing accurate control of the arm, in ensuring the appropriate power is provided to all of the joint links as it moves over a given trajectory. Unfortunately, it is extremely difficult to compute, and for each degree of freedom contains 10 constants that need finding; mostly inertia terms which for each link depends on its orientation and position relative to the arm's base; thus relying on all link angles between the base and the link of interest. The mechanics of this is presented in the theory section of the report, but the Robotics Toolbox provides functions which compute the inertial, coriolis and gravitational torques acting on the arm. Professor Corke also provides a method of motor control for each link given the aforementioned parameters are known. The method uses the typical motor position control strategy of a Proportional Derivative Controller (details in the theory section) to compute the required motor torque from the error in angle position and velocity, however also includes a feed-forward component of the calculated disturbance torque due to the coupled dynamics between links. 
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{Correcting_for_disturbance_torque.jpg}
+\caption{Motor Torque Control System}
+\end{figure}
+\end{center}
+
+Thus the torque provided at each link can be expressed as:
+
+$\tau = K_p (q^{*} - q) + K_v (\dot{q^{*}} - \dot{q}) + M(q) \ddot{q^{*}} + C_j (q, \dot{q}) \dot{q} + g_j (q)$
+
+Where the change in angle required by each joint when moving the end-effector from one coordinate to another can be computed using the variation of the 'ikine' function for the given robotic arm; the forward kinematics can be computed similarly using the 'fkine' function.
+%% this should be compared to how VREP controls the arm using PID in the theory section. Additionally, the advantage of calculating the dynamic equation for the arm for LQR
+
+\subsection{Robotic Arm Models}
+%https://au.mathworks.com/help/physmod/sm/ug/import-robot-arm-model.html
+%https://au.mathworks.com/help/control/examples/multi-loop-pid-control-of-a-robot-arm.html?searchHighlight=robotic%20arm&s_tid=doc_srchtitle
+Separate to the custom designed toolbox of Professor Corke, MATLAB has its own robot manipulator modelling sub-program and alternative methods of control. Simscape allows the creation of physical systems within MATLAB's simulation tool Simulink. An example of 6 DOF robotic arm is presented below; the base of the arm represents the origin, and the lines span out from this with rigid bodies followed by links. Each rigid body can be shaped within MATLAB or imported from a CAD model to produce a replica of the real robotic arm; where properties such as material and interia can be defined.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{simscape_robotic_arm.jpg}
+\caption{smrobot Simscape Model}
+\end{figure}
+\end{center}
+
+Simulating the model shown above will provide a visualisation of the arms and any motion set on it by external forces or motor torques; not included in the above model.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{simscape_robotic_arm_model.jpg}
+\caption{smrobot Simscape Model Visualisation}
+\end{figure}
+\end{center}
+
+From here, it is a matter of controlling the robotic arm to move from one joint configuration to another. For a custom robotic arm, any of the strategies outlined in the theory section of this report can be used, however MATLAB provides another means which is described in the section below. In order to move the joints from one position to the next, a strategy similar to that shown in Figure 2.1 is required. In simulink, the layer of controlling the motor position can be formatted as follows:
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{simulink_motor_control_loop.jpg}
+\caption{Simulink Model of Motor Control Loop}
+\end{figure}
+\end{center}
+
+Where nested within the controller is the tuned PID controllers for each motor which drives it to the desired position. This is similar to Peter Corke's method but without pre-emptive knowledge of the disturbance torque due to the arm's dynamic coupling.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{simulink_motor_control_PID.jpg}
+\caption{Simulink Model of Motor Controllers}
+\end{figure}
+\end{center}
+
+It will be seen that VREP operates in the same way, as it enables the importing of manipulator models and setting of each joint's controller coefficients. The figure above gives a good representation of the mechanics behind what the parameters are doing in terms of regulating each joint's error to a desired angle. A significant advantage of MATLAB is the auto-tuning functionality of the PID controllers for each joint, however a controller on it's own would not be as robust as that described in the Robotics Toolbox section.
+
+\subsection{Adaptive Neuro-Fuzzy Inference System}
+%https://au.mathworks.com/help/fuzzy/modeling-inverse-kinematics-in-a-robotic-arm.html?searchHighlight=robotic%20arm&s_tid=doc_srchtitle
+An Adaptive Neuro-Fuzzy Inference System (ANFIS) network can be used to deduce the joint angles required for an arm's end-effector to reach a desired 3-D position. Calculating the required angles analytically for an arm of greater than 4 DOF can become challenging and result in infinitely many solutions. Like any neural network, with a sufficiently large dataset the internal weights will learn what angles will result in the desired end-effector position. Thus, in training an ANFIS to control each joint for a training dataset, it is able to interpolate angles to sufficient accuracy and move the joints to reach a desired end-effector position.
+
+To train the network, input to output mapping data is required. Thus, given the forward kinematics for a robotic manipulator is known, a dataset of angles to end-effector position can be created over the space that it is desired for the end-effector to move. After the network gains its own understanding of the mapping, any point within the testing region can be given and the network return the required joint angles. In a MATLAB example, each joint is given its own network to be trained such that for each joint an angle will be provided given a desired position. Outside the range of training, the manipulator will not respond promisingly, and thus for a large control range, a sufficiently large dataset is required. Overall neural networks respond quickly to providing results once trained, however the training process can be time consuming.
+
+\section{Programmed Robotic Arms}
 
 
+\section{Physics Engines}
+\subsection{Bullet Physics Library}
+
+\subsection{Open Dynamics Engine}
+
+\subsection{Vortex Dynamics}
+
+\subsection{Newton Dynamics}
 
 
-\chapter{Literature review / prior art}
-
-You will need to review previous work in the field, which may include
-books and papers (``literature''), patents and commercial products
-(``prior art''), and earlier work in your Department.  This
-information is usually (but not always) collected in a single chapter,
-whose title should preferably be more specific and interesting than
-the one above.
 
 \chapter{Theory}
+
+
+
+
+
+\subsection{Equations of Motion}
+
+
 
 A scientific paper is likely to be read by people who are not
 specialists in the same field as the author(s), but who nevertheless

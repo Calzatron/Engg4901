@@ -1,20 +1,31 @@
 \contentsline {chapter}{Acknowledgments}{v}
 \contentsline {chapter}{Abstract}{vii}
-\contentsline {chapter}{List of Figures}{ix}
-\contentsline {chapter}{List of Tables}{x}
+\contentsline {chapter}{List of Figures}{x}
+\contentsline {chapter}{List of Tables}{xi}
 \contentsline {chapter}{\numberline {1}Introduction}{1}
-\contentsline {chapter}{\numberline {2}Literature review / prior art}{3}
-\contentsline {chapter}{\numberline {3}Theory}{4}
-\contentsline {chapter}{\numberline {4}Methodology, procedure, design, etc.}{5}
-\contentsline {chapter}{\numberline {5}Results and discussion \dots }{6}
-\contentsline {chapter}{\numberline {6}Conclusions}{7}
-\contentsline {section}{\numberline {6.1}Summary and conclusions}{7}
-\contentsline {section}{\numberline {6.2}Possible future work}{7}
-\contentsline {part}{Appendices}{8}
-\contentsline {chapter}{\numberline {A}Dummy appendix}{9}
-\contentsline {chapter}{\numberline {B}Program listings}{10}
-\contentsline {section}{\numberline {B.1}First program}{10}
-\contentsline {section}{\numberline {B.2}Second program}{10}
-\contentsline {section}{\numberline {B.3}Etc.}{10}
-\contentsline {chapter}{\numberline {C}Companion disk}{11}
-\contentsline {chapter}{Bibliography}{13}
+\contentsline {chapter}{\numberline {2}Programming Robots to Move}{5}
+\contentsline {section}{\numberline {2.1}MATLAB Toolboxes}{5}
+\contentsline {subsection}{\numberline {2.1.1}Robotics Toolbox}{5}
+\contentsline {subsection}{\numberline {2.1.2}Robotic Arm Models}{7}
+\contentsline {subsection}{\numberline {2.1.3}Adaptive Neuro-Fuzzy Inference System}{9}
+\contentsline {section}{\numberline {2.2}Programmed Robotic Arms}{10}
+\contentsline {section}{\numberline {2.3}Physics Engines}{10}
+\contentsline {subsection}{\numberline {2.3.1}Bullet Physics Library}{10}
+\contentsline {subsection}{\numberline {2.3.2}Open Dynamics Engine}{10}
+\contentsline {subsection}{\numberline {2.3.3}Vortex Dynamics}{10}
+\contentsline {subsection}{\numberline {2.3.4}Newton Dynamics}{10}
+\contentsline {chapter}{\numberline {3}Theory}{11}
+\contentsline {subsection}{\numberline {3.0.1}Equations of Motion}{11}
+\contentsline {chapter}{\numberline {4}Methodology, procedure, design, etc.}{12}
+\contentsline {chapter}{\numberline {5}Results and discussion \dots }{13}
+\contentsline {chapter}{\numberline {6}Conclusions}{14}
+\contentsline {section}{\numberline {6.1}Summary and conclusions}{14}
+\contentsline {section}{\numberline {6.2}Possible future work}{14}
+\contentsline {part}{Appendices}{15}
+\contentsline {chapter}{\numberline {A}Dummy appendix}{16}
+\contentsline {chapter}{\numberline {B}Program listings}{17}
+\contentsline {section}{\numberline {B.1}First program}{17}
+\contentsline {section}{\numberline {B.2}Second program}{17}
+\contentsline {section}{\numberline {B.3}Etc.}{17}
+\contentsline {chapter}{\numberline {C}Companion disk}{18}
+\contentsline {chapter}{Bibliography}{19}
