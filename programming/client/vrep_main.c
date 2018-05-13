@@ -163,7 +163,10 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 		exit(1);
 	}
 
-
+	/*	Set the kinematics mode for ik solution	*/
+	inverse_kinematics_mode_toggle("mode 1 1");
+	inverse_kinematics_mode_toggle("mode 2 0");
+	inverse_kinematics_mode_toggle("mode 3 0");
 }
 
 int main(int argc, char** argv){
@@ -585,7 +588,11 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		printf("	*Duty:	%f\n", duty);
 		//pritnf("	programMode %s\n")
 	#endif // DEBUG
-
+	if ((info_ptr->response[0] == 'm') && (info_ptr->response[1] == 'o') && 
+		(info_ptr->response[2] == 'd') && (info_ptr->response[3] == 'e')) {
+	
+		inverse_kinematics_mode_toggle(info_ptr->response);
+	}
 
 	if (strcmp(info_ptr->sceneMode, "ik") == 0) {
 		#ifdef DEBUG
@@ -1174,7 +1181,9 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 		jointAngle = fmod(jointAngle, 2 * 3.141592);
 	}
 
-	printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+	#ifdef DEBUG
+		printf("moving joint %d : %f : %f\n", jointNum, jointAngle, ang);
+	#endif // DEBUG
 
 	//return;
 
@@ -1453,11 +1462,9 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		#ifdef DEBUG
 				printf("begining control sequence\n");
 		#endif // DEBUG
+
 		/*	Move the arm to the desired location	*/
-		
-			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
-		//control_kinematics_v2(info_ptr, move_ptr, position[0], position[1], 0);
 	}
 	else if (command == 's') {
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);

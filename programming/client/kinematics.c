@@ -26,12 +26,108 @@ int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
 int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z);
-
+void control_kinematics_v2(info* info_ptr, move* move_ptr, float x, float y, float z);
+void control_kinematics_v3(info* info_ptr, move* move_ptr, float x, float y, float z);
 float determinant(float matrix[25][25], float size);
 void cofactor(float matrix[25][25], float size, float det);
 void transpose(float matrix[25][25], float matrix_cofactor[25][25], float size, float det);
 
+int Mode1;
+int Mode2;
+int Mode3;
 
+
+
+/*
+*	@brief Sets the which INV K solution to use
+*	@param command from input "mode # #"
+*	@ret none
+*/
+void inverse_kinematics_mode_toggle(char* inputCommand) {
+
+	//printf("%s\n", inputCommand);
+
+	char buffer[10];
+	memset(buffer, 0, 10);
+	strcpy(buffer, inputCommand);
+
+	int cmdError = 0;
+	const char s[2] = {' ', '\0'};
+	char* token;
+	int num = 0;
+	token = strtok(buffer, s);
+	//printf("%s\n", token); fflush(stdout);
+	int modeNum = 0;
+	int modeToggle = 0;
+	if (strcmp("mode", token) == 0) {
+
+		while ((token != NULL) && (num < 2)) {
+			
+			token = strtok(NULL, s);
+
+			char bbuf[5];
+			memset(bbuf, 0, 5);
+			sprintf(bbuf, "%s", token);
+			char* err;
+			if (!num) {
+				modeNum = strtol(bbuf, &err, 10);
+				if (modeNum > 3) {
+					cmdError = 1;
+				}
+				++num;
+			}
+			else {
+				modeToggle = strtol(bbuf, &err, 10);
+				if (modeToggle > 1) {
+					cmdError = 1;
+				}
+				//else { printf("^%d^ ", modeToggle); }
+				++num;
+			}
+
+		}
+
+	}
+	else {
+		printf("not mode str\n");
+		cmdError = 1;
+	}
+
+	if ((!modeNum) && (!modeToggle)) {
+		cmdError = 1;
+	}
+
+	if (cmdError) {
+		printf("Mode Usage: mode modeNumber(1,2,3) bool(0,1)\n");
+		
+		/*	print the current mode	*/
+		printf("Active Modes: ");
+		if (Mode1) {
+			printf(" Mode1 ");
+		}
+		if (Mode2) {
+			printf(" Mode2 ");
+		}
+		if (Mode3) {
+			printf(" Mode3 ");
+		}
+		printf("\n");
+
+		return;
+	}
+	else {
+		if (modeNum == 1) {
+			Mode1 = modeToggle;
+		}
+		else if (modeNum == 2) {
+			Mode2 = modeToggle;
+		}
+		else if (modeNum == 3) {
+			Mode3 = modeToggle;
+		}
+		//printf("mode %d set to %d\n", modeNum, modeToggle);
+	}
+}
 
 
 /*	Stores in memory the forward kinematic
@@ -433,7 +529,7 @@ void get_position_from_angles(double* angles, double* positionVect) {
 }
 
 
-void control_kinematics_xy(info* info_ptr, move* move_ptr, float x, float y, float z) {
+void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y, float z, int mode) {
 
 	double pi = 3.141592;
 
@@ -526,25 +622,50 @@ void control_kinematics_xy(info* info_ptr, move* move_ptr, float x, float y, flo
 		/*	Calculate error in X and Y, and XY and Z planes	*/
 		double errorAngXY = desiredAngXY - actAngXY;
 		double errorAngZ = desiredAngZ - actAngZ;
-
+		double q_1, q_2, q_3;
 		/*	Calculate the angles to input	*/
-		/*	joint 1	*/
-		error[0] = errorAngXY * 0.05;							//0.08; //*0.01
-		accumError[0] = (accumError[0] + errorAngXY) * 0.99;	//0.95;//1.25; //1.1;//0.85;
-
-		double q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
 		
-		/*	joint 2	*/
-		error[1] = 0.65 * (0.25 * errorAngXY + 0.75 * errorAngZ);
-		accumError[1] = (accumError[1] + (0.25 * errorAngXY + 0.75 * errorAngZ)) * 0.55;
+		if (mode) {		// high XY control
+			/*	joint 1	*/
+			error[0] = errorAngXY * 0.05;							//0.08; //*0.01
+			accumError[0] = (accumError[0] + errorAngXY) * 0.99;	//0.95;//1.25; //1.1;//0.85;
 
-		double q_2 = error[1] + accumError[1] + angles[1];
+			q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
 
-		/*	joint 3	*/
-		error[2] = 1.17 * (0.25 * errorAngXY + 0.75 * errorAngZ);
-		accumError[2] = (accumError[2] + (0.25 * errorAngXY + 0.75 * errorAngZ)) * 1.11;
+			/*	joint 2	*/
+			error[1] = 0.65 * (0.25 * errorAngXY + 0.75 * errorAngZ);
+			accumError[1] = (accumError[1] + (0.25 * errorAngXY + 0.75 * errorAngZ)) * 0.55;
 
-		double q_3 = error[2] + accumError[2] + angles[2];
+			q_2 = error[1] + accumError[1] + angles[1];
+
+			/*	joint 3	*/
+			error[2] = 1.17 * (0.25 * errorAngXY + 0.75 * errorAngZ);
+			accumError[2] = (accumError[2] + (0.25 * errorAngXY + 0.75 * errorAngZ)) * 1.11;
+
+			q_3 = error[2] + accumError[2] + angles[2];
+		}
+		else {		// high Z control
+
+			/*	Calculate the angles to input	*/
+			/*	joint 1	*/
+			error[0] = errorAngXY * 0.03;
+			accumError[0] = (accumError[0] + errorAngXY) * 0.99;
+
+			q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
+
+			/*	joint 2	*/
+			error[1] = 0.55 * errorAngZ;
+			accumError[1] = (accumError[1] + errorAngZ) * 0.51;
+
+			q_2 = error[1] + accumError[1] + angles[1];
+
+			/*	joint 3	*/
+			error[2] = 1.10 * errorAngZ;
+			accumError[2] = (accumError[2] + errorAngZ) * 1.01;
+
+			q_3 = error[2] + accumError[2] + angles[2];
+
+		}
 
 		/*	joint 4	*/
 		error[3] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.1;
@@ -847,7 +968,25 @@ void control_kinematics_z(info* info_ptr, move* move_ptr, float x, float y, floa
 }
 
 
+/*
+*	@brief calculates the desired tip position using pid control on each joint
+*	@param the information and movement structures with a change in coordinates to move
+*	@ret none
+*/
+void control_kinematics_v2(info* info_ptr, move* move_ptr, float x, float y, float z) {
 
+
+	if (z) {
+		control_kinematics_v2_loop(info_ptr, move_ptr, x, y, z, false);
+	}
+	else {
+		//printf("++__++_++_+\n");
+		control_kinematics_v2_loop(info_ptr, move_ptr, x, y, 0, true);
+		//printf("++__++_++_+\n");
+		control_kinematics_v2_loop(info_ptr, move_ptr, 0, 0, -0.023, false);
+	}
+
+}
 
 
 /*	
@@ -857,7 +996,18 @@ void control_kinematics_z(info* info_ptr, move* move_ptr, float x, float y, floa
 *	@ret none
 */
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z) {
-	
+
+	/*	Should be able to use any mode, default is this function	*/
+	if (Mode2) {
+		control_kinematics_v2(info_ptr, move_ptr, x, y, z);
+		return;
+	}	// IK_MODE2
+	if (Mode3) {
+		control_kinematics_v3(info_ptr, move_ptr, x, y, z);
+		return;
+	}	// IK_MODE3
+
+
 	clock_t start = clock();
 
 	/*	Get the joint4 position so q_2 and q_3 can be determined	*/
@@ -1086,7 +1236,7 @@ void fk_mod(move* move_ptr) {
 *	@param the information and movement structures with a change in coordinates to move
 *	@ret none
 */
-void control_kinematics_v2(info* info_ptr, move* move_ptr, float x, float y, float z) {
+void control_kinematics_v3(info* info_ptr, move* move_ptr, float x, float y, float z) {
 
 	/*	Need to make x,y,z * 1000	*/
 

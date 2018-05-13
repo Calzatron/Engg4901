@@ -4,6 +4,10 @@
 
 //#define DEBUG	1
 //#define DATA_STREAMING
+#define IK_MODE1
+#define IK_MODE2
+#define IK_MODE3
+
 
 /*	Define motion struct	*/
 
