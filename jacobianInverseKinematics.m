@@ -76,8 +76,66 @@ for i = 1:size(d,2)
 end
 A = A1*A2*A3*A4*A5*A6;
 
+%% Create the jacobian with states x, y, z, thx, thy, thz
+% Construct angular velocity terms
+R = [A(1, 1), A(1, 2), A(1,3); A(2, 1), A(2, 2), A(2,3); A(3, 1), A(3, 2), A(3,3)];
 
-%%
+% compute the translational derivatives for each joint angle
+for j = 1:5
+   Jac(1, j) = diff(X, q(j));
+   Jac(2, j) = diff(Y, q(j));
+   Jac(3, j) = diff(Z, q(j));
+   Jac(4, j) = 0;
+   Jac(5, j) = 0;
+   Jac(6, j) = 0;
+end
+
+% compute the rotational derivatives for each joint angle
+for z = 1:6
+    % Compute the rotational velocity matrix for q1
+    for i = 1:3
+        for j = 1:3
+            dR(i, j) = diff(R(i,j), q(z));
+        end
+    end
+    % compute the skew matrix for q1_dot (dR/dq1 * R^T)
+    Sw1 = dR * R';
+    Jac(4, z) = Sw1(3, 2);
+    Jac(5, z) = Sw1(1, 3);
+    Jac(6, z) = Sw1(2, 1);
+end
+
+% In Jac is the a symbolic representation of the Jacobian matrix
+% the arm needs to be linearised about a point
+q_ = [-8.84885925, 1.846790327, 10.28148573, 4.764735222, -0.0000006894989015, pi];
+Jac_sub = subs(Jac, q, q_);
+
+% and now the inverse can be computed
+Jac_inv = Jac_sub^-1;
+
+%% Seperate section for quick running of calculating position
+% the position for these angles are in x
+subbedA = subs(A, q, q_);
+x = vpa([subbedA(1,4); subbedA(2,4); subbedA(3,4)]);
+
+% and given a small change in the vertical position (mm)
+delta_x = [0; 0; 0.5; 0; 0; 0];
+
+% The change in angles are
+delta_angles = Jac_inv * delta_x;
+
+% the change in angles are dependent on a small change in time (50 ms)
+delta_angles = 0.05 * vpa(delta_angles);
+
+% Which gives a transformation of (q_k+1 = q_k + dt * dq/dt)
+Final = subs(A, [q1,q2,q3,q4,q5,q6], [ q_(1) + delta_angles(1), q_(2) + delta_angles(2), q_(3) + delta_angles(3), q_(4) + delta_angles(4), q_(5) + delta_angles(5), pi]);
+
+% and final position at V
+V = vpa([Final(1,4); Final(2,4); Final(3,4)]);
+
+%% Jacobian without angular velocity states
+% Offers position accuracy without considering angular velocity
+
 X = A(1,4);
 Y = A(2,4);
 Z = A(3,4);
@@ -91,9 +149,9 @@ for j = 1:5
    J(1, j) = diff(X, q(j));
    J(2, j) = diff(Y, q(j));
    J(3, j) = diff(Z, q(j));
-   %J(4, j) = 0;
-   %J(5, j) = 0;
-   %J(6, j) = 0;
+   J(4, j) = 0;
+   J(5, j) = 0;
+   J(6, j) = 0;
    
 end
 
