@@ -9,23 +9,29 @@
 \contentsline {subsection}{\numberline {2.1.2}Robotic Arm Models}{7}
 \contentsline {subsection}{\numberline {2.1.3}Adaptive Neuro-Fuzzy Inference System}{9}
 \contentsline {section}{\numberline {2.2}Programmed Robotic Arms}{10}
-\contentsline {section}{\numberline {2.3}Physics Engines}{10}
-\contentsline {subsection}{\numberline {2.3.1}Bullet Physics Library}{10}
-\contentsline {subsection}{\numberline {2.3.2}Open Dynamics Engine}{10}
-\contentsline {subsection}{\numberline {2.3.3}Vortex Dynamics}{10}
-\contentsline {subsection}{\numberline {2.3.4}Newton Dynamics}{10}
-\contentsline {chapter}{\numberline {3}Theory}{11}
-\contentsline {subsection}{\numberline {3.0.1}Equations of Motion}{11}
-\contentsline {chapter}{\numberline {4}Methodology, procedure, design, etc.}{12}
-\contentsline {chapter}{\numberline {5}Results and discussion \dots }{13}
-\contentsline {chapter}{\numberline {6}Conclusions}{14}
-\contentsline {section}{\numberline {6.1}Summary and conclusions}{14}
-\contentsline {section}{\numberline {6.2}Possible future work}{14}
-\contentsline {part}{Appendices}{15}
-\contentsline {chapter}{\numberline {A}Dummy appendix}{16}
-\contentsline {chapter}{\numberline {B}Program listings}{17}
-\contentsline {section}{\numberline {B.1}First program}{17}
-\contentsline {section}{\numberline {B.2}Second program}{17}
-\contentsline {section}{\numberline {B.3}Etc.}{17}
-\contentsline {chapter}{\numberline {C}Companion disk}{18}
-\contentsline {chapter}{Bibliography}{19}
+\contentsline {section}{\numberline {2.3}Simulation Platforms and Physics Engines}{12}
+\contentsline {subsection}{\numberline {2.3.1}V-REP}{13}
+\contentsline {subsubsection}{Communication}{14}
+\contentsline {subsubsection}{V-REP Features}{16}
+\contentsline {subsection}{\numberline {2.3.2}Alternative Simulation Tools}{16}
+\contentsline {subsubsection}{Webots}{16}
+\contentsline {subsubsection}{Gazebo}{17}
+\contentsline {subsubsection}{Bullet Physics Library}{17}
+\contentsline {subsubsection}{Open Dynamics Engine}{17}
+\contentsline {subsubsection}{Vortex Dynamics}{17}
+\contentsline {subsubsection}{Newton Dynamics}{17}
+\contentsline {chapter}{\numberline {3}Theory}{18}
+\contentsline {subsection}{\numberline {3.0.1}Equations of Motion}{18}
+\contentsline {chapter}{\numberline {4}Methodology, procedure, design, etc.}{19}
+\contentsline {chapter}{\numberline {5}Results and discussion \dots }{20}
+\contentsline {chapter}{\numberline {6}Conclusions}{21}
+\contentsline {section}{\numberline {6.1}Summary and conclusions}{21}
+\contentsline {section}{\numberline {6.2}Possible future work}{21}
+\contentsline {part}{Appendices}{22}
+\contentsline {chapter}{\numberline {A}Dummy appendix}{23}
+\contentsline {chapter}{\numberline {B}Program listings}{24}
+\contentsline {section}{\numberline {B.1}First program}{24}
+\contentsline {section}{\numberline {B.2}Second program}{24}
+\contentsline {section}{\numberline {B.3}Etc.}{24}
+\contentsline {chapter}{\numberline {C}Companion disk}{25}
+\contentsline {chapter}{Bibliography}{27}

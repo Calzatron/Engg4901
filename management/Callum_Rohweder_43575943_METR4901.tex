@@ -439,16 +439,133 @@ An Adaptive Neuro-Fuzzy Inference System (ANFIS) network can be used to deduce t
 To train the network, input to output mapping data is required. Thus, given the forward kinematics for a robotic manipulator is known, a dataset of angles to end-effector position can be created over the space that it is desired for the end-effector to move. After the network gains its own understanding of the mapping, any point within the testing region can be given and the network return the required joint angles. In a MATLAB example, each joint is given its own network to be trained such that for each joint an angle will be provided given a desired position. Outside the range of training, the manipulator will not respond promisingly, and thus for a large control range, a sufficiently large dataset is required. Overall neural networks respond quickly to providing results once trained, however the training process can be time consuming.
 
 \section{Programmed Robotic Arms}
+%https://pdfs.semanticscholar.org/75f2/fa10a66e35bd6b5b5d695b31be51df78303e.pdf
+Volume 58 of the 2012 International Journal of Computer Applications, titled Software Development for an Inverse Kinematics of Seven-Degrees of Freedon Newly Designed Articulated Inspection Robot, details on previous software development tools used to control robotic manipulators. It is detailed that the inverse kinematics can be solved using an Adaptive Neuro Fuzzy Network (ANFIS), a neural network trained to reduce error in end effector position, non-linear optimization methods, geometric approaches, and through the manipulation of the transformation matrices. In the ANFIS approach, it was noted that MATLAB was used, however C / C++ programming has been used to develop programs that compute the more mathematics based inverse kinematics methods. A program is proposed in this paper which uses Visual-Basic to allow the calculation of forward and inverse kinematics, and trajectory planning.\\
 
 
-\section{Physics Engines}
-\subsection{Bullet Physics Library}
 
-\subsection{Open Dynamics Engine}
+%http://scholarcommons.usf.edu/cgi/viewcontent.cgi?article=2791&context=etd
+A thesis paper from the University of South Florida comments on the fact that programming in a low level language such as C is closer to the hardware level which reduces computation time in processing and communicating with external systems (sensors and motors). High-level languages, such as MATLAB, provide an user-friendly interface for solving complex maths operations, however lack capabilities found in C / C++ such has multi-threading and easy communication between concurrently running processes. It is explained that the complexity in configuring MATLAB to communicate with a separate C++ program lead to failure of the wheel-chair mounted robotic arm's program on multiple occasions. The software system in this paper refers to using a C++ program used to communicate with sensors and other hardware, whilst using MATLAB for the control algorithm computations, and simulation. Due to the aforementioned advantages of C++, a new C++ program, with an external library for matrix manipulation, was created to replace the MATLAB program. The concluding results being that the new software system reduced delays in the control of the robotic arm, leading to better stability and control.\\
+The primary purpose of using MATLAB in this experiment was to simulate a virtual model of the robotic arm, and using the angles of this to control the physical robotic arm through the C++ platform. The complexity and delay produced by MATLAB lead to slow and unreliable control.\\
 
-\subsection{Vortex Dynamics}
 
-\subsection{Newton Dynamics}
+
+The Kinova Jaco arm's Software Development Kit (SDK) is written in C++, with the handling of communication and calculations stored in an human-unreadable dynamic link library. There is no documentation into how the SDK calculates the joint angles required for a desired gripper position, however there are usage examples in C++ of all the available functions; one of which is used to setting the gripper position and angle in cartesian coordinates. This SDK allows direct tuning of crucial arm parameters such as maximum applied torque, PID coefficients and velocity control. Predefined structures can be filled with this information and sent to the arm's FIFO buffer to interpret and act accordingly, making the control of the arm from the developer's perspective effortless.\\
+Controlling the robotic arm in this way however, means the arm needs to be completely set-up in order to use the SDK. It may also be hard to understand how the parameters affect the movement of the arm; for example, the coordinate system isn't well defined and will take some trial and error to understand. This could be done with the help of the `get` functions, which can return torque, velocity and position values of the arms current configuration. To further understand how the settings can affect the arm, Kinova have supplied the `Development Center` with the SDK (which back-end C++ code is accessible, and can provide knowledge into how the arm can be controlled) what allows the user to move the arm, set trajectories, and review current parameters.\\
+
+
+
+% I really don't know much about ROS... RVIZ?
+%http://wiki.ros.org/ROS/Introduction
+%https://github.com/Kinovarobotics/kinova-ros
+The Robot Operating System (ROS) is a modular collection of commonly used software in low-level device control, hardware abstraction and functionality seen in robotics. ROS can be used in Python, C++ and Lisp programming languages to build a framework around robotic software kits that directly control a robotic actuator. Thus, it has already been used as a cover of the Kinova SDK for the Jaco arm. Further, simulation platforms such as Gazebo and MoveIt can be controlled using ROS, with the software for controlling a Jaco arm in Gazebo being available. Together, ROS can be used to control a virtual model of the Jaco arm in Gazebo, as well as the physical arm through the Kinova SDK. Control of robotic manipulators in VREP is also available using ROS through the VREP remote API.\\
+%https://pdfs.semanticscholar.org/2600/e3b018b5fa77035dab558f783919c9d46d35.pdf
+ROS offers a package called Rvis, which provides a method of interacting with imported models in 3D. Similar to a robotics simulation package, Rvis can provide information about the centre of mass of objects, collisions, and joints of robotic manipulators and objects in a scene. It however lacks the real-world modelling that comes with simulation programs such as V-REP or Gazebo (running a physics engine). Thus, it is typically used as a wrapper for these programs, such that the user can retrieve key information about objects in a scene whilst simulating properties such as gravity and friction.
+
+
+%https://robotacademy.net.au/lesson/inverting-the-jacobian-matrix-2/
+In Professor Peter Corke's Robot Academy series, he goes through an intuitive explanation for programming robotic arms using the arm's Jacobian matrix (referenced in Theory). As the Jacobian is a function of joint angles, it only provides a truthful reflection of the small change in angles required for a small change in end effector position, local to the current arm configuration. Thus, the Jacobian matrix can give a solution for small angle changes, but after the arm moves to this new position, it must be recalculated. This can be done in programming using discrete time steps as outlined in the figure below. Unfortunately, as this is an approximation technique, if any of the spacial or time parameters are too large, the result will no longer hold, and thus it should be used with caution.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{jacobian_programming.jpg}
+\caption{Flow Diagram of using Jacobian in Programming}
+\end{figure}
+\end{center}
+
+A similar technique that can reduce the error between the end effector's position and a small change in position is the PID controller. With the appropriate weightings for each joint, the joints can be moved to reduce the error in end effector position. Note that there is no control of the joint-space in this case, and could lead to undesired joint configurations. This gives the Jacobian an advantage, as it is non-invertible at a joint singularity; when the arm looses a degree of freedom.
+
+
+\section{Simulation Platforms and Physics Engines}
+%https://www.smashingrobotics.com/most-advanced-and-used-robotics-simulation-software/
+There are numerous platforms available for simulating the dynamics and interactions of robot's with a scene. V-REP is particularly useful for this thesis due to its ability to remotely control the simulation and the objects within, whilst providing a realistic environment for said interactions. Other popular robotic platforms have similar functionality, but may come at a cost, include Webots, Robot Studio, ARGoS, labVIEW, Visual Components, Virtual Robotics Toolkit, Gazebo, Actin Simulation and Workspace. Although the objective of these platforms is to simulate a robotic manipulator in a scene, they are customized in the robots that can be simulated, the physics engine they use to simulate the dynamics, and the requirements by the users using the product. A good example of this is the Robot Virtual Worlds platform, which has comprehensive capabilities in simulating and programming LEGO robotics. On the contary, Workspace is used for simulating industrial production lines with multiple robotic manipulators acting together; and is used by large companies such as ABB and Mitsubishi. The scope of this thesis focuses on the use of free simulators that provide realistic and programmable simulations for educational use. Thus, simulation platforms such as Webots, Gazebo and V-REP are of particular interest as they equally provide the required features to meet the objectives. 
+
+%https://arxiv.org/pdf/1402.7050.pdf
+An online survey was conducted by researchers Serena Ivaldi, Vincent Padois and Franceso Nori to determine which simulation platform and dynamics solver was most preferred. The survey was completed by 119 participants with 62\% possessing a PhD, and of the remaining, 32\% had a university level degree. It was found that 39\% of the participants hadn't heard of V-REP, compared to 27\% and 15\% for Webots and Gazebo respectively. However, it was found that V-REP was the best rated for usability, documentation and set-up guides, whereas Gazebo was the most used. From the findings, it was noted that V-REP was the most likely for applicants to try, and keep using, compared to Webots and Gazebo.
+
+%http://www.dca.fee.unicamp.br/~gudwin/courses/IA889/2014/IA889-02.pdf
+A full comparison between Gazebo and V-REP was conducted by Lucas Noguira from the Universidade de Campinas. This article goes through implementing features common to both platforms and the process required for setting them up to do a given task; i.e. connect a sensor to a robot and read it through ROS. It was found that V-REP offered a much better interface for adding components, and used less computation time when compared. 
+
+\subsection{V-REP}
+% Introduce V-REP
+The robotics simulation platform used in this thesis is the Virtual Robotics Experimental Platform (V-REP) by Coppelia Robotics. V-REP offers a means of realistically simulating mobile robotics and actuators with an easy to use interface. In a simulation, V-REP continuously reads an internal `main` Lua script, that may read other scripts describing properties associated with robotics in the scene, which are customisable by the user. On the side pane is a large list of available robots that can be imported, and once they are, a script customised by Coppelia is loaded to the list of running scripts; i.e. in the case of the Jaco arm, a script is imported that moves the arm around in the scene to a pre-configured trajectory. The simulation process is described by the figure below, where it can be seen that the main flow of code goes between actuation, reaction, sensing and control, with monitoring collisions being the main priority at each stage.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{vrep_simulation_diagram.jpg}
+\caption{Flow Diagram of the V-REP Simulation}
+\end{figure}
+\end{center}
+
+\subsubsection{Communication}
+%Introduce a means of communicating with V-REP
+%http://www.coppeliarobotics.com/helpFiles/en/writingCode.htm#sixMethods
+Fortunately, the parameters within these scripts and objects within the scene can be controlled using the remote API, which is available for C/C++, Python, Java, Matlab, Octava, Lua and Urbi. The documentation for the remote API contains extensive descriptions of over 100 functions, where the usage is available for all supported languages. Additionally to the remote API and internal Lua scripts, there are 4 other methods of controlling a scene in V-REP. The most obvious is plugins, which can provide custom Lua commands for interacting with the internal Lua scripts, it is effectively an external library of functions. Similarly, ROS can provide a wrapper of V-REP, enabling control from any ROS supported coding language, and further can enable the control of an external robot through a ROS node, using the information from V-REP; which is the aim of this thesis to a large extent. ROS. There is no limitations to utilizing V-REP's capabilities between using a remote API client and a ROS node, as seen in the connection methods table on the V-REP website; both will contain lag due to communication over the internet through a socket connection. Other methods of controlling V-REP include through the use of an add-on, or a BlueZero node.
+
+%Introduce the methods of communication with V-REP remote API
+Communication using the remote API is through a socket connection between the client API and VREP. To enable connection, V-REP needs to be configured to allow external connections through a specified port. As scripts are associated with objects within the scene, this configuration is typically set in a threaded child script of an invisible dummy object in the V-REP scene; an example of this can be seen below. 
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{vrep_port_listen.jpg}
+\caption{Sample Lua Code for Connecting V-REP to a port}
+\end{figure}
+\end{center}
+%http://www.coppeliarobotics.com/helpFiles/en/remoteApiFunctions.htm
+On the client side, connecting to V-REP waits for a given length of time for a client identification number. Once this number is obtained, the number is used for all communication thereafter in a manner noted by Coppelia for the language chosen. As an example, the functions could return parameters such as joint angles, velocity and sensor outputs, alternatively the functions could also be used to set or change these parameters.
+% need to discuss at some stage that communication isn't garanteed between different networks, i.e. home verse uni
+
+Communication between the client program and V-REP is undertaken in four different modes; blocking function calls, non-blocking function calls, data streaming and synchronous operation.
+
+\begin{center}
+\begin{table}[htb]
+
+
+    \begin{tabular}{ | l | p{10cm} |}
+    \hline
+    Operation Mode & Summary \\ \hline
+     Blocking & When a command is sent in blocking mode, the client will wait until the V-REP API response before moving to the next line of code.\\ \hline
+    Non-blocking & When data needs to be updated in the client program, that isn't required straight away. The client can make a call for the data to be copied to a particular address and move on to the next line. The API will respond in due time.  \\ \hline
+    Data Streaming & When the same data is constantly required from V-REP, the data-streaming method allows a way for V-REP to send updates of a particular value without calling for it each time. For instance, joint angles of a robotic arm may be required by the client program with large frequency, and could be updated without making direct calls and waiting for a response each time once a data-streaming call is given. This is a continuous mode, and the client will be stuck receiving data. \\
+    \hline
+    Synchronous & When it is desired to have the simulation and client program run concurrently in time, such that the simulation advances with the client. Synchronous mode allows the client to control the advancement of the simulation.\\
+    \hline
+    \end{tabular}
+    \caption{V-REP remote API operation modes}
+\end{table}
+\end{center}
+
+To be able to interact with a particular object in V-REP, one must refer to it in function calls using its `object handle`. The object handle is a unique number given to every object in a scene, typically in order of when the object was added to the scene, known by its appearance in the scene hierachy; a list containing all of the objects in the scene, starting with objects like the default camera, floor, lights, XYZ coordinate frame, and then any objects that were placed in the scene after. Once an object has been deleted from the middle of the hierachy, the other objects retain their object handle; thus once an item is added its object handle won't change. When calling a missing object in a scene, NULL will be returned.
+
+\subsubsection{V-REP Features}
+
+
+
+
+
+
+\subsection{Alternative Simulation Tools}
+
+\subsubsection{Webots}
+%http://journals.sagepub.com/doi/pdf/10.5772/5618
+Webots is a robotics platform that allows the simulation of popular robot models, that can be interacted with using external software scripts, of which can be then programmed onto real robots; given they are compatible. Similar to V-REP, one can communicate with the simulation using TCP/IP from a program written in C/C++, MAtlab, Python or Java. The simulation also utilises Open Dynamics Engine (ODE) to give a realistic representation of physical interactions between objects. Motors and sensors can be placed in the scene or within robots, and tuned to mimic their real-time capabilities; maximum torque, PI control of servos, and sampling of sensors to name a few parameters that can be varied. There is little information on the comparison between this platform and V-REP, but from the information found on Webots and in the survey outlined above, it appears to have equivalent functionality, if not less, as it relies only on one physics engine whereas V-REP offers four.
+Webots could be used for this thesis, as it provides a means of real-time (or even speed-up) interaction with a scene and the objects within. The use of ODE is no downfall, as outlined in the ODE section, it provides a realistic rendering of collisions within a scene.
+
+\subsubsection{Gazebo}
+%http://lenkaspace.net/blog/show/120
+Gazebo offers a very similar platform to V-REP, where a model can be placed in a scene and have the simulation controlled by a remote API. As an open source platform, full integration with ROS has been created, where the internal parameters of a simulation can be controlled with ROS. It is offered on any OS with a command line interface to help control simulations. Simulations are saved to an .xml script, which can be edited, and rerun; a feature V-REP lacks with it's .ttt saving format. A thorough comparison was made between Gazebo, V-REP and ARGoS, which demonstrates that they both contain the key features required for this thesis. It can be seen however, that V-REP has more positive features when compared to the other too. Gazebo on start-up is build with ODE, however can be built from source with any physics engine.
+
+
+
+
+
+\subsubsection{Bullet Physics Library}
+
+\subsubsection{Open Dynamics Engine}
+
+\subsubsection{Vortex Dynamics}
+
+\subsubsection{Newton Dynamics}
 
 
 

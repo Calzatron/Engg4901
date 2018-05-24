@@ -7,6 +7,9 @@
 \contentsline {figure}{\numberline {2.3}{\ignorespaces smrobot Simscape Model Visualisation}}{8}
 \contentsline {figure}{\numberline {2.4}{\ignorespaces Simulink Model of Motor Control Loop}}{8}
 \contentsline {figure}{\numberline {2.5}{\ignorespaces Simulink Model of Motor Controllers}}{9}
+\contentsline {figure}{\numberline {2.6}{\ignorespaces Flow Diagram of using Jacobian in Programming}}{12}
+\contentsline {figure}{\numberline {2.7}{\ignorespaces Flow Diagram of the V-REP Simulation}}{14}
+\contentsline {figure}{\numberline {2.8}{\ignorespaces Sample Lua Code for Connecting V-REP to a port}}{15}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
