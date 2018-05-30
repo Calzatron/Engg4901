@@ -80,6 +80,10 @@ A = A1*A2*A3*A4*A5*A6;
 % Construct angular velocity terms
 R = [A(1, 1), A(1, 2), A(1,3); A(2, 1), A(2, 2), A(2,3); A(3, 1), A(3, 2), A(3,3)];
 
+X = A(1,4);
+Y = A(2,4);
+Z = A(3,4);
+
 % compute the translational derivatives for each joint angle
 for j = 1:5
    Jac(1, j) = diff(X, q(j));
@@ -119,18 +123,29 @@ subbedA = subs(A, q, q_);
 x = vpa([subbedA(1,4); subbedA(2,4); subbedA(3,4)]);
 
 % and given a small change in the vertical position (mm)
-delta_x = [0; 0; 0.5; 0; 0; 0];
+desired_delta_x = [0; 0; 3; 0; 0; 0];
 
-% The change in angles are
-delta_angles = Jac_inv * delta_x;
+% Newton Raphson method for getting a better approximation
+for i = 1:50
+    
+    Jac_sub = subs(Jac, q, q_);
 
-% the change in angles are dependent on a small change in time (50 ms)
-delta_angles = 0.05 * vpa(delta_angles);
+    % and now the inverse can be computed
+    Jac_inv = Jac_sub^-1;
 
-% Which gives a transformation of (q_k+1 = q_k + dt * dq/dt)
-Final = subs(A, [q1,q2,q3,q4,q5,q6], [ q_(1) + delta_angles(1), q_(2) + delta_angles(2), q_(3) + delta_angles(3), q_(4) + delta_angles(4), q_(5) + delta_angles(5), pi]);
+    % The change in angles are
+    delta_angles = Jac_inv * delta_x;
+    
+    % the change in angles are dependent on a small change in time (25 ms)
+    delta_angles = 0.025 * vpa(delta_angles);
+    
+    % Which gives a transformation of (q_k+1 = q_k + dt * dq/dt)
+    q_ = [ q_(1) + delta_angles(1), q_(2) + delta_angles(2), q_(3) + delta_angles(3), q_(4) + delta_angles(4), q_(5) + delta_angles(5), pi];
+    Final = subs(A, [q1,q2,q3,q4,q5,q6], q_);
+    delta_x = [x(1) + desired_delta_x(1) - Final(1,4); x(2) + desired_delta_x(2) - Final(2,4); x(3) + desired_delta_x(3) - Final(3,4); 0; 0; 0];
+end
 
-% and final position at V
+% and final position at V, which matches x + desired_delta_x
 V = vpa([Final(1,4); Final(2,4); Final(3,4)]);
 
 %% Jacobian without angular velocity states

@@ -11,6 +11,9 @@
 \contentsline {figure}{\numberline {2.7}{\ignorespaces Flow Diagram of the V-REP Simulation}}{14}
 \contentsline {figure}{\numberline {2.8}{\ignorespaces Sample Lua Code for Connecting V-REP to a port}}{15}
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Feedback Control System with Disturbance}}{22}
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Physical representation of D-H Parameters between two links}}{25}
+\contentsline {figure}{\numberline {3.3}{\ignorespaces 3 Revolute Joint Arm}}{28}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
