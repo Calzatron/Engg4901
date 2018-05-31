@@ -1,6 +1,7 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Flow diagram describing the key features of this thesis}}{4}
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {2.1}{\ignorespaces Motor Torque Control System}}{6}
 \contentsline {figure}{\numberline {2.2}{\ignorespaces smrobot Simscape Model}}{7}
@@ -13,7 +14,10 @@
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {3.1}{\ignorespaces Feedback Control System with Disturbance}}{22}
 \contentsline {figure}{\numberline {3.2}{\ignorespaces Physical representation of D-H Parameters between two links}}{25}
-\contentsline {figure}{\numberline {3.3}{\ignorespaces 3 Revolute Joint Arm}}{28}
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Revolute Joint Arm}}{28}
+\contentsline {figure}{\numberline {3.4}{\ignorespaces The Newton-Raphson Method applied to Inverse Kinematics}}{32}
+\contentsline {figure}{\numberline {3.5}{\ignorespaces The calculation method for Inverse Kinematics in V-REP}}{33}
+\addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
