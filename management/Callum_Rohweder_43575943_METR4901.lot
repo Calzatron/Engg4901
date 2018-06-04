@@ -5,9 +5,13 @@
 \contentsline {table}{\numberline {2.1}{\ignorespaces V-REP remote API operation modes}}{16}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces V-REP remote API operation modes}}{40}
+\contentsline {table}{\numberline {4.2}{\ignorespaces Client program IK input commands}}{43}
+\contentsline {table}{\numberline {4.3}{\ignorespaces Client program IK input commands}}{45}
 \addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces Chosen controller coefficients for each joint}}{60}
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {6.1}{\ignorespaces \sl Fraction of air volume involved in heat exchange for second mode (right column) vs.\ filling factor (left column). The plain-text headings represent $f$, $m$, $\mu _2$ and $f_2$.}}{37}
+\contentsline {table}{\numberline {6.1}{\ignorespaces \sl Fraction of air volume involved in heat exchange for second mode (right column) vs.\ filling factor (left column). The plain-text headings represent $f$, $m$, $\mu _2$ and $f_2$.}}{62}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

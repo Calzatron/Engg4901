@@ -714,14 +714,7 @@ $\vec{q} = f^{-1}( \vec{P} )$
 
 Given the derivation from the last section, this computation isn't simple to compute, as the angle vector $\vec{q}$ can contain any number of joint angles, whereas the position vector of the end effector $\vec{P}$ is defined in ${\rm I\!R}^3$. For a 6 joint arm, this gives 6 unknowns and three equations.\\
 
-There are numerous methods that present inverse kinematics solutions to any serial chain of joints; even when there is no known closed form solution. A paper by Gregory Z. Grudic, the University of British Columbia, called Iterative Inverse Kinematics with Manipulator Configuration Control and Proof of Convergence, lists many of the different methods in some detail, including the Tsai and Morgan's solution for a 6 revolute joint arm. \\
-%%%%%%%% Need to move this chunk of text to the appendix...
-%https://books.google.com.au/books?id=PK_N9aFZ3ccC&printsec=frontcover&dq=tsai+and+morgan+robotics+textbook&hl=en&sa=X&ved=0ahUKEwjRvqqIw63bAhXGwLwKHRxbDAoQ6wEIUjAH#v=onepage&q&f=false
-%https://reader.elsevier.com/reader/sd/B3D6C34BEA5F22FD156A30862B225645F137D5CBAEF54030ADE786D00811AE281D632E6381AF7B9758568981C0ABC1B4
-Manipulators with 6 rotational joints can reach any position within its stretched length, where motors with more joints are termed as over-actuated robotic actuators and are capable of changing their joint configurations without changing the end-effector position. It is the aforementioned reason that 6 joint robotic arms are of such large interest, and the inverse kinematics is of such high interest.\\
-Raghavan and Roth's solution to the inverse kinematics of any 6 joint robotic arm is identified in many research papers and textbooks. It takes the transformations matrices from the forward kinematics, and rearranges them to make a system of equations about joint three. From here, there are 6 unknowns and 5 equations, where by substituting out the trigonometric products form a linear system with 16 unknowns and 6 equations. With more substitutions they arrived at a 12 by 12 matrix written in terms of variables representing trigonometric expressions. The determinant of this matrix gives a 16-degree polynomial referenced to the middle joint, of which can be solved for using a root solver, and the other joint angles found by back substitution. From this, it was concluded that there is 16 possible solutions to the inverse kinematics, however solving a 16-degree polynomial made this method too slow for real-time implementation. The Manocha Method avoids solving the determinant by forming the equations into an eigenvalue problem, where in solving for the eigenvectors gave three of the arm's joint angles with less operations. This was the first real-time inverse kinematics method to be implemented, with methods since being variations of the two outlined above. The Raghavan and Roth method is briefly outlined in appendix C of Lung-Wen Tsai's textbook Robot Analysis: The Mechanics of Serial and Parallel Manipulators. Further, it is worked through along with the Manocha Method in an article from the 14th Triennial World Congress, 1999, A Faster Algorithm for Calculating the Inverse Kinematics of General 6R Manipulator for Robot Real Time Control.\\
-It is believed that although new methods derived from those described above form solutions to the inverse kinematics problem in this thesis, as the Jaco arm has 6 revolute joints, the mathematics knowledge and tools for computing the eigenvalues of the complex equations is insufficient.\\
-
+There are numerous methods that present inverse kinematics solutions to any serial chain of joints; even when there is no known closed form solution. A paper by Gregory Z. Grudic, the University of British Columbia, called Iterative Inverse Kinematics with Manipulator Configuration Control and Proof of Convergence, lists many of the different methods in some detail, including the Tsai and Morgan's solution for a 6 revolute joint arm. A summary of popular solutions is provided in the appendix\\
 
 In this thesis, the most common approaches are used to determine the joint angles required to move the Jaco arm's end effector. %Further methods are briefly meantioned and referenced in the inverse kinematics appendix.
 
@@ -757,7 +750,7 @@ where $\sigma = \theta_1 + \theta_2 + \theta_3$
 
 From the cosine rule, the triangle can be defined by;
 
-$p_x^2 + p_y^2 = a_1^2 + a_2^2 + 2 a_1 a_2 c \theta_2$
+$p_x^2 + p_y^2 = a_1^2 + a_2^2 - 2 a_1 a_2 c \theta_2$
 
 which can be rearranged for $\theta_2$ in terms of point P and the arm lengths such that;
 
@@ -934,20 +927,516 @@ Using V-REP's remote API, a client program is required to be developed to allow 
 Considering there was a distinct lack of background experience with V-REP and using remote API's, the development of the client program was broken down into small stages. These stages together allowed the full development of the program:
 
 \begin{enumerate}
-  \item 
-  \item 
+  \item Import the Jaco arm into V-REP, add the gripper; additionally, learn how to import models into the scene and create a robotic arm for the interest of familiarising oneself with V-REP
+  \item Use a familiar coding language to interface with the remote API to communicate with V-REP
+  \item Determine a method for getting the object names within the scene, to make a mapping between object handles and object names (i.e. it is known that the fourth joint's name will contain the word 'joint' and the number 4, but that doesn't give a way of communicating with V-REP, as the remote API requires object handles.
+  \item Make the IP address, port number, and scene mode input arguments to the program for quick management
+  \item Develop the client program to be able to send and receive joint angles from the Jaco arm in V-REP
+  \item Create an interface for communicating with the client, to be able to transfer input commands to the client; for getting and moving joint angles
+  \item Create a V-REP scene with the Jaco joints in Inverse Kinematics Group, such that the end-effector tracks a target object
+  \item Using the mapping for object names to object handles, get the target and tip objects' handle
+  \item Control the position of the target during a simulation, so the Jaco arm follows the commands.
+  \item Design an interface for giving keyboard inputs to move the target in the scene
+  \item Find a way of getting the input from a gaming controller via USB; i.e. 'X' button pressed.
+  \item From a separate program, create a child process to run the program for getting the controller inputs, and send them to the parent process
+  \item Integrate this functionality into the V-REP client program, so when the scene mode is Inverse Kinematics, the joystick application process is created and communicates with the client of any input changes.
+  \item Using MATLAB, form the forward and inverse kinematics solutions using the D-H parameters, analytical inverse method, a control system for reducing angle error using regulators, and the Jacobian matrix for a given position
+  \item Adjust the tip dummy object to mimic the end-effector position from the forward kinematics
+  \item Integrate forward kinematics functionality into the client program
+  \item Integrate the analytic inverse solution into the client program
+  \item Integrate the control scheme solution into the client program
+  \item Integrate the jacobian inverse method into the client program
+  \item	Tune the solutions individually
+  \item Devise a method of quickly swapping between inverse kinematics solutions
+  \item Optimize the code and program
+
 \end{enumerate}
 
+Through the development of the program, additional stages were added, such as enabling the child process terminate when there wasn't a joystick connected, and allowing the program to then accept inverse kinematics commands through keyboard input. Later, it was discovered that threads cause blocking of other tasks, and shouldn't be kept running. These additional developments will be outlined in the approach section below, as the development of the program is explained. 
+
+\section{Project Development}
+
+\subsection{Set Up}
+Originally, the program was written in python as it allowed easy manipulation of variables, and passing of information to V-REP. There is plenty of example code for setting up a connection to V-REP from a python program. This allowed an understanding of how the connection was established; V-REP needed to be set to read from a given port, and then from the client program, a call to connect was made which returned a client identification number, which is used for every interaction thereafter. In the python version, a call to 'import vrep' was made, which handles the remote connection and allows the use of the python library. The script was really basic, it created a connection, got the object handles given the name of the joints of interest, set some parameters and moved the joints. This process is descibed by the figure below.
 
 
-\section{Client Program Approach}
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.8\linewidth]{python_flow_diagram.jpg}
+\caption{Simple V-REP client program in Python Flow Chart}
+\end{figure}
+\end{center}
+
+
+At this stage, a better definition of the problem scope was provided by Dr Singh, which included many different ideas than that expected. Dr Singh made mention of having the scene in V-REP be projected onto a table using a homography, and then interacting with the virtual arm by moving in-front of the projection. From this, I began to add sensors and cameras into the V-REP scene, so a fixed point can be projected; significant delay came with the addition of a camera in the scene whilst moving the arm, and thus this design concept wasn't pursued further. The inclusion of a joystick also became a requirement for this task, in that the end-effector of the arm should be controlled with a joystick. From this, it was decided that to allow interfacing with peripherals, the client program should be written in C. The idea behind this was that an executable can create child processes that are separate to the VREP client, which handle tasks such as reading from the joystick, or projecting the environment onto a table (if that was to be required).
+
+From previous studies, it was known how to develop a C application in the Linux environment, and thus a virtual machine was made. The program was then rewritten in C, which had it's own problems associated with including the external API files in the correct order, and the generation of the makefile; there was limited instruction on which of the many files should be included. The makefile is depicted in the image below for documentation purposes.
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1.1\linewidth]{makefile.jpg}
+\caption{V-REP Client Makefile}
+\end{figure}
+\end{center}
+
+
+The client then became under development, with the first task being to extract the object names and handles from V-REP. Unfortunately there wasn't a remote API function for getting object names, however there was one for handles. Thus, an internal V-REP function needed to be created to return object names given an object handle. This was done in the V-REP main script, and was called in the remote API using the simxCallScriptFunction(). This remote API function expects 4 types of information to be returned from V-REP, (an integer, float, string and a buffer), thus the Lua function returned two empty tables, one containing the object name, and an empty buffer. Using the blocking communication technique, this function was able to be called for each object handle in the scene, and the name stored.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.8\linewidth]{object_names.jpg}
+\caption{Lua function in V-REP main for retrieving object names}
+\end{figure}
+\end{center}
+
+This process caused a slight delay on start up, whilst the client program retrieved the names corresponding to important joints of the Jaco arm, and mapping them to their respective object handles; all of the information for objects in the V-REP scene were stored in an struct. Thus, it was desirable to write the mapping for a regularly used scene to a text file once it is retrieved from V-REP, allowing the text file to be used on start-up instead of communication to V-REP when the simulation is run again. To further develop this, the client program will look for a given text file for a scene, and if it does not exist it will get the information from V-REP, and write it to the file for next time; otherwise it will fill the struct with the information from the text file. As the important information from V-REP is the names and object handles of joints, motors and the Target object, this is the only information saved to the file, making it a much faster avenue than requesting from V-REP and sorting.
+
+\vspace{\baselineskip}
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.4\linewidth]{text_file_example.jpg}
+\caption{Example of a text file created by the V-REP client}
+\end{figure}
+\end{center}
+
+\vspace{\baselineskip}
+
+Now that the client program was able to get the joint handles in the scene, and send desired joint positions. Merging this functionality together, the client became able to automatically associate a joint number with an object handle and then set or get the joint angle from V-REP. To further progress this, the command-line interface was developed to take in forward kinematics inputs, of the form, `joint number` `angle to move`, with enter being used to store the request. From this, the program was able to set a joint angle of the Jaco arm in V-REP, and return the new angle. This process is outlined below.
+
+\vspace{\baselineskip}
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{client_fk.jpg}
+\caption{Client program in Forward Kinematics mode}
+\end{figure}
+\end{center}
+
+\vspace{\baselineskip}
+
+From this, it was important to ensure the forward kinematics can be calculated, to ensure the Jaco arm's end-effector position was in the expected position when returned from V-REP. Furthermore, it would be required for the inverse kinematics derivation and implementation. 
+
+\subsection{Forward Kinematics Implementation}
+% forward kinematics
+Kinova Robotics supplied documentation that assisted with the forward kinematics of the arm. In their $JACO^2$ 6 DOF Advanced Specification Guide, is the D-H parameters, joint lengths and offset angles for the robotic arm. Expressed in the table below are the numerical values for the D-H parameters, for the given axis positions along the arm. It can be seen that the axis for joint 4 isn't at the physical motor position, rather at the angled point in the link, this is to simplify the parameters as is at the bend, pointing towards joint 3, and is merely powered by the motor at joint 4. This occurs again at joint 5, where links 4 and 5 have a bend of 60 degrees, moving the axis of rotation away from the joints. The parameters used in this case are the 'Classical D-H Parameters' from the Kinova documentation, however there are other sets of parameters for the Jaco arm. For instance, the zeroth axis can be turned such that $\alpha_0$ is 0, and similarly for $\alpha_3$, where $\alpha_2$ and $\alpha_4$ can be $-pi/2$. The classical parameters were used as it matches the Jaco documentation, Peter Corke's Robotic Toolbox, and the set of angles to make the arm stand straight up could be easily determined. 
+
+\vspace{\baselineskip}
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.7\linewidth]{jaco_axis.jpg}
+\caption{D-H Parameters axis for each joint on Jaco arm}
+\end{figure}
+\end{center}
+
+\vspace{\baselineskip}
+
+
+
+\begin{center}
+\begin{table}[htb]
+
+
+    \begin{tabular}{| l | l | l | l | l | p{15cm} |}
+    \hline
+    Joint & $\alpha_{i-1}$ & $a_{i-1}$ & $d_i$ & $\theta_{i}$ \\ \hline
+     1 & pi/2 & 0 & 275.5 & q1 \\ \hline
+     2 & pi & 410.0 & 0 & q2 \\ \hline
+     3 & pi/2 & 0 & -9.8 & q3 \\ \hline
+     4 & pi/3 & 0 & -250.08 & q4 \\ \hline
+     5 & pi/3 & 0 & -85.563 & q5 \\ \hline
+     6 & pi & 0 & -202.78 & q6 \\ \hline
+    \end{tabular}
+    \caption{V-REP remote API operation modes}
+\end{table}
+\end{center}
+
+\vspace{\baselineskip}
+
+Using the theory outlined for deriving the end-effector position from a set of joint angles (forward kinematics), the transformation matrix in terms of symbolic joint angles $\vec{q}$ for this arm was calculated using MATLAB. The script for this is provided with this paper, where it can be seen that the transformation matrix is denoted by the variable A. From the figure of the Jaco arm provided, it can be seen that it is in folded over position, whereas in V-REP the Jaco arm begins in a straight up configuration. Thus, there is a difference between the mapping for angles in V-REP compared to the transformation matrix, meaning, for them to be transparent the angles of the transformation matrix need to be offset to mimic that of the virtual arm. Correctly, for the transformation matrix to provide an arm configuration with the gripper at it's tallest point, like V-REP, the angles need to be substituted into the transformation matrix as;
+
+\vspace{\baselineskip}
+
+
+$\vec{q} = [ pi, pi/2, -pi/2, 0, -pi, pi]^T$
+
+\vspace{\baselineskip}
+
+
+resulting in an end-effector position;
+
+\vspace{\baselineskip}
+
+
+$\vec{X} = [0, -64.299, 1181.145]^T$
+
+\vspace{\baselineskip}
+
+
+Thus, for changes in joint angles relative to V-REP's starting position, the following substitution had to be made;
+
+\vspace{\baselineskip}
+
+
+$\vec{q} = [ pi - q_1, \frac{pi}{2} + q_2, -\frac{pi}{2} + q_3, q_4, -pi + q_5, pi + q_6]^T$
+
+\vspace{\baselineskip}
+
+Thus $q_i$ is the offset in angle between one joint and the next, as per the forward kinematics convention provided in the theory section of the report. To separate the V-REP communication and terminal input handling to the mathematics associated with forward and inverse kinematics, functions for these were placed in its own kinematics files (called kinematics.c/.h). Once the forward kinematics solution was correct in MATLAB, the mathematics that described the end-effector position in terms of joint angles was inserted into the file, and given an input command that ran the function and printed the expected end-effector position. This was able to prove that the forward kinematics model and the tip position agreed; after some slight tweaking of the tip position relative to joint 6.
+
+
+\subsection{V-REP Inverse Kinematics}
+After the forwards kinematics was correct, the inverse kinematics methods can be written in MATLAB and derived, to be integrated into the client program. For the integration, the client program had to be set-up to take inverse kinematics inputs, and manipulate the joint angles with V-REP accordingly. In addition to this, the client program needed to be able to control the target object in a inverse kinematics V-REP scene. Thus, the next objective to complete was to get V-REP to recognise the Jaco arm serial chain and compute the joint angles such that the tip follows the target, moved by the client program.
+
+This part was straight forward, an 'IK Group' needed to be created that contained the Target and Tip objects, and the reference frame to be set to that of the Jaco's base. The solver can have constraints on the x, y, z, $\theta_x$, $\theta_y$ and $theta_z$; thus the tip can be constrained to the target's position and orientation. The desired precision can also be specified, which is how close the solver's solution can place the tip to the target's position before finishing the interations (before the maximum iteration number is reached). The settings chosen where 0.5mm in translational coordinates, and 0.1 radians for the angles, no restriction on $\theta_z$ so the arm always points away from its base, and a maximum number of steps to be 5. The Damped Least Squares solver was selected with damping of 0.052, this provided a smooth transition towards a desired path; whereas the Pseudo Jacobian Method can have significant error around the target before getting a precise enough approximation, causing scattered movements. More specifically, for a small change in tip to target position of 1.5mm in the y, and 7.6mm in the z, the Pseudo Jacobian method with 5 (and even 50) iterations wasn't able to change the base angle enough for joint 2 and 3 to move into the correct plane to allow the error in y and z be limited. This problem has occurred as V-REP has the Jaco model placed up-right, thus there are singularities with joints 2 and 3 being aligned. The Damped Least Squares method performs better close to singularities, where 5 iterations in this mode can effortlessly move the end-effector into position. Below is a figure presenting the Jaco arm in inverse kinematics mode with small error in target to tip position. Following is a figure of the results between using the DLS and Pseudo inverse methods. Due to the arm being in inverse kinematics mode, the joint angles cannot be set to place them out of singularities on start up; as V-REP is constantly trying to make the target and tip error fall below the threshold.
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.4\linewidth]{Small_change_jaco.jpg}
+\caption{The Jaco arm in V-REP with joints set to IK mode, with a small error in target to tip position}
+\end{figure}
+\end{center}
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.9\linewidth]{Small_change_jaco_result.jpg}
+\caption{Left: the Jaco arm using the Pseudo Inverse Jacobian with 50 iterations. Right: the Jaco arm using DLS of damping 0.05 and 5 iterations}
+\end{figure}
+\end{center}
+
+
+For this robotic manipulator it was found that the DLS method was the best to used with V-REP, and the small iteration number didn't come with any noticeable delay in the program; thus satisfying the real-time objective.
+
+The client program was set up for interpreting inverse kinematics inputs, being keyboard commands. Given the command, presented in the table below, the target position will be retrieved from V-REP, incremented on according to the command, and then the world position of the target would be reset; moving the arm.
+
+\begin{center}
+\begin{table}[htb]
+
+    \begin{tabular}{| l | l | p{6cm} |}
+     \hline
+     Keyboard Command & Change in Tip Position & Description  \\ 
+     \hline
+     'w' & 3 mm & radially out (horizontal) from the base of the arm \\ 
+     \hline
+     's' & 3 mm & radially in (horizontal) towards the bass of the arm \\ 
+     \hline
+     'a' & 3 mm & anti-clockwise (horizontal) from the current tip position \\ 				 \hline
+     'd' & 3 mm & clockwise (horizontal) from the current tip position \\ 
+     \hline
+     '-' & 3 mm & change in height of the tip downwards \\ 
+     \hline
+     '+' & 3 mm & change in height of the tip upwards \\ 
+     \hline
+    \end{tabular}
+    \caption{Client program IK input commands}
+\end{table}
+\end{center}
+
+\vspace{\baselineskip}
+The maths for calculating the new coordinates of the target were quite simple, where $\vec{P_t}$ denotes the position of the tip relative to the base such that;
+
+\vspace{\baselineskip}
+$\vec{P_t} = \vec{Tip_{worldCoorinates}} - \vec{JacoBase_{worldCoordinates}}$
+
+\vspace{\baselineskip}
+the 'w' command would have the following computations;
+
+\vspace{\baselineskip}
+$radius = \sqrt{P_{t_x}^2 + P_{t_y}^2}$
+
+\vspace{\baselineskip}
+$radius = radius + \Delta radius$
+
+\vspace{\baselineskip}
+$angle = atan2(P_{t_y}, P_{t_x})$
+
+\vspace{\baselineskip}
+$P_{t_x} = radius \times cos(angle)$
+
+\vspace{\baselineskip}
+$P_{t_y} = radius \times sin(angle)$
+
+\vspace{\baselineskip}
+It was found that the program could seamlessly control the target in V-REP,and the end-effector would follow.
+
+\subsection{Joystick Integration}
+The next objective was to add a joystick as an input source for moving the end-effector. It was assumed that the physical Jaco arm would be set-up to a Windows computer in the Robotics Design Lab at UQ, and as a port is necessary for creating a processes from the client program to read the joystick, it was decided that the client program was required to be developed on a Windows computer; rather than a virtual machine were it cannot directly access USB ports. The task of moving to Windows was time consuming, Linux compilers were first downloaded to Windows such that the program can compile in command-line. Unfortunately the networking on Windows is different to Linux, and so there wasn't libraries for converting Linux network code to a form understandable by Windows. It was decided that a new client program should be created in Visual Studio, and then the client program's custom files have the code copied over.
+
+%https://www.libsdl.org/download-2.0.php
+Only Windows has the ability to control the Human Interface Drivers, however the Windows API allows one to communicate with this via functions such as GetRawInputData(); available with hidsdi.h. Unfortunately a program using Windows API can only communicate with another Window through Window messaging (queues). The client program was a console application, which had the ability to communicate with other applications through a method similar to piping in Linux. Given it was desirable to find an existing joystick interface as an executable which can easily be run by a creating a child process, many platforms were tested to determine the easiest to interface with. The notes taken during this time is provided in the appendix, where Windows API, HTML Gamepad API, LibUSB, and Simple Directmedia Layer (SDL) source code were tested. It was found that SDL provided the best means in interfacing with the Joystick, as the library offered the source code that was editable from Visual Studio. Initially the project, testjoystick, was designed to display information about the joystick, and show which buttons were being pressed in a Window. It was also discovered that the application had it's own handle to the console, using SDL\_log to print to terminal. This meant that usual handles to the terminal such as stdout and stdin had no effect on the console window. Thus, changes were made to the program (it should be noted that SDL is open-source as long as it's referenced and changes made are commented on);
+
+\begin{itemize}
+	\item The code that created and controlled the window was removed; so the application only printed to the control via SDL\_log
+	\item The handle to stdout and stdin were redefined; such that stdin pointed to the STD\_INPUT\_HANDLE, which was opened for reading.
+	\item The code was made to print to stdout "No Joysticks Attached" and exit; so the child process isn't left open when there isn't a joystick.
+\end{itemize}
+
+%https://msdn.microsoft.com/en-us/library/windows/desktop/ms682425(v=vs.85).aspx
+A new project was made to attempt to spawn a child process using the Microsoft Developer Network (MSDN); libraries accessible from Visual Studio. With reference to the example code on the CreateProcess function, information successfully flowed between the testjoystick application and the new project file. This code was then copied into the client program, in the file joystick.c. This file was used to store all code relevant to the joystick, such as creating the process, reading from the process, interpreting the button presses and joystick positions, adding the relevant information to the input buffer, and the handing of passing commands from the buffer to the main client thread. A total of 3 threads were used, with two made to service the commands of the joystick;
+
+\begin{center}
+\begin{table}[htb]
+    
+    \begin{tabular}{| l | p{10cm} |}
+    \hline
+     Thread & Description     \\
+     \hline
+     Main & Handled input commands from the joystick buffer or from the terminal, and communicated with V-REP to produce the desired outcome  \\
+     \hline 
+     Joystick Interpretation & Reads from stdout of the joystick process, interprets the information, and adds a (w/s/d/a/-/+) command to the joystick command buffer with decimal value corresponding to the amount that the joystick was pushed for that command (0 for no press, 1 for 100\% pressed).\\
+     \hline
+     Joystick Add Command & This task keeps track of the last command to be added to the buffer, when the push value is greater than 0, and 750ms has passed, a copy of the last command is added to the buffer as the joystick is still pressed down. \\ \hline
+    \end{tabular}
+    \caption{Client program IK input commands}
+\end{table}
+\end{center}
+
+
+It can be seen in the below figure that the output of the joystick process (SDL\_log prints that were provided, but same information that is sent to the client program) shows the axis being toggled as a number between 0 and 3 (two axis per joystick) with 16-bit signed integer representing the amount it's pushed on that axis. Thus, when a joystick axis is held and not returned to zero, the output of the joystick process only shows that it's reached 32797, but doesn't keep printing to show that it's still held there. For this reason an additional thread was created to check the joystick buffer, and re-add commands after a period without change. It was found that 750 ms was the optimal time to wait between adding to the buffer, as it took on average 600 ms for a command to be interpreted sent to V-REP. This average is CPU speed dependent, and thus changes from computer to computer; it is similar to the sensitivity of the joystick.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.9\linewidth]{joystick_cmdline.jpg}
+\caption{An example of the terminal output of the joystick process when the left joystick is toggled on}
+\end{figure}
+\end{center}
+
+With the joystick successfully moving the tip position in V-REP, the main objective of having an external tool control the robotic simulation was complete. It was now a manner of getting different inverse kinematics methods working with the V-REP client program. This was to enable the V-REP scene can be in forwards kinematics mode, and the client program move the joint angles to provide a desirable end-effector position. The chosen methods for the client program were, the analytical approach as this would require the least number of calculations, a control systems approach, and using the inverse Jacobian with Newton-Raphson's method. Three were chosen to determine which was the best given the design objectives.
+
+The client program was further developed during this stage, to incorporate commands for getting the world coordinates of objects, pausing communication between V-REP and the client to allow all joint angles to be sent at one time, streaming mode was trialled with the objective of updating the client's knowledge of the joint angles, and setting up the interface having a forward kinematics scenes with inverse kinematics inputs, and a way of quickly flicking between the different inverse kinematics solutions.
+
+\chapter{Kinematics Approach}
+\section{Forward Kinematics}
+As aforementioned, the forward kinematics was derived using the D-H Parameters provided by Kinova and by following the theory section of this report for the transformation matrix. Due to the amount of symbolic expressions, MATLAB didn't ignore numbers close to zero. Thus, before using the transformation matrix, each coefficient in each index was filtered and extracted if it was smaller than 0.000001. The matrix expressions are still too long to be displayed here, however it is available in an attached MATLAB scripted titled forwardKinematics.m and in the kinematics.c file for the client program. It was found that the transformation could accurately determine the position of the end-effector given a set of angles; this can be checked by typing 'fk' as an input command for the client program, and checking the coordinates of the tip object in V-REP.
+
+\section{Inverse my Matrix Manipulation}
+In order to take the strain off V-REP doing all the computations, and to give the control of either forward or inverse kinematics control to the client program, three inverse kinematics methods were integrated into the client program. The first attempt at an inverse kinematics solution was to derive the relationship between joints through manipulations of the transformation matrix, such that;
+
+$(A_{0}^{1})^{-1} T = A_{1}^{2} A_{2}^{3} A_{3}^{4} A_{4}^{5} A_{6}^{6}$
+
+After rearranging the matrices between the left and side and right hand side, and inspecting the indexes of both sides for equalities, no fruitful results were found. For instance, when observing the results of both $A_4^5 * A_5^6$ compared to $(A_0^1 * A_1^2 * A_2^3 A_3^4)^{-1} A$, each index of both matrices were mathematically identical; any variances could be corrected with trigonometric identities. 
+
+\section{Inverse by Analytical Approach}
+
+To begin this approach, the Jaco arm was redrawn in different configurations to determine how the varying each joint can change the end-effector position. Following the approach outlined in the theory section of this report, it can be seen that the second link forms a triangle with point $\vec{P}$, formed by the joint angles $q_2$, $q_3$ and the joining joint lengths. An angle of 60 degrees is always present between the rotational axis of $q_4$ and link $\vec{PR}$, similarly with $q_5$ and link $\vec{RS}$. In the figure provided, $q_4 = \frac{\pi}{2}$ and $q_5 = \pi$, which leads to the end-effector remaining in the x-z plane; the angles contribute no y-component. 
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.9\linewidth]{jaco_angles_figure.jpg}
+\caption{Dimensions and angles of Jaco Arm}
+\end{figure}
+\end{center}
+
+Varying these two angles in any means will result in a decrease in angle visible in this figure between the rotational axes and the links; as part will form into the y-z plane. This leads to the figure below, where these angles are denoted $\alpha$ and $\beta$ respectively. Instead of considering point $\vec{P}$, the axial coordinate due to the 60 degree links were added to the link prior, moving point $\vec{P}$ to $\vec{P'}$.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.8\linewidth]{jaco_inv_figure.jpg}
+\caption{Simplification of Jaco arm geometry}
+\end{figure}
+\end{center}
+
+Limiting $\alpha$ and $\beta$ to 60 degrees, results in the following relationships;
+
+$\alpha = \frac{q_4}{6}$
+
+$\beta	= \frac{q_5 - \frac{\pi}{2}}{6}$
+
+Focusing more on the wrist, the lengths of the proposed vectors can be determined; note that $D_4$ and $D_5$ are known from the D-H parameters of the arm.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.9\linewidth]{jaco_inv_wrist_figure.jpg}
+\caption{Simplification of Jaco arm wrist geometry}
+\end{figure}
+\end{center}
+
+
+From this figure it was found that $\vec{PR} = 85.563$
+
+The point R can thus be written in terms of point P' and the affect of the arm angles contributing length in the x-z plane such that;
+
+\vspace{\baselineskip}
+
+$R_x = P_x + 85.563 sin( q_2 + q_3 + \alpha)$
+
+$R_y = P_y + 85.563 sin( q_2 + q_3 + (\frac{pi}{3} - \alpha))$
+
+$R_z = P_z + 85.563 cos( q_2 + q_3 + \alpha)$
+
+\vspace{\baselineskip}
+
+Similarly for the end-effector position $\vec{S}$ in terms of $\vec{R}$
+
+\vspace{\baselineskip}
+
+$S_x = R_x + 202.95 sin( \beta + \alpha + q_2 + q_3)$
+
+$S_y = R_y + 202.95 sin ( (\frac{\pi}{3} - \beta) + (\frac{\pi}{3} - \alpha) + q_2 + q_3)$
+
+$S_z = R_z + 202.95 cos( \beta + \alpha + q_2 + q_3)$ 
+
+\vspace{\baselineskip}
+
+From the theory section, it is known that;
+
+\vspace{\baselineskip}
+
+$P_{xy}^2 + (P_z - D_1)^2 = 410^2 + 250^2 - 2 \times 410 \times 250 \times cos(q_3)$
+
+$\rightarrow q_3 = cos^{-1} ( \frac{P_{xy}^2 + (P_z - D_1)^2 - 410^2 -250^2 }{2 \times 410 \times 250}$
+
+\vspace{\baselineskip}
+
+and,
+
+\vspace{\baselineskip}
+
+$cos(q_2) = \frac{ P_{xy} (410 + 250 sin (q_3)) + 250 sin(q_3)(P_z - D_1) }{410^2 + 250^2 + 2 \times 410 \times 250 cos(q_3)}$
+
+$sin(q_2) = \frac{-P_{xy} \times 250 sin(q_3) + (P_y - D_1)(410 + 250 cos(q_3))}{410^2 + 250^2 + 2 \times 410 \times 250 cos(q_3)}$
+
+$\rightarrow q_2 = atan2( \frac{sin(q_2)}{cos(q_2)})$
+
+\vspace{\baselineskip}
+
+The angular position of $\vec{P}$ in the x-y plane is dependent on $q_1$, and the radial position from the base in x-y coordinates is dependent on the angles of $q_2$, $q_3$, as seen above. Thus, the expression for $q_1$ in terms of $\vec{P}$ will have the form (a constant offset of angle occurs do to the arm's orientation in V-REP);
+
+$q_1 = atan2( P_y, P_x)$
+
+Therefore, given a desired position for $\vec{P}$, joint angles $q_1$, $q_2$ and $q_3$ can be determined. From this position and a known end-effector position, $\vec{S}$, the angles $\alpha$, $\beta$, can be determined and thus $q_4, q_5$;
+
+Substituting out $\vec{R}$, it is known that;
+
+$sin(q_2 + q_3 + \alpha) 85.563 + P_x = S_x -202.95 sin(\beta + \alpha + q_2 + q_3) $
+
+This can be repeated for the y and z coordinates, however it can be seen that the relationship between $\vec{P}$ and $\vec{z}$ depends on all the angles being known, or, both $\vec{P}$ and $\vec{S}$ being known; not only $\vec{S}$ unless $\alpha$, $\beta$, are known, or more relationships between the joints are found. This is not a dead-end however, as it is known that the relationship between $\vec{P}$ and $q_1$, $q_2$ and $q_3$ exists, and if $\alpha$, $\beta$ are static between movements, it can be found that;
+
+$\Delta \vec{P} \propto \Delta \vec{S}$
+
+thus, knowing the change in position required at the end-effector, the change in coordinates of $\vec{P}$ can be approximated to move the end-effector to the desired position. Discrepancies will depend on the angle of the arm joints, however this method will bring the end-effector close to the desired point. Any variation in position can be corrected using feedback control on the approximated angles $q_2$, $q_3$, calculated as per the above formulas. Below is a figure presenting the controller that was designed;
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1.14\linewidth]{inv_kinematics_and_control.jpg}
+\caption{Control loop for approximating the joints angles to move the end-effector using the position of the fourth joint}
+\end{figure}
+\end{center}
+
+The controller gains are smaller than 1 to reduce the error being added to the position of the fourth joint, such that a solution is approached with each loop iteration. Integral control allows the error to be added with each loop, reducing steady state error, whilst the proportional gain allows the required state be reached quickly.
+
+In the MATLAB script, inverseKinematics.m, the steps for calculating the required angles for a desired end-effector position is presented; following the maths presented above. After verification of this process, the code was written in the client program to tune the gains of the controller, and add any angle offsets present between theoretical calculations and the joints of the arm in V-REP. The PI controller was able to be tuned by writing the calculated end-effector position to a spread sheet (stored in programming/client/x62/Debug) each loop iteration; allowing the plotting to view the response. For this design, an accuracy of 6mm in each component of $\vec{S}$ was required, with a maximum loop iteration of 20. It was decided that the $K_P$ and $K_I$ gains for each axis should be equal, as it is desirable for the arm to weigh each axis equivalently. The response with the lowest overshoot and steady-state error was found to have gains of $K_P = 0.08$ and $K_I = 0.2$, with the response of each axis being presented below; and further in the appendix. It can be seen that the responses converge to the desired values in practice. In code, bounds were placed to ensure the control loop was not forcing the arm to reach an unreachable end-effector position.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{des_act_inv1_plot.jpg}
+\caption{Response of Chosen Controller Given a Change in End-Effector Position Command (3mm in the x-y plane)}
+\end{figure}
+\end{center}
+
+\section{Inverse by Control Loops}
+The success in the former section called for a trial of using control loops to govern the change in angles required for reducing the error in end-effector position. A key problem with this form of control is that there is no method of checking for undesirable joint configurations; such as the arm folding onto itself. Due to this system being non-linear, the controller response will depend on position, and thus will only be used for correcting small errors in end-effector position. In MATLAB Simulink the original model was created, where the inputs were the desired end-effector coordinates. To give the system a localized approximation, the first 3 angles were calculated using the inverse kinematics described in the previous section. To make a start, the 6 joint angles had a PI controller with proportional gain being a fraction of their following link lengths. The purpose of this was that, for example, the second link is the longest at 410mm, and thus small angles of $q_2$ will effect the end-effector position more than $q_3$, which moves a link of length 200mm; thus the gains for controlling $q_3$ are more than that for $q_2$. The error being corrected was not the difference in x, y, z coordinates between the desired position $S_d$ and actual position $S_a$ of the end effector. Instead, the change in angle between these locations in the x-y plane, and ground-z plane were used; this was to decrease the probability of having inaccurate error from changing between coordinates. The angular displacement error, $\theta_z$, $\theta_{xy}$ are illustrated in the figure below.
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{jaco_inv_control_figure.jpg}
+\caption{Error being corrected in control loop}
+\end{figure}
+\end{center}
+
+It is known that $q_1$ does not effect the $z$ coordinate of the end-effector position, and is the largest contributor to motion in the x-y plane. The dominant response was desired to be the elimination of error $\theta_z$, where $\theta_{xy}$ will be corrected thereafter. To control $q_1$, a high integral gain was used, such that the end-effector position will slowly be regulated for steady-state error in the x-y plane. 
+
+The error inputs to the PI controllers for each joint was determined by the amount of which the joint would contribute in that angle. For instance, joints 4 and 5 equally contribute to the error of $\theta_z$ and $\theta_{xy}$, thus the error into the controller is the summation of these errors. Angles $q_2$ and $q_3$ were given the largest proportional gains, as it is desired that these joints move the most.
+
+It was quickly found that the system could become unstable given the incorrect parameters for one of the controllers, but the design process itself was a good starting point.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{matlab_inv_des_act.jpg}
+\caption{The desired and actual positions of the end-effector with each joint under control}
+\end{figure}
+\end{center}
+
+It can be seen in the figure that the error in end-effector position was correctly adjusted, moving the arm from its reset position defined by the D-H parameters to the desired location of $S_d = [200, 200, 750]^T$. Unfortunately, as the control is on two degrees of freedom, and the end-effector's position is in 3 dimensional space, there is uncorrected steady-state error in the z-coordinate.
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{matlab_inv_des_act_angle.jpg}
+\caption{The desired and actual angular positions of the end-effector}
+\end{figure}
+\end{center}
+
+It can be seen in the figure above that the desired angular positions were achieved, however, from this prospective there isn't control on radial distance, leading to stead-state error; like there would have been if error in three (angular or linear) displacements were used. Another issue with this controller is that the convergence of $\theta_{xy}$ is faster than $\theta_z$, which is the opposite to that of which is desired, and is a direct consequence of incorrect implementation a reference position correction with integral gain.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.8\linewidth]{control_system.jpg}
+\caption{Standard Regulator Block Diagram}
+\end{figure}
+\end{center}
+
+Instead, it would be desirable to use 'integral action', shown below, as it provides a reference position that eliminates steady-state error, and is robust to disturbances.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{control_system_integral_action.jpg}
+\caption{Block Diagram of integral action, giving the output (y) a reference input (r)}
+\end{figure}
+\end{center}
+
+
+A separate method to achieving the desired response would be to have a cascade loop, regulating $\theta_z$ in the faster inner loop, and $\theta_{xy}$ in the outer-loop, as presented below.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{control_system_cascade.jpg}
+\caption{Block Diagram of a Standard Cascade Regulator}
+\end{figure}
+\end{center}
+
+The proposed control system was incorporated into the V-REP client program, and the parameters further tuned by exporting the position of the end-effector to a spread sheet, which allowed plotting of the responses. Provided below is a graph showing the error of the controller that was designed within the client program, where an increase in radial distance of the end-effector by 3 mm was desired. It can be seen that steady-state error occurs in $\theta_z$, as found in the simulation, however $\theta_{xy}$ reaches and stays at exactly 0.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{control_loop_error.jpg}
+\caption{V-REP Client Program Control Loop Error}
+\end{figure}
+\end{center}
+
+
+The table below presents the chosen controller gains, and the percentage of error in angle contributed to the total error seen by each controller.
+
+\begin{center}
+\begin{table}[htb]
+
+
+    \begin{tabular}{| p{1.2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} |}
+    \hline
+    Joint & $K_p$ & $K_I$ & \% XY & \% Z & Arm Length & Angle Correction \\ \hline
+     1 & 0.05	& 0.99	& 100	& 0		& 197.13 &	-$q_1 - \pi$ \\ \hline
+     2 & 0.65	& 0.55	& 25	& 75	& 410 	&	$q_2 - \frac{\pi}{2}$  \\ \hline
+     3 & 1.17	& 1.11	& 25	& 75	& 207.3 &	$q_3 + \frac{3 \pi}{2}$ \\ \hline
+     4 & 0.1	& 0.02	& 50	& 50	& 74.1	& $q_4$ \\ \hline
+     5 & 0.15	& 0.15	& 50	& 50 	& 74.1	& $q_5 - \pi$ \\ \hline
+     6 & 0.15	& 0.15	& 0		& 0 	& 160 	& $q_6$ \\ \hline
+    \end{tabular}
+    \caption{Chosen controller coefficients for each joint}
+\end{table}
+\end{center}
+
+
+\section{Inverse by Jacobian}
 
 
 
 
-
-
-\chapter{Methodology, procedure, design, etc.}
 
 This may be one chapter or several.  Again, titles should be more
 informative than the above.
@@ -959,10 +1448,6 @@ graphics, as in \fig{fzsys}, requires no auxiliary packages and allows
 the mathematical formatting features of \LaTeX\ to be used in
 diagrams; but the \texttt{picture} files, unlike PostScript files,
 usually require manual editing.
-
-
-
-
 
 \chapter{Results and discussion \ldots}
 
@@ -1031,8 +1516,41 @@ plain-text headings represent $f$, $m$, $\mu_2$ and $f_2$.}
 
 % \include appendix chapters here.
 
-\chapter{Dummy appendix}
+\chapter{Appendix}
+\section{Joystick Applications}
+\subsection{Objectives}
+•	Retrieve real time data of the joystick states; button presses and joystick position from a Generic Joystick Controller with USB input.
+•	Have the states printed to stdout in real time using an executable that can be spawned from a parent process (VREP main client).
+•	The process must be killable from the parent process as well, to avoid unnecessary hanging and infinite forking, which could damage computer memory.
 
+\subsection{Windows API}
+Windows has its own API for building window executables. This API is formatted differently to standard C programs, and contains very different properties and types. For example, main is run from [1]:
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
+The syntax and libraries from Windows.h, with hidsdi.h allowes direct communication with Human Interface Devices (HID). Windows are generated first, and messages are sent through this thread and the HID, thus to GetRawInputData(), a window must be created to generate the message struct [1] and the lParam argument [2]. Message windows can be created by setting the hWndParent parameter of CreateWindow() to HWND\_MESSAGE; this will create a hidden window that can only be terminated using Task Manager. 
+The primary problem with the Windows API is that it is separate to the console, thus writing to stdout is ineffective, and the only way to create an output is to write to a file with FILE* f = fopen(), and fprintf(f, “text”). Setting the linking configuration from Windows to Console will cause the program build to be unsuccessful. Despite these problems, Windows API provides the lowest level of talking directly to the HID drivers, and manipulation of USB data from the controller.
+
+Open-source code for generating a window containing a joystick GUI with real-time button presses is available from [4]. Building RawInputJoystickSource/Raw Input.vcxproj in Visual Studio will generate an executable Raw Input.exe in RawInputJoystickSource/Debug, which can be run from command prompt. Adding print statements or writing to stdout won't produce anything on command prompt, however the executable will create a window containing the joystick visualisation. Re-writing the source code from the Windows API was unsuccessful as getting the raw input requires the message struct, generated using a window thread. Created text files however will appear in /Debug.
+
+\subsection{HTML5 Gamepad API}
+Code for creating joystick support with browser (HTML5) games is available from [5] with information at [6]. The latter contains instructions for getting a PS4 controller working in Chrome and Firefox. As this isn’t useful for application based programs, it would be a useful alternative for games that are ran using .html.
+
+\subsection{Libusb and xusb.c}
+A library used for retrieving information from USB, with an example executable and solution, xusb.c, which demonstrates this for Generic, PS3 and Xbox joysticks [7]. The library functions have documentation available from [7], however, apart from the xusb example there is limited documentation on how to implement these functions or format code. Thus, manipulating the code for the Generic USB Joystick to work with xusb.c, to see the button inputs is difficult. If the file is ran with “xusb.exe –s vid:pid” the device information and reading input report can be generated, if buttons are being pressed the hexadecimal output will reflect this. It is possible to loop the “Reading Input Report” and print to stdout in the same way as current. The inputs will then have to be mapped to buttons, which can create difficulty with interpreting the state of the joysticks. A PS3 controller code did not work (exited with Input/Output error), as the inputs weren’t printed to terminal, but it is expected that the code format for processing the input, to show which buttons were pressed, will be similar to that for the Generic USB controller. The code can be executed from libusb-1.0.21/examples/bin64, with code kept in libusb-1.0.21/examples/xusb.c.
+
+\subsection{Simple Direct Layer (SDL) Source Code}
+Written in C, a cross platform library can be download for the use of getting data from keyboard, mouse and joysticks, from the SDL website [9]. If the source code is modified it must be marked as so, otherwise it is free to be used and manipulated to repeatedly display input data from devices; originally set to only print device information, however input manipulation functions are provided. The joystick project can be built by loading SDL2-2.0.7/VisualC/SDL into Visual Studio and building from testjoystick.c. This file initialises the joystick and retrieves data from the SDL\_joystick.c file, where it can be executed in a console from SDL2-2.0.7/VisualC/Win32/Debug. The test files are setup to produce a GUI, however the code for this can be commented out, and input manipulation moved to main. Printf can be included by creating a new stream pointing to standard out, and joystick information sent to it (by default, SDL uses a different handler (not stdout) to point information to the command line, and so an external process cannot read this information).
+
+
+\section{Alternate Inverse Kinematics Solutions}
+
+%%%%%%%% Need to move this chunk of text to the appendix...
+%https://books.google.com.au/books?id=PK_N9aFZ3ccC&printsec=frontcover&dq=tsai+and+morgan+robotics+textbook&hl=en&sa=X&ved=0ahUKEwjRvqqIw63bAhXGwLwKHRxbDAoQ6wEIUjAH#v=onepage&q&f=false
+%https://reader.elsevier.com/reader/sd/B3D6C34BEA5F22FD156A30862B225645F137D5CBAEF54030ADE786D00811AE281D632E6381AF7B9758568981C0ABC1B4
+Manipulators with 6 rotational joints can reach any position within its stretched length, where motors with more joints are termed as over-actuated robotic actuators and are capable of changing their joint configurations without changing the end-effector position. It is the aforementioned reason that 6 joint robotic arms are of such large interest, and the inverse kinematics is of such high interest.\\
+Raghavan and Roth's solution to the inverse kinematics of any 6 joint robotic arm is identified in many research papers and textbooks. It takes the transformations matrices from the forward kinematics, and rearranges them to make a system of equations about joint three. From here, there are 6 unknowns and 5 equations, where by substituting out the trigonometric products form a linear system with 16 unknowns and 6 equations. With more substitutions they arrived at a 12 by 12 matrix written in terms of variables representing trigonometric expressions. The determinant of this matrix gives a 16-degree polynomial referenced to the middle joint, of which can be solved for using a root solver, and the other joint angles found by back substitution. From this, it was concluded that there is 16 possible solutions to the inverse kinematics, however solving a 16-degree polynomial made this method too slow for real-time implementation. The Manocha Method avoids solving the determinant by forming the equations into an eigenvalue problem, where in solving for the eigenvectors gave three of the arm's joint angles with less operations. This was the first real-time inverse kinematics method to be implemented, with methods since being variations of the two outlined above. The Raghavan and Roth method is briefly outlined in appendix C of Lung-Wen Tsai's textbook Robot Analysis: The Mechanics of Serial and Parallel Manipulators. Further, it is worked through along with the Manocha Method in an article from the 14th Triennial World Congress, 1999, A Faster Algorithm for Calculating the Inverse Kinematics of General 6R Manipulator for Robot Real Time Control.\\
+It is believed that although new methods derived from those described above form solutions to the inverse kinematics problem in this thesis, as the Jaco arm has 6 revolute joints, the mathematics knowledge and tools for computing the eigenvalues of the complex equations is insufficient.\\
+
+\section{Appendices notes}
 Appendices are useful for supplying necessary details or explanations
 which do not seem to fit into the main text, perhaps because they are
 too long and would distract the reader from the central argument.
