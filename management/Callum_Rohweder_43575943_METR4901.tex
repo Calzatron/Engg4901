@@ -822,11 +822,11 @@ $ \left(\begin{array}{cccccc}
 \end{array}\right)
 $
 
-Thus, the change in end-effector position that results from a change of angles is;
+Thus, the change in angles required for a change in end-effector position;
 
 $\frac{dX}{dt} = J \frac{dq}{dt}$
 
-and the change in angles required for a change in end-effector position;
+and the change in end-effector position that results from a change of angles is;
 
 $\frac{dq}{dt} = J^{-1} \frac{dX}{dt}$
 
@@ -1433,70 +1433,231 @@ The table below presents the chosen controller gains, and the percentage of erro
 
 
 \section{Inverse by Jacobian}
+Within this theory section of this report is was found that the Jacobian can be found from the transformation matrix for a robotic manipulator. Following the creation of the transformation matrix for the Kinova Jaco arm, the Jacobian was approach was trialled; in the MATLAB file 'jacobianInverseKinematics.m'.
 
+The first step was to retrieve the expressions that describe the change in linear and rotational positions of the end-effector due to a change in each angle. 
 
+\begin{enumerate}
+  \item Firstly, the rotational and translational matrices were extracted from the transformation matrix
+  \item The components of the Jacobian representing the change in translational coordinates was filled by deriving the three position states by each joint angle
+  \item From this, the rotational matrix can be derived with respect to each angle, creating $\frac{\delta R}{\delta q_i}$
+  \item The Skew matrix was created, by $S(\omega) = \frac{\delta R}{\delta q_i} \times R^T$
+  \item $\omega_x$, $\omega_y$ and $\omega_z$ were extracted from the skew matrix; representing the change in rotation of the end-effector due to a change in angle $q_i$ 
+  \item The rotational components were added to the required position within the Jacobian matrix.
+  \item With the Jacobian matrix complete and in symbolic form, substitution of angles of the Jaco arm in a known, not singular, position was substituted into the Jacobian.
+  \item The Jacobian could now be inverted; note that the symbolic representation of the Jacobian is overly complex, a symbolic representation of the inverse Jacobian could not be computed.
+  \item Substituting these same angles into the transformation matrix leads to the end-effector location in this configuration known.
+  \item A vector representing $\frac{dX}{dt}$ needed to be created, the arbitary position $[0, 0, 3, 0, 0, 0]^T$ was used, representing only a change in height by 3 mm; it was found that small changes in position lower than 1 took more iterations to get an accurate approximation.
+  \item The change in angles were calculated $\frac{dq}{dt} = J^{-1} \frac{dX}{dt}$.
+  \item This change in angle should be multiplied by the change in time (0.025 was used); in a sense this is a proportional gain that restricts over-shooting the desired end-effector position by incrementing in too large of angles. Thus the change in angle is known to be: $\Delta q = \Delta t J^{-1} \frac{dX}{dt}$
+  \item The approximated angles for the desired end-effector position could be calculated by $q_{k+1} = q_k + \Delta q$
+  \item Substituting $q_{k+1}$ into the transformation matrix could provide the new location of the end-effector.
+  \item Re-calculation of the desired change in position, $\frac{dX}{dt}$,  is required to narrow down on an accurate approximation of $\vec{q}$ as per the Newton-Raphson Method; $\frac{dX}{dt}$ = starting position + desired change in position - new calculated position of the end-effector.
+  \item Steps 7 to 15 were repeated 50 times to narrow down on an accurate approximation of joint angles for the desired end-effector position.
+\end{enumerate}
 
+The results of this process is illustrated in the figure below, where it can be seen that the z-coordinate of the end-effector converges towards the desired position. It can also be noted that as the error in the x and y positions starts to diverge, the method begins to return it to the desired locations. Considering the displacements are in millimeters, this approximation of the end-effector position is usefully accurate for this thesis.
 
-
-This may be one chapter or several.  Again, titles should be more
-informative than the above.
-
-You will almost certainly need diagrams to clarify your meaning.  The
-\LaTeXe\ \texttt{graphics} package allows the inclusion of PostScript
-graphics, as in \fig{flr1}.  The inclusion of \LaTeX\ \texttt{picture}
-graphics, as in \fig{fzsys}, requires no auxiliary packages and allows
-the mathematical formatting features of \LaTeX\ to be used in
-diagrams; but the \texttt{picture} files, unlike PostScript files,
-usually require manual editing.
-
-\chapter{Results and discussion \ldots}
-
-\ldots\ or perhaps the discussion should be a separate chapter.
-
-In any case, you will probably need to include tabulated results.
-\tab{tf2} illustrates the use of various \LaTeX\ environments to
-include a computer printout (plain text file) in a document.  The
-\texttt{verbatim} environment, which encloses the formatted text, is
-also useful for program listings.
-
-\begin{table}\renewcommand{\baselinestretch}{1.0}
-\caption{\sl Fraction of air volume involved in heat exchange for
-second mode (right column) vs.\ filling factor (left column).  The
-plain-text headings represent $f$, $m$, $\mu_2$ and $f_2$.}
-\label{tf2}
 
 \begin{center}
-\begin{minipage}[c]{2.85in}\small\normalsize
-\begin{verbatim}
-
- f(%)     m         mu2     f2(%)
-
- 0.016   80.00    0.05400   4.874
- 0.031   56.57    0.07732   5.438
- 0.062   40.00    0.11103   6.125
- 0.125   28.28    0.16001   6.970
- 0.250   20.00    0.23175   8.020
- 0.500   14.14    0.33799   9.329
- 1.000   10.00    0.49789  10.967
- 2.000    7.07    0.74444  13.008
- 4.000    5.00    1.13919  15.525
- 8.000    3.54    1.81095  18.568
-
-19.237    2.28    3.61958  23.174
-37.180    1.64    7.28635  27.094
-57.392    1.32   14.63631  29.813
-74.316    1.16   29.35160  31.453
-85.734    1.08   58.79364  32.360
-\end{verbatim}
-\end{minipage}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{jacobian_plot.jpg}
+\caption{Plot of using Jacobian Approximation to move the end-effector to a desired position }
+\end{figure}
 \end{center}
-\end{table}
+
+Unfortunately however, as aforementioned, the symbolic representation of the Jacobian calculated for this robotic arm is lengthy and consists of harsh trigonometric expressions. A very small sample of the sixth row, first column of the Jacobian is provided below; which can be seen to have conjugates of angles.
+
+$\left(1.0\, \cos\!\left(\overline{\mathrm{q6}}\right)\, \left(0.75\, \sin\!\left(\overline{\mathrm{q4}}\right)\, \left(\cos\!\left(\overline{\mathrm{q1}}\right)\, \cos\!\left(\overline{\mathrm{q2}}\right)\, \cos\!\left(\overline{\mathrm{q3}}\right) + \cos\!\left(\overline{\mathrm{q1}}\right)\, \right),\right)\right)$
+ 
+Unfortunately these expressions cannot be written in C; unless code for conjugate is written. Thus, this Jacobian matrix cannot be easily integrated into the client program. To simplify the Jacobian, the rotational states of the end-effector were excluded from the matrix, reducing the amount of constraints forming the solution. This leads to the Jacobian being rank deficient, which can be overcome with the use of the Pseudo-Inverse Jacobian method; outlined in theory. This method forms a square matrix of size 6, which describes an under-actuated robotic arm. The same process as outlined above was used, again, before inverting the symbolic variables were substituted with the joint positions. It was found that this method did not require step 16, as in the approximation did not require re-iteration to provide a better result, as the end-effector position was within the required accuracy. This significantly reduced the computation time of the solution, and the symbolic Pseudo Jacobian was less complicated than that previously found.
+
+For a change in position $\Delta X = [0, 0, 3, 0, 0, 0]^T$, from an end-effector position of $S_a = [344.4863, 219.7989, 488.1665]^T$, the calculated position was found to be $S_{calc} = [ 344.4755, 219.79189, 491.1696]^T$. The change in angles for this new end-effector position was $\Delta q = [0.0001232, -0.0024076, -0.00240756, 0.000061, 0.00020, 0]^T$. Therefore, it was found that this provided an adequate solution to the inverse kinematics problem, that could be recreated in the client program; MATLAB can convert expressions to C code given they are simple enough. From this, the symbolic representation of $J J^T$ was copied into the client program as a 2-D array of doubles. 
+
+When the client program is working with a forward kinematics scene, it moves the Jaco arm into a configuration without singularities;
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.5\linewidth]{jaco_start_config.jpg}
+\caption{ Starting position of the Jaco arm when giving IK inputs to a FK scene }
+\end{figure}
+\end{center}
+
+This configuration corresponds to the angles, referenced to the D-H configuration, of
+
+$q = [-8.6394, 1.74581, 10.47175, 4.71239, 0.000001, \pi]^T$
+
+Substituting these angles into the matrix elements gives a result equivalent to that from MATLAB for $J J^T$.
+
+
+$J J^T = $
+$ \left(\begin{array}{ccccc} 
+1.4889e5 & -3.81914e3 & -1.3779e2 & -9.6326e4 & 6.77427e4 \\ 
+-3.81615e3 & 3.0065e5 & -1.15784e5 & 4.24957e-1 & 3.113135e-1 \\ 
+-1.37792e2 & -1.15784e5 & 9.901883e4 & -1.488897e-1 & -7.42055e-2 \\ -9.6325e4 & 4.24857e-1 & -1.488897e-1 & 6.235711e4 & 4.3853e4 \\
+-6.77426e4 & 3.11313e-1 & -7.42055e-2 & 4.38533e4 & 3.08403e4 
+
+\end{array}\right)
+$
+
+%http://www.ccodechamp.com/c-program-to-find-inverse-of-matrix/
+As per the theory, the next step is to inverse $J J^T$, and then multiply this by J, resulting in $J (J J^T)^{-1}$. The inverse of this matrix is computed by calculating the matrix of minors, matrix cofactors, adjugate, and then dividing through by $1/det(JJ^T)$; the general process for calculating the inverse of a nxn matrix in C. Before starting this, the determinant of $J J^T$ is calculated to ensure the matrix is invertible.
+
+In the V-REP client program, the determinant is calculated to be -1.723682e-29 for the starting configuration of the arm. For this same position, MATLAB calculates the determinant to be -6.90106775e-43, thus the calculations are off by a power of -13 before the inverse is calculated. As the determinant is not equal to 0, the inverse was calculated, resulting in a matrix with coefficients magnitudes different to that computed in MATLAB for the same angles. Occasionally, the determinant is calculated in the client program to be $-inf$ despite the arm not being moved. This leads to the belief that the smallest of variances in angles can lead to incorrect results; a direct result of the precision in calculations between MATLAB and C. In the client program, the code has been written for this implementation, but was found to be unsuccessful when it came to computing the inverse of the Pseudo Jacobian, and thus was unable to be used; the client program can enter the functions for these calculations, and display the results, when receiving IK inputs and 'Mode 3' is active.
+
+
+\chapter{Results Summary and Discussion}
+\section{Jaco Arm Control}
+The Jaco arm was successfully loaded into the V-REP scene, and was able to be set to both inverse and forward kinematics modes. In the inverse kinematics mode, it was found that control over all six position states was enabled; the tip object could be set to mimic the target object in both translational and rotational position. The focus was to create a means of moving the end-effector from one set of coordinates to another, which was implemented by changing the target's translational position; with the only restriction on angle being that the gripper pointed in the same direction as the target is in the x-y plane. No means of changing the orientation of the end-effector by providing an input was integrated into the client program, however there is a function within the client program designed to vary orientation of objects within V-REP. It may be beneficial to set the joystick up to swap between position control and orientation control, such that the joysticks can either toggle a change in position (as current) or toggle a change in target orientation. To switch between modes, a button on the controller could be pressed; already an output from the joystick process.
+
+It was found that there is no way to change joint angles once V-REP identifies a set of links as an inverse kinematics group. By default, the arm is configured in the upright position with singularities occurring at joints 2 and 3, the Pseudo-Inverse kinematics method for moving the end-effector to the target position could not be used. V-REP's Damped Least Squares inverse kinematics solver however was able to correctly move the Jaco arm despite this, and within 5 iterations always stably moved the end-effector to the target position, in real-time. Using this method with the joystick proved that the Jaco arm was able to be controlled using a joystick seamlessly. 
+
+Once the transformation matrix for the arm was determined, the tip object from the inverse kinematics method was able to be used to indicate the position calculated by the forward kinematics. Thus, it was found that the forward kinematics defines the movement of a point slightly above the last joint of the gripper's 'thumb'. By typing 'fk' as input into the client program, the translational component of the transformation matrix is used to compute the tip position, which is accurate to 0.5 of a millimetre in each coordinate. The transformation matrix in this case is formed using the classic D-H parameters from the Jaco arm documentation, and the translational components were extracted from MATLAB, however there is a separate set of D-H parameters included in the client program which are used to calculate the transformation matrix. With the former method producing accurate results, the calculation of the transformation matrix in the client program is not used.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{client_start_up.jpg}
+\caption{ Client Program on Start-Up }
+\end{figure}
+\end{center}
+The input arguments of the client program are;
+
+vrepClientProgram.exe fk/ik [object filename] [IP Address] [port]
+
+On start-up, the client will connect to local host on port 19999 unless a IP address and port is specified in the program usage. Once connected, it will prompt for the user to wait while it creates the joystick process and determines if a joystick is connected. When a joystick is connected, it will flag that it found the joystick and is ready for commands, otherwise it will prompt for a keyboard input. The input commands can either be for forwards kinematics for moving a joint angle a given amount of degrees, or inverse kinematics commands that move the end-effector set distances radially from or circularly around the base of the arm. If the user doesn't specify an object filename, it will use the hard-coded object handles for the joints; which may be different if a new scene is created and the Jaco arm isn't the first object to be imported. 
+When an input argument to the client specifies that the 'scene' (Jaco arm in V-REP) is in inverse kinematics mode (specified by 'ik'), the target object will be moved and V-REP will calculate the angles to follow. If a scene isn't specified or the input arguments are incorrect, the user will be prompted for each argument individually. When 'fk' is specified as an input argument, the user will be asked whether they desire input arguments of type inverse or forwards kinematics. The separation of these is due to the separation of giving forwards kinematics inputs when the scene is in forwards kinematics mode compared to when the scene in in inverse kinematics mode. Additionally, when the program is set to take inverse kinematics inputs but the scene is in forwards kinematics mode, the Jaco arm needs to be moved into a usable configuration for the inverse methods used; without singularities and with joint 4 of the Jaco arm in the same quadrant as the gripper, with the gripper further out radially.
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{client_prompted_start_up.jpg}
+\caption{ Client Program given incorrect arguments on start-up }
+\end{figure}
+\end{center}
+
+\section{Joystick Implementation and Processing Time}
+Several methods of getting the commands from the joystick were trialled before the SDL solution was found. A comparison of these is found in the appendix, although it is believed that this method provided the best solution as it was a console based application which was easily modifiable in Visual Studio. This program was changed to send only the information necessary for moving the end-effector to the V-REP client program, which communicated through stdin and stdout. It was found that the application wouldn't exit if there wasn't a joystick available. Thus, the application was made to send whether or not there is a joystick to connect to on start up, and exiting if there isn't, allowing the client program to take inputs from keyboard instead of joystick. The joystick application originally used 17\% CPU usage when reading form the joystick. Upon closer inspection, it was found that the program was continuously searching for events on the joystick; it wasn't going to sleep to allow other programs to run more often. MSDN has a function called 'sleep' which will set the thread to wait state, which was used for 50ms within this application. It was found that this figure reduced the CPU usage to below 1\% whilst not taking away from the responsiveness of the application to joystick events.
+
+Upon further inspection of the CPU usage whilst using the V-REP client, it was found that the client program consumed 25\% of the CPU on average. Considering it consisted of one thread for calculations and communication with V-REP, one for reading and interpreting from the joystick process, and one for adding to the buffer when the joystick hasn't been moved and the last log was non-zero, this figure was understandable, however unnecessary. The latter thread hangs in a loop until 750 ms (varies computer to computer depending on CPU speed, but this number was found to be good for the computer this thesis was constructed on) has passed, where it checks the buffer and adds a new command if needed. Thus, it was desirable to make this thread terminate if there isn't a joystick to read from, and when there is, sleep for 50ms to allow other threads to run (meaning a new command is added every 750 - 800 ms, which is an unnoticeable change for the user. A similar outcome was made for the thread that communicates with the joystick process. The main thread was also put into wait state, for 20ms, when it's held waiting for an input command. Overall, it was found that these implementations decreased the CPU usage to around 1\%. It was also evident that the inverse kinematics calculations were performed at around 500 ms (depends on computer CPU), as opposed to the prior average of 750 ms; these results can be seen in the inverse kinematics spread-sheets. Thus, adding waiting delays within the threads allowed the important computations happen quicker, which led to a faster client program.
+
+
+\section{Client Program Inverse Kinematics}
+With setting up the client to be able to interpret inverse kinematics commands, it was found that errors commonly occurred when the end-effector moved between quadrants.  For instance, with the implementation of the proposed analytic inverse kinematics solution (judging the change in end-effector position by moving position of the fourth joint), scenarios occurred where the fourth joint was in one quadrant, and the end-effector in another. This would produce an error when the client program attempts to align the position of the fourth joint with the end-effector, and when it bases calculations for the new end-effector position off a joint which is in a different quadrant. To overcome this problem, when the end-effector is found to be pointing straight upwards, or in a different quadrant to the fourth joint, the client program will move the fourth joint to align them within the same quadrant before starting the inverse kinematics. Errors can still occur when the gripper sits on the negative x-axis, as $q_1 = 0 = 2\pi$, causing undesirable movements to a target angle, or the position of joint 4 could have a small positive y component, and the tip have a negative y component, causing the client program to think the arm is in different quadrants, and get held trying to align something that is visually aligned without flipping the wrist around. As with the physical Jaco arm, it is recommended that this virtual arm only moves within one quadrant (however it can operate fine without coming near the negative x-axis).
+
+
+In order to demonstrate the implementation of the three inverse-kinematics methods the client program can provide, commands for swapping between the methods was developed. The input syntax for this is, 'mode (mode number) (boolean value)'; for instance, turning mode 1 off would require the command 'mode 1 0'. Typing only the word 'mode' will display the usage for this command, and show the active modes. The mode numbers are as presented in this paper, the first mode is the analytical solution, the second is a control systems method, and the third is for using the Jacobian inverse.
+
+
+Extracting data from the control loops to a spread-sheet allowed the tuning of the PI controllers. It could be seen that adjusting certain gains would produce effects in steady-state error, oscillation and setting time. In addition to this, it could be seen which commands the solutions struggled with most. For instance, it was found that the control system implementation was accurate in changing the x-y position of the end-effector, however had high oscillation and steady-state error in the z. This was explained to be due to a lack of constraint on the radial position of the end-effector, and due to a high integral gain on $q_1$ which controls the x-y position; thus eliminating stead-state error faster than the error in the z-axis is corrected. To overcome these issues, more than two forms of error should be reduced, as the end-effector moves in 3 dimensional space, and a cascade loop should be used so the responses do not fight.
+
+
+\section{Client Program Jacobian}
+%%http://www.cse.hcmut.edu.vn/~hungnq/courses/501120/docthem/Double%20precision%20floating-point%20format%20-%20Wikipedia.pdf
+%%https://au.mathworks.com/help/matlab/ref/det.html
+%%https://au.mathworks.com/help/matlab/ref/lu.html
+%%https://www.codewithc.com/c-program-for-lu-factorization/
+%%https://s-mat-pcs.oulu.fi/~mpa/matreng/eem3_4-3.htm
+As found in the Kinematics Approach section, the Jacobian inverse kinematics method was unsuccessfully implemented. In the client program, the determinant of $JJ^T$ would equal 0 when using double-precision floating point numbers, and would equal an incorrect value when using standard floats. For double-precision, the spacing, or error in rounding to a representable number, can be found to be $2^{n-52}$, for a number between $2^n$ and $2^{n+1}$, giving a maximum possible error of $2^{-53}$, which rounds to $1.11022e-16$. Thus, the differences in answers is a consequence of rounding between the finite values available with floating point numbers, and thus is also dependent on the order of arithmetic. An example of this error is shown in the calculations below;
+
+$e = 1 - 3*(4/3 - 1)$
+
+results in
+ 
+$e =  2.2204e-16$
+
+which is evidently twice 1.11022e-16, and is not equal to 0 as it is supposed to. For the computation of the determinant, MATLAB uses the product of diagonals of the matrices from the LU decomposition; where the LU decomposition matrices are calculated by Gaussian elimination. In the documentation for MATLAB's lu function (calculates the lower and upper triangle matrices such that A = L $\times$ U), it is noted that factorisation is a key step in obtaining the determinant, for reasons described above. Both, an LU decomposition method and a standard algebraic way of solving smaller determinants within the matrix, were implemented into the client program to solve for the determinant, with results either approaching -$inf$ or 0. Even when comparing the LU matrices from the client, they are different to that from MATLAB, leading to the conclusion that MATLAB's implementation is structured to minimise the error in calculations, which is lacking in the client program.
+
+
+\section{Kinova SDK}
+Development with the Kinova SDK was not trialled as the initialisation functions require connection to the physical Jaco arm, and thus no testing could be conducted. There are plenty of examples within the SDK that show how to code for moving to a new end-effector position, or changing the target positions for the joint angles. From the examples, it is evident that the program designed to use the SDK and control the physical arm would be hardly dissimilar to the developed client program. It would be required to take in a joint number and a desired angle, where internally it sends the commands to the Jaco arm to work with. As the client program now uses significantly less CPU, and can control the virtual arm in real-time, it is evident that processing to the development of the physical arm's interface can begin.
+
+
+\section{Data Streaming Implementation}
+To be able to detect collisions, the client program comes with a synchronous mode, where it continuously retrieves the Jaco arm's angles from V-REP. In order to do this, 6 threads were created, one for each joint; as only one value can be streamed constantly. Thus, 6 connections are made to V-REP over 6 ports, with the data being streamed every 50 ms (variable). Once a new joint angle arrives to one of the clients, it updates the struct containing the arm parameters, which is accessible by all threads; mutexes make this thread safe, the main thread will only look at the angles when making movement calculations. This mode was deactivated for general use of the client program, as it was found to significantly reduced simulation time (due to V-REP's increased background processing). Another finding was that the simulation time depended on the amount of objects in the scene, as well as the CPU's capabilities; moving to a different computer, it was found that moving the Jaco arm was 5 times faster. Thus, there is potential that the streaming method can work with the client program operating as normal, given an empty scene and a good CPU. To reduce the load on the CPU, the threads sleep for 10 ms whenever data has not arrived from V-REP. This was found to again to decrease processing time, however not enough to implement velocity / acceleration checking; but may be a good option on a better computer. 
+
+
+%This may be one chapter or several.  Again, titles should be more
+%informative than the above.
+%
+%You will almost certainly need diagrams to clarify your meaning.  The
+%\LaTeXe\ \texttt{graphics} package allows the inclusion of PostScript
+%graphics, as in \fig{flr1}.  The inclusion of \LaTeX\ \texttt{picture}
+%graphics, as in \fig{fzsys}, requires no auxiliary packages and allows
+%the mathematical formatting features of \LaTeX\ to be used in
+%diagrams; but the \texttt{picture} files, unlike PostScript files,
+%usually require manual editing.
+
+%\chapter{Results and discussion \ldots}
+%
+%\ldots\ or perhaps the discussion should be a separate chapter.
+%
+%In any case, you will probably need to include tabulated results.
+%\tab{tf2} illustrates the use of various \LaTeX\ environments to
+%include a computer printout (plain text file) in a document.  The
+%\texttt{verbatim} environment, which encloses the formatted text, is
+%also useful for program listings.
+%
+%\begin{table}\renewcommand{\baselinestretch}{1.0}
+%\caption{\sl Fraction of air volume involved in heat exchange for
+%second mode (right column) vs.\ filling factor (left column).  The
+%plain-text headings represent $f$, $m$, $\mu_2$ and $f_2$.}
+%\label{tf2}
+%
+%\begin{center}
+%\begin{minipage}[c]{2.85in}\small\normalsize
+%\begin{verbatim}
+%
+% f(%)     m         mu2     f2(%)
+%
+% 0.016   80.00    0.05400   4.874
+% 0.031   56.57    0.07732   5.438
+% 0.062   40.00    0.11103   6.125
+% 0.125   28.28    0.16001   6.970
+% 0.250   20.00    0.23175   8.020
+% 0.500   14.14    0.33799   9.329
+% 1.000   10.00    0.49789  10.967
+% 2.000    7.07    0.74444  13.008
+% 4.000    5.00    1.13919  15.525
+% 8.000    3.54    1.81095  18.568
+%
+%19.237    2.28    3.61958  23.174
+%37.180    1.64    7.28635  27.094
+%57.392    1.32   14.63631  29.813
+%74.316    1.16   29.35160  31.453
+%85.734    1.08   58.79364  32.360
+%\end{verbatim}
+%\end{minipage}
+%\end{center}
+%\end{table}
 
 \chapter{Conclusions}
-
 \section{Summary and conclusions}
+The primary objective of this thesis was to create a client program which uses the V-REP remote API to control a virtual Kinova Jaco arm. Upon forming a method for reliable control, different techniques used for calculating the joint angles required to move the end-effector of a 6 joint robotic arm were studied. Experimentally, the validity of three approaches were tested, to determine which was the most robust in accurately controlling the robotic arm. \\
+
+The first approach used relationships between joints to calculate the angles required to move the arm into an approximate position, and then used control loops to reduce the error in end-effector position. This was found to be successful in most arm configurations, where the joint angles were correctly calculated in 500 ms on an old computer, and an average of 100 ms on a modern laptop. Unfortunately this method led to errors when the arm tried to reach points too close to the z-axis, as some components of the arm were in different quadrants to others.\\
+
+A control systems approach was wrongly implemented into the client program, which allowed the calculation of joint angles which produced an undesirable amount of steady-state error in the height of the end-effector from the base. After reviewing the model used in for this approach, it was found that there is a lack of control on the radial position of the arm, which contributed to the steady-state error, along with having a high integral gain on the control of the x-y axis. Alternative models were proposed which would overcome these problems.\\
+
+The Jacobian was also integrated into the client program after providing good results in MATLAB. Due to calculation differences, and numerical precision, the inverse Jacobian for a given set of joint angles was unable to be calculated with accuracy in the client program. The discrepancy between MATLAB and the client program came from the more sophisticated method of calculating the determinant and inverse of a square matrix in MATLAB; which takes into account the order of operations such that the error due to the rounding of (double) floating point numbers is reduced.\\
+
+Despite these draw-backs, the client program successfully acheived crucial design objectives.
+
+\begin{itemize}
+	\item An easy to use program was created which allowes the control of the Jaco arm given forward or inverse kinematics commands.
+	\item The end-effector position can be controlled with the use of an external joystick (similar to a PS3 controller).
+	\item Mathematical solutions to the forward and inverse kinematics of the Jaco arm are integrated into the V-REP client and produce accurate results.
+	\item Collision avoidance can be implemented using the data-streaming capabilities of the client program given a fast enough CPU.
+	\item Through V-REP's inverse kinematics solver, set to Damped Least Squares, or the analytical solution provided by the client program, the position of the end-effector of the Jaco arm can be controlled in real time.
+	\item The client program created has functions within for further development, such as orientation control of the end-effector, detecting collisions, and sending joint information to other programs.
+	\item The client program was optimized for CPU usage and computational efficiency. It can also be quickly modified to allow the printing of usage information associated with different areas of the program, and to allow data-streaming.
+\end{itemize}
+
 
 \section{Possible future work}
+
+
+
+
+
 
 \appendix
 

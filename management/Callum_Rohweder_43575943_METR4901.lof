@@ -40,7 +40,11 @@
 \contentsline {figure}{\numberline {5.10}{\ignorespaces Block Diagram of integral action, giving the output (y) a reference input (r)}}{60}
 \contentsline {figure}{\numberline {5.11}{\ignorespaces Block Diagram of a Standard Cascade Regulator}}{60}
 \contentsline {figure}{\numberline {5.12}{\ignorespaces V-REP Client Program Control Loop Error}}{61}
+\contentsline {figure}{\numberline {5.13}{\ignorespaces Plot of using Jacobian Approximation to move the end-effector to a desired position }}{63}
+\contentsline {figure}{\numberline {5.14}{\ignorespaces Starting position of the Jaco arm when giving IK inputs to a FK scene }}{64}
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Client Program on Start-Up }}{67}
+\contentsline {figure}{\numberline {6.2}{\ignorespaces Client Program given incorrect arguments on start-up }}{68}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
