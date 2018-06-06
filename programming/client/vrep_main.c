@@ -1,8 +1,11 @@
 /*
+*	METR4901		2017-2018		UQ
 *	Callum Rohweder
-*	VREP client program
+*	vrep_main.c
 *
+*	VREP client program
 */
+
 
 /*	Include Files	*/
 #include <stdio.h>
@@ -24,17 +27,21 @@
 
 
 /*	Global Definitions	*/
-#define BUFSIZE 4096 
+#define BUFSIZE 4096				// size of buffer for extracting file contents
 
 
+/*	Global variables	*/
 HANDLE  hConsoleOut;                 // Handle to the console   
 HANDLE  hRunMutex;                   // "Keep Running" mutex   
 HANDLE  hScreenMutex;                // "Screen update" mutex  
 int     ThreadNr;                    // Number of threads started   
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo; // Console information 
 
+/*	Variables for data-streaming threads	*/
 HANDLE jointMutexes[5];
 
+/*	Struct to be passed to threads that contains
+*	pointers to the info and move structures	*/
 struct jointThreads
 {
 	info *information_ptr;
@@ -42,6 +49,7 @@ struct jointThreads
 	HANDLE threadNumber;
 
 };
+
 
 /*	Function Definitions	*/
 info* makeInfo(void); 
@@ -70,20 +78,28 @@ void stream_joints(struct jointThreads *threadStruct);
 void handle_joint_threads(info* info_ptr, move* move_ptr);
 double current_angle(move* move_ptr, int jointNum);
 
+
 /*	Program Functions	*/
 
-
-/*	Determine the mode of the Jaco arm in Vrep from input commands	*/
+/*	Determines the mode of the Jaco arm in Vrep from input commands	*/
 void initialise_program(info* info_ptr, char argc, char** argv) {
 	
 	char inputBuffer[10];
 	int i = 0;
+
+	/*	Check that enough arguments was received	*/
 	if (argc == 1) {
+
+		/*	only the title was used, a kinematics mode for the Jaco
+			arm in VREP needs to be specified	*/
 		printf("Usage: vrepClientProgram.exe fk/ik [object filename] [IP Address] [port]");
 		printf("\nPlease specify a scene Kinematics mode (ik/fk)>> "); fflush(stdout);
+		
+		/*	get the reponses until a newline is entered	*/
 		char c = getchar();
 		
 		while ((c != '\n') && (i < 10)) {
+			
 			/*	store input	*/
 			inputBuffer[i] = c;
 			c = getchar();
@@ -91,21 +107,34 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 		}
 	}
 	else {
+
+		/*	A kinematics mode for the Jaco arm was specified,
+		*	add it to the input buffer to be determined		*/
 		strcpy(inputBuffer, argv[1]);
 		i = strlen(argv[1]) + 1;
 	}
+	
 	/*	Search for mode in input buffer	*/
 	info_ptr->sceneMode = malloc(sizeof(char) * 3);
 	info_ptr->programMode = malloc(sizeof(char) * 3);
+
+	/*	go through each character in the buffer to determine the mode	*/
 	for (int j = 0; j < i; j++) {
+		
+		/*	check for IK or ik	*/
 		if (((inputBuffer[j] == 'i') && (inputBuffer[j + 1] == 'k')) ||
 			((inputBuffer[j] == 'I') && (inputBuffer[j + 1] == 'K'))) {
+			
+			/*	when the scene is in IK, the program should be expending ik inputs	*/
 			strcpy(info_ptr->sceneMode, "ik");
 			strcpy(info_ptr->programMode, "ik");
 		}
+		/*	search for FK or fk	*/
 		else if (((inputBuffer[j] == 'f') && (inputBuffer[j + 1] == 'k')) ||
 			((inputBuffer[j] == 'F') && (inputBuffer[j + 1] == 'K'))) {
 			
+			/*	then the scene mode is fk, which means the client program's
+			*	mode needs to be determined	*/
 			strcpy(info_ptr->sceneMode, "fk");
 
 			/*	The scene was specified to be in FK mode
@@ -113,41 +142,64 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 			printf("Would you like ik inputs with a fk VREP scene [Y/n]>>");
 			char c = getchar();
 
+			/*	when no inputs are given	*/
 			if ((c == '\n') || (c == '\r')) {
+				
 				/*	Choose ik by default (enter)	*/
 				strcpy(info_ptr->programMode, "ik");
 			}
 
+			/*	otherwise determine the mode from that of which was entered	*/
 			char extraBuffer[20];
 			i = 0;
+
+			/*	get commands until a new line	*/
 			while ((c != '\n') && (i < 10)) {
+				
 				/*	store input	*/
 				extraBuffer[i] = c;
 				c = getchar();
 				++i;
 			}
+			
+			/*	it was a 'Y'/'y'/'\n' (yes) or 'N'/'n' (no) question	*/
 			if ((extraBuffer[0] == 'Y') || (extraBuffer[0] == 'y')) {
+				
+				/*	ik input commands to be given	*/
 				strcpy(info_ptr->programMode, "ik");
 			}
 			else if ((extraBuffer[0] == 'n') || (extraBuffer[0] == 'N')) {
+				
+				/*	fk input commands to be given	*/
 				strcpy(info_ptr->programMode, "fk");
 			}
 			else {
+				
+				/*	ik input commands to be given by default	*/
 				strcpy(info_ptr->programMode, "ik");
 			}
+
+			/*	print that of which was chosen	*/
 			printf("\n%s selected\n", info_ptr->programMode);
 		}
 	}
 	
 	/*	Get IP Address and Port from input or use local host settings	*/
 	char ipAddress[18];
-	int port = 19999;
+	int port = 19999;	// default port number
+
+	/*	check if an IP address was given	*/
 	if (argc > 3) {
+		/*	get the IP address, note that this needs to be a string	*/
 		strcpy(ipAddress, argv[3]);
 		char* ptr;
+
+		/*	get the port to connect on	*/
 		port = strtol(argv[4], &ptr, 10);
 	}
+	/*	use the default address if none was given	*/
 	else {
+
 		strcpy(ipAddress, "127.0.0.1");
 	}
 
@@ -157,8 +209,10 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 
 	/*	Check that the ID is valid	*/
 	if (info_ptr->clientID != -1) {
+		
 		printf("Successfully connected to VREP\n");
 	} else {
+
 		printf("Connection failed %d\n", info_ptr->clientID);
 		exit(1);
 	}
@@ -169,6 +223,7 @@ void initialise_program(info* info_ptr, char argc, char** argv) {
 	inverse_kinematics_mode_toggle("mode 3 0");
 }
 
+
 int main(int argc, char** argv){
     
     printf("getting client\n");				// start
@@ -176,6 +231,7 @@ int main(int argc, char** argv){
     info* info_ptr = makeInfo();			// initialise structures
 	move* move_ptr = makeMove();
 
+	/*	Filter the input arguments to determine the modes of the client program and scene	*/
 	initialise_program(info_ptr, argc, argv);
 
     /*	Retrieve data in a blocking fashion - ensure response from vrep	*/
@@ -214,9 +270,6 @@ int main(int argc, char** argv){
 		printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
 	#endif // DEBUG
 
-	
-    //printf("DEBUG>> objectHandles[40] %d \n", info_ptr->objectHandles[40]);
-
     /*	Set-able boolean value to retrieve names from Vrep and store joints
 	*	or just use known joint handles to identify joints	*/
 	int en_name = 0;
@@ -227,14 +280,19 @@ int main(int argc, char** argv){
 		get_object_names_vrep(info_ptr);
 	}
 	else if (argc >= 3) {
+		
 		/*	Check if need to fill in the file or if it is ready for reading		*/
 		char objectFileName[20];
-		strcpy(objectFileName, argv[2]);
-		char* cwd = _getcwd(NULL, 0);
+		strcpy(objectFileName, argv[2]);		// copy the filename
+		char* cwd = _getcwd(NULL, 0);			// get the current working directory
+
+		/*	construct the file path	*/
 		char* objectFilePath = malloc(sizeof(char)*(strlen(cwd) + strlen(argv[2]) + 5));
 		strcpy(objectFilePath, cwd);
 		strcat(objectFilePath, "\\");
 		strcat(objectFilePath, argv[2]);
+
+		/*	check if the file exists in the current working directory	*/
 		int exists = PathFileExists(objectFilePath);
 		
 		if (exists) {
@@ -257,22 +315,34 @@ int main(int argc, char** argv){
 	else {
 		/*	use hard-coded handles	*/
 		for (int h = 0; h < info_ptr->objectCount; h++) {
+			
+			/*	when the loop falls on a known joint handle, save this to the object handles
+			*	buffer and mark it as a joint, otherwise the objectHandles can be saved as 0,
+			*	as they won't be used again	*/
 			if ((h == 18) || (h == 21) || (h == 24) || (h == 27) || (h == 30) || (h == 33)) {
+				
+				// a joint, store the handle and mark as a joint
 				info_ptr->isJoint[h] = 1;
 				info_ptr->objectHandles[h] = h;
 				printf("H = %d\n", h);
 			} else {
+
+				// not a joint
 				info_ptr->isJoint[h] = 0;
 				info_ptr->objectHandles[h] = 0;
 			}
 
+			/*	check if the loop is up to saving the target handle	*/
 			if (h == 127) {
+				
+				// save target handle
 				info_ptr->targetHandle = h;
 			}
 
 		}
 	}
 	printf("Wait, getting information... ");
+	
 	/* Retrieve all angles of joints to be used in kinematics
 	*	Store the positions in move_ptr->currAng[i] for the i'th joint */
 	initial_arm_config_vrep(info_ptr, move_ptr);
@@ -302,33 +372,35 @@ int main(int argc, char** argv){
 	_beginthread(add_to_buffer, 0, &ThreadNr);			// direct the thread to their new home
 	
 	
-	////////////////////////********* Under Construction **********//////////////////
+	/*	Connect to V-REP over multiple connections and data stream
+	*	the joint angles	*/
 	#ifdef DATA_STREAMING
 
 		handle_joint_threads(info_ptr, move_ptr);
 
 	#endif //DATA_STEAMING
-	/////////////////////////////////////////////////////////////////////////////////
 
 
 	while (1) {
-		//printf(".");
+
 		/*	Need to work out how to choose between command or joystick based control	*/
 		if ((strcmp(info_ptr->sceneMode, "ik") == 0) && (joystickEnabled())) {
 
-			//printf("ik and joystickEn\n"); fflush(stdout);
+
 			/*	A joystick was found, get inputs from this	*/
 			if (joystick_input_available()) {
+				
 				/*	A joystick command is available to action on	*/
 				joystick_get_char(info_ptr);
 
+				/*	interpret and act on the command	*/
 				interpret_command_ik(info_ptr, move_ptr, false);
 			}
 		}
 		else {
 
-			//if (strcmp(info_ptr->sceneMode, "fk") == 0) {
 			if (strcmp(info_ptr->programMode, "fk") == 0) {
+				
 				/*	Instead of getting input from joystick, get from command line input	*/
 				#ifdef DEBUG
 					printf("commandline ");
@@ -337,24 +409,30 @@ int main(int argc, char** argv){
 				get_command(info_ptr, move_ptr);
 			}
 			else {
+				
 				/*	Program Mode is ik but scene is fk... Input can be joystick or commandline
 				*	'wasd' 
 				**/
 				if (joystickEnabled()) {
 					if (joystick_input_available()) {
+						
 						/*	A joystick command is available to action on	*/
 						joystick_get_char(info_ptr);
 						interpret_command_ik(info_ptr, move_ptr, false);
 					}
 				}
 				else {
+					
 					#ifdef DEBUG
 						printf("commandline ik");
 					#endif // DEBUG
+					
+					/*	Get command from stdin, this will then
+					*	call: interpret_command_ik(info_ptr, move_ptr, true);
+					*	it was skipped in the ^if above as the joystick threads
+					*	handle getting commands form joystick				*/
 					get_command(info_ptr, move_ptr);
 				}
-				//printf("entering ik\n"); fflush(stdout);
-				//inverse_kinematics(move_ptr, info_ptr);
 			}
 		}
 	}
@@ -368,6 +446,7 @@ int main(int argc, char** argv){
 }
 
 
+/*	Creates threads for connecting to V-REP to stream the joint angles	*/
 void handle_joint_threads(info* info_ptr, move* move_ptr) {
 
 	/*	Create a thread for each joint	*/
@@ -377,22 +456,20 @@ void handle_joint_threads(info* info_ptr, move* move_ptr) {
 		jointMutexes[i] = CreateMutex(NULL, FALSE, NULL);
 
 		if (jointMutexes[i] == NULL) {
+
 			printf("CreateMutex error: %d\n", GetLastError());
 			continue;
 		}
 
-		//printf("before struct: %d\n", info_ptr->clientID);
-
 		/*	Copy the struct information	*/
 		struct jointThreads threadStruct;
 
+		/*	Each thread will have access to info and move struct
+		*	once it gets the address from the thread struct	*/
 		threadStruct.information_ptr = info_ptr;
 		threadStruct.movement_ptr = move_ptr;
 		threadStruct.threadNumber = (HANDLE)(ThreadNr);
 
-		//printf("before thread: %d\n", threadStruct.information_ptr->clientID);
-
-		//printf("this is angle before: %d, %f\n", info_ptr->jacoArmJointHandles[0], current_angle(move_ptr, 0));
 
 		/*	Generate a new thread to stream data	*/
 		ThreadNr++;												// increment threadcount for command thread
@@ -415,6 +492,8 @@ void handle_joint_threads(info* info_ptr, move* move_ptr) {
 }
 
 
+/*	Function for using data-streaming to update joint angles.
+	the angle being updated is dependent on the thread ID	*/
 void stream_joints(struct jointThreads *threadStruct) {
 
 	/*	Regain the information from the input struct	*/
@@ -481,6 +560,7 @@ void stream_joints(struct jointThreads *threadStruct) {
 		else {
 			// once you have enabled data streaming, it will take a few ms until the first value has arrived. So if
 			// we landed in this code section, this does not always mean we have an error!!!
+			Sleep(10);
 		}
 	} printf("%d exited streaming\n", threadNumber);
 
@@ -505,8 +585,8 @@ move* makeMove(void) {
 }
 
 
-void ShutDown(void) // Shut down threads   
-{
+/* Shut down threads	*/
+void ShutDown(void){
 	while (ThreadNr > 0)
 	{
 		// Tell thread to die and record its death.  
@@ -520,21 +600,27 @@ void ShutDown(void) // Shut down threads
 
 
 /*	Prompts ready to receive command from stdin
-*	stores the input in the response buffer
-*	and sends it for interpreting	*/
+	stores the input in the response buffer
+	and sends it for interpreting	*/
 void get_command(info* info_ptr, move* move_ptr){
     
+	/*	prompt for input	*/
     printf(">> ");
     int c;
     int i = 0;
     
+	/*	fill the response buffer with incoming characters	*/
     char response[128];
     while((c = getchar()) != '\n'){
         response[i] = c;
         ++i;
+
+		// sleep between characters
 		Sleep(20);
     }
 
+	// copy the command to the information struct so it 
+	// can be accessed / manipulated until a new command comes
     response[i] = '\0';
 	info_ptr->response = malloc(sizeof(char) * 128);
     strcpy(info_ptr->response, response);
@@ -570,8 +656,10 @@ void get_command(info* info_ptr, move* move_ptr){
 void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 
 	float duty = 1.0;
+
 	/*	Mode is for IK, move target	object	*/
 	if (!commandLine) {
+		
 		/*	Recieved command from joystick, need to determine % to move by	*/
 		char buffer[100];
 		strcpy(buffer, info_ptr->response);
@@ -588,16 +676,22 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		printf("	*Duty:	%f\n", duty);
 		//pritnf("	programMode %s\n")
 	#endif // DEBUG
+
+	// check if the mode is being changed
 	if ((info_ptr->response[0] == 'm') && (info_ptr->response[1] == 'o') && 
 		(info_ptr->response[2] == 'd') && (info_ptr->response[3] == 'e')) {
 	
+		// handle changing the kinematics mode
 		inverse_kinematics_mode_toggle(info_ptr->response);
 	}
 
+	// check if we should be receiving ik inputs for a ik scene
 	if (strcmp(info_ptr->sceneMode, "ik") == 0) {
 		#ifdef DEBUG
 				printf("going to move_target_vrep\n"); fflush(stdout);
 		#endif // DEBUG
+
+		// handle sending commands such that the target position changes
 		if (info_ptr->response[0] == 'w') { move_target_vrep(info_ptr, move_ptr, 'w', duty); }
 		if (info_ptr->response[0] == 'a') { move_target_vrep(info_ptr, move_ptr, 'a', duty); }
 		if (info_ptr->response[0] == 's') { move_target_vrep(info_ptr, move_ptr, 's', duty); }
@@ -606,9 +700,12 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		if (info_ptr->response[0] == '+') { move_target_vrep(info_ptr, move_ptr, '+', duty); }
 		
 	}
+
+	// or fk scene with ik inputs
 	else {
+
 		/*	FK scene but given IK input
-		*	Begin control loop and kinematics for moving joints	*/////////////////////////////////////////////////////////////////
+		*	Begin control loop and kinematics for moving joints	*/
 		#ifdef DEBUG
 			printf("going to get_joint_angles_vrep\n"); fflush(stdout);
 		#endif // DEBUG
@@ -621,7 +718,7 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 			printf("going to move_tip_vrep\n"); fflush(stdout);
 		#endif // DEBUG
 
-		
+		// handle giving commands for the client program to move the tip through inverse kinematics
 		if (info_ptr->response[0] == 'w') { move_tip_vrep(info_ptr, move_ptr, 'w', duty); }
 		if (info_ptr->response[0] == 'a') { move_tip_vrep(info_ptr, move_ptr, 'a', duty); }
 		if (info_ptr->response[0] == 's') { move_tip_vrep(info_ptr, move_ptr, 's', duty); }
@@ -630,6 +727,7 @@ void interpret_command_ik(info* info_ptr, move* move_ptr, bool commandLine) {
 		if (info_ptr->response[0] == '+') { move_tip_vrep(info_ptr, move_ptr, '+', duty); }
 		if (info_ptr->response[0] == 'p') { move_tip_vrep(info_ptr, move_ptr, 'p', duty); }
 		if ((info_ptr->response[0] == 'f') && (info_ptr->response[1] == 'k')) {
+			
 			/*	was asked to get the joint angles using the classic DH parameters and FK	*/
 			fk_classic(move_ptr, info_ptr);								// UPDATED
 		}
@@ -686,6 +784,8 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 	token = strtok(response, " ");
 	token = strtok(NULL, " ");
 	
+	
+	/*	Determine if the angle is correct	*/
 	double ang;
 	char* ptr;
 	ang = strtol(token, &ptr, 10);
@@ -694,6 +794,8 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 		free(info_ptr->response);
 		get_command(info_ptr, move_ptr);
 	}
+
+	/*	determine which joint is being moved	*/
 	int jointNum = 0;
 	if (info_ptr->response[0] == joint[0]) {
 		jointNum = 1;
@@ -723,61 +825,75 @@ void interpret_command_fk(info* info_ptr, move* move_ptr) {
 
 
 /*  Retrieves object names for corresponding object handle,
-*  stored in info struct
-*
-*  Calls a custom function in VRep main script, which takes in an
-*  object handle and returns the object's name.
+  stored in info struct
+
+  Calls a custom function in VRep main script, which takes in an
+  object handle and returns the object's name.
 */
 void get_object_names_vrep(info* info_ptr){
     
     int replySize[1] = {1};
     
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	//for (int j = 0; j < info_ptr->objectCount; j++) {
-	
-	//	printf("objectHandle[%d]: %d\n", j, info_ptr->objectHandles[j]);
-	//}
-	//exit(0);
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
+	/*	go through the list of object handles and get the names of the objects	*/
     for(int i = 0; i < info_ptr->objectCount; ++i){
+
         int ret = 0;
         simxChar* replyData;
-		//printf("%d		", info_ptr->objectHandles[i]);
 		simxInt num = i;//info_ptr->objectHandles[i];
         info_ptr->isJoint[i] = 0;
-        ret = simxCallScriptFunction(info_ptr->clientID, "", sim_scripttype_mainscript,
+        
+		/*	Call the custom function in V-REP to return names	*/
+		ret = simxCallScriptFunction(info_ptr->clientID, "", sim_scripttype_mainscript,
                 "get_object_names", 1, &num, 0, NULL, 0, NULL, 0, NULL, 
                 NULL, NULL, NULL, NULL, &replySize, &replyData, NULL, NULL,
                 simx_opmode_blocking);
+
+		/*	Check if an error occurred	*/
         if (ret != simx_return_ok){
             printf("ret not ok %d\n", i);
 		}
 		else {
+			/*	No error, print the name incoming and object handle	*/
 			printf("%d :	%s\n", i, replyData);
 		}
+
+		/*	stored the object name in the info struct	*/
         info_ptr->objectNames[i] = malloc(sizeof(char)*(strlen(replyData)+1));
         strcpy(info_ptr->objectNames[i], replyData);
+
+		/*	Filter through the returned string for the terms 'joint' and 'motor
+		*	as these will correspond to handles that can be used to move joints	*/
         char* underScore = "_";
         char* name = malloc(sizeof(char)*(strlen(info_ptr->objectNames[i])+1));
         strcpy(name, info_ptr->objectNames[i]);
         char* token = strtok(name, underScore);
+
+		/*	Go through each word in the name checking	*/
         while (token != NULL){
             char joint[5] = {'j', 'o', 'i', 'n', 't'};
             char motor[5] = {'m', 'o', 't', 'o', 'r'};
             int count = 0;
+
+			/*	do the comparision over each letter	*/
             for (int c = 0; c < 5; c++){
                 if ((token[c] == joint[c]) || (token[c] == motor[c])){   
                     ++count;
                 }
             }
+
+			/*	Check if the name identifies the target object	*/
 			if (strcmp(token, "Target") == 0) {
+
+				/*	retrieve the target object's handle so it can be refered to	*/
 				info_ptr->targetHandle = info_ptr->objectHandles[i];
 				printf("Target is %d indexed at: %d\n", info_ptr->objectHandles[i], i); //i+1;
 			}
+
             token = strtok(NULL, underScore);
-            if (count == 5){
+            
+			/*	Check whether joint or motor were found,
+			*	make a note in the isJoint array if true*/
+			if (count == 5){
                 info_ptr->isJoint[i] = 1;
             }
         }
@@ -787,8 +903,8 @@ void get_object_names_vrep(info* info_ptr){
 
 
 /* Puts the arm into a starting pos, straight up, by rotating joints 4 and 5
-*  the joint handles are also found, and angles of each using get_joint_angles.
-*  When the program mode is ik, moves joint 4 so the tip and base are aligned */
+  the joint handles are also found, and angles of each using get_joint_angles.
+  When the program mode is ik, moves joint 4 so the tip and base are aligned */
 void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	
 	#ifdef DEBUG
@@ -803,6 +919,7 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 		printf("jacoarmjointhandles malloced %d\n", info_ptr->objectCount);
 	#endif // DEBUG
 
+	/*	Go through the list of handles and extract the joint handles	*/
 	while (num < 6) {
 
 		if (info_ptr->isJoint[i]) {
@@ -821,6 +938,8 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 		}
 	}
 
+	/*	Get the joint angles from V-REP. Note that the joints are thread-safe
+	*	incase streaming joint angles	*/
 	#ifndef DATA_STREAMING
 		/*	Create a mutex for each joint	*/
 		for (int i = 0; i < 5; i++) {
@@ -849,6 +968,8 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	}
 	else if (strcmp(info_ptr->programMode, "ik") == 0) {
 		if ((move_ptr->currAng[0] < 0.1) && (move_ptr->currAng[0] > -0.1) && (move_ptr->currAng[3] < 3.2) && (move_ptr->currAng[3] > 3.1)){
+			
+			/*	Set the arm into a non-singular position	*/
 			move_joint_angle_vrep(info_ptr, move_ptr, 1, -45, false);
 			move_joint_angle_vrep(info_ptr, move_ptr, 4, 90, false);
 			move_joint_angle_vrep(info_ptr, move_ptr, 2, 10, false);
@@ -861,6 +982,8 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 	simxInt handle;
 	for (int j = 0; j < info_ptr->objectCount; j++) {
 		if (info_ptr->isJoint[j]) {
+
+			/*	store the position of the base in world coords in armPosition	*/
 			handle = (simxInt)(info_ptr->objectHandles[j]);
 			simxGetObjectPosition(info_ptr->clientID, handle, -1, &position, simx_opmode_blocking);
 			info_ptr->armPosition = malloc(sizeof(simxFloat) * 3);
@@ -868,6 +991,8 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 			info_ptr->armPosition[1] = position[1];
 			info_ptr->armPosition[2] = position[2];
 			//printf("Jaco arm %d position: %f %f %f\n", handle, info_ptr->armPosition[0], info_ptr->armPosition[1], info_ptr->armPosition[2]);
+			
+			/*	exit this loop so it isn't overwritten	*/
 			break;
 		}
 	}
@@ -875,17 +1000,20 @@ void initial_arm_config_vrep(info* info_ptr, move* move_ptr) {
 
 
 /*  Writes all the object handles and corresponding names to filename
-*  if filename already exists, it clears the file before writing
-*  filename is either an input argument or by default called "objects"
+  if filename already exists, it clears the file before writing
+  filename is either an input argument or by default called "objects"
 */
 void write_object_info(info* info_ptr, char* filename){
 
+	/*	Create a file, or replace an existint one with filename	*/
     FILE* object_fp = fopen(filename, "w+");
     if (object_fp == NULL){
         fprintf(stdout, "Failed to generate file\n");
         exit(1);
     }
     
+	/*	Put a different object handle and corresponding object name on each line
+		of the file; when the object corresponds to a joint	*/
     for (int i = 0; i < info_ptr->objectCount; i++){
         if (info_ptr->isJoint[i]){ 
             char line[256];
@@ -894,30 +1022,40 @@ void write_object_info(info* info_ptr, char* filename){
         }
 
     }
-
+	
+	/*	add the targets handle and name to the file	*/
 	char line2[256]; 
 	sprintf(line2, "%d Target\n", info_ptr->targetHandle);
 	fputs(line2, object_fp);
+
+	/*	flush and close the file	*/
     fflush(object_fp);
     fclose(object_fp);
 
 }
 
 
-void read_object_info(info* info_ptr, char* filename) {
-	/*	read's in the file that contains the object names
-	*	and handles. Updates the info_ptr struct with information	*/
 
+/*	read's in the file that contains the object names
+	and handles. Updates the info_ptr struct with information	*/
+void read_object_info(info* info_ptr, char* filename) {
+	
+	/*	open the file for reading	*/
 	FILE* objectFilePtr = fopen(filename, "r");
 	if (objectFilePtr == NULL) {
+		
+		/*	at this point the file should have already been seen, so 
+			if a pointer doesn't exist then something has gone wrong*/
 		fprintf(stdout, "Failed to open file %s for reading\n", filename);
 		exit(1);
 	}
 
+	/*	begin to read the entire file into the buffer	*/
 	char buffer[BUFSIZE];
 	int fileLength = 0;
 	char c = fgetc(objectFilePtr);
 
+	
 	while ((c != EOF) && (fileLength < BUFSIZE)) {
 		/*	Load as much of the file into memory as possible,
 		*	save the length of the file in characters so the end
@@ -928,7 +1066,6 @@ void read_object_info(info* info_ptr, char* filename) {
 	}
 
 	c = '\0';
-	//int count;
 	int i = 0;
 	int stable = 1;
 
@@ -947,6 +1084,9 @@ void read_object_info(info* info_ptr, char* filename) {
 		int objectHandle = 0;
 		char objectName[35];
 		while (c != '\n') {
+
+			/*	until a space is reached collect the characters
+			*	which make up a word*/
 			if (!spaceToggle) {
 				wordHandle[wordHandleIt] = c;
 				++wordHandleIt;
@@ -961,6 +1101,7 @@ void read_object_info(info* info_ptr, char* filename) {
 			c = buffer[i];
 			++i;
 			if (c == ' '){
+				
 				/*	The object handle of a joint has been stored in a temporary array
 				*	and needs to be saved	*/
 				spaceToggle = true;
@@ -970,6 +1111,7 @@ void read_object_info(info* info_ptr, char* filename) {
 				objectHandle = strtol(wordHandle, &err, 10);
 				info_ptr->isJoint[objectHandle] = 1;
 			} else if (c == '\n') {
+				
 				/*	The name corresponding to the last saved objectHandle has been stored
 				*	and needs to be perminantly saved, as this will allow finding the
 				*	targeHandle etc later.	*/
@@ -1002,7 +1144,9 @@ void read_object_info(info* info_ptr, char* filename) {
 }
 
 
-/*	Updates the position vector with relativeHandle's orientation relative to the base of the arm	*/
+/*	Updates the orientation vector with handles's 
+	orientation relative to the base of the arm	(the relativehandle) 
+	When the relativeHandle is -1, the base of the arm will be used */
 void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int relativeHandle) {
 	
 	int jointHandle1 = relativeHandle;
@@ -1010,15 +1154,17 @@ void get_orientation_vrep(info* info_ptr, float* orientation, int handle, int re
 		for (int i = 0; i < info_ptr->objectCount; i++) {
 			if (info_ptr->isJoint[i]) {
 				jointHandle1 = i;
+				break;
 			}
 		}
 	}
+
 	// get position of handle relative to jaco_joint_1
 	simxGetObjectOrientation(info_ptr->clientID, handle, jointHandle1, &orientation, simx_opmode_blocking);
 }
 
 
-/*	Updates the position vector with relativeHandle's position relative to the base of the arm.
+/*	Updates the position vector with handles's position relative to the base of the arm
 	Good for x,y coordinates, but not z as the base joint has an offset height
 */
 void get_position_vrep(info* info_ptr, float* position, int handle) {
@@ -1036,6 +1182,7 @@ void get_position_vrep(info* info_ptr, float* position, int handle) {
 	position[0] = pos[0]; position[1] = pos[1]; position[2] = pos[2];
 
 }
+
 
 /*
 	Updates position vector with the world coordinates of the object given by handle
@@ -1071,8 +1218,8 @@ void set_world_position_vrep(info* info_ptr, float* position, int objectHandle) 
 
 
 /* Updates info struct with all jaco arm joint current angles
-*  joints 4 and 5 are initially adjusted to take on FK values,
-*  the other joints are offset by 180 degrees */
+  joints 4 and 5 are initially adjusted to take on FK values,
+  the other joints are offset by 180 degrees */
 void get_joint_angles_vrep(info* info_ptr, move* move_ptr) {
 	
 
@@ -1205,7 +1352,8 @@ void set_joint_angle_vrep(info* info_ptr, move* move_ptr, int jointNum, double a
 
 
 /*	move's the target for the arm tip to follow
-	the movement is specified by direction, with a displacement scaled by duty	*/
+	the movement is specified by direction, with a displacement scaled by duty,
+	with the maximum movement specified to 3 mm.	*/
 void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float duty)
 {
 	
@@ -1293,6 +1441,10 @@ void move_target_vrep(info * info_ptr, move * move_ptr, char direction, float du
 /*	Determines the next position the tip should be in from the commands
 	Command is w,s,a,d,-,+
 	Duty is a decimal between 0->1 that scales the next position 
+	When inverse kinematics is needed, the arm's configuration will be 
+	checked to ensure the gripper isn't facing the sky, or the fourth
+	joint and the end-effector aren't in difference quadrants. When these
+	occur, the arm will be adjusted.
 */
 void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	
@@ -1326,11 +1478,16 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 	/*	Ensure the tip is lower than joint 5 and pointing outwards form the arm	*/
 	if ((tipMag < joint5Mag) && (joint5Position[2] < position[2])) {
+		
 		/*	Need to turn the wrist around	*/	
 		move_joint_angle_vrep(info_ptr, move_ptr, 4, 180, false);
+		
 		/*	Wait until it has moved into the right position	*/
 		while ((tipMag < joint5Mag) && (joint5Position[2] < position[2])) {
-			for (int wait = 0; wait < 200; wait++) { ; }
+			
+			/*	wait for the arm to move	*/
+			Sleep(500);
+
 			/*	Update tip position and check against criteria	*/	
 			simxGetObjectPosition(info_ptr->clientID, info_ptr->targetHandle - 1, -1, &position, simx_opmode_blocking);
 			tipMag = position[0] * position[0] + position[1] * position[1];
@@ -1344,7 +1501,6 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	if (tipAngle < 0) {
 		tipAngle = 2 * 3.141592 + tipAngle;
 	}
-	//fmod(tipAngle, 3.141592));
 
 	
 	/*	Get the current angle of the base	*/
@@ -1352,33 +1508,42 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 	if (jointAngle < 0) {
 		jointAngle = 2 * 3.141592 + jointAngle;
 	}
-	//jointAngle = fmod(jointAngle, 3.141592);
-
+	
 	#ifdef DEBUG
 		printf("tipAngle: %f,	jointAngle: %f,		base Angle: %f\n", tipAngle, current_angle(move_ptr, 3), jointAngle);
 	#endif // DEBUG
 		
 	double changeAngle;
 
+	/*	When 'p' is given, the command is to print the information for
+	*	the wrist turning around, in particular, the angular difference in 
+	*	position of the tip and joint 4	*/
 	if (command == 'p') {
+		
 		/*	Print out the orientation of the tip and base joint	*/
 		changeAngle = 180.0*(jointAngle - tipAngle) / 3.141592;
+		
 		/*	Correct for zero crossing in both directions	*/
 		if (((jointAngle > 3.0*3.141592 / 2.0) && (tipAngle < 3.141592 / 2.0))
 			|| ((jointAngle < 0.0) && (tipAngle < 3.141592 / 2.0))) {
+			
 			changeAngle = changeAngle - 360.0;
 		}
 		else if (((tipAngle > 3.0*3.141592 / 2.0) && (jointAngle < 3.141592 / 2.0))
 			|| ((tipAngle < 0.0) && (jointAngle < 3.141592 / 2.0))) {
+			
 			changeAngle = changeAngle + 360.0;
 		}
+		
 		printf("tipAngle: %f,	base Angle: %f		change: %f\n", tipAngle, jointAngle, changeAngle);
 		return;
 	}
 
+	/*	when the end-effector requires inverse kinematics, ensure the 
+	*	end-effector and joint 4 are aligned	*/	
 	if ((command != 'a') && (command != 'd')) {
+		
 		/*	Ignore this correction if only the base joint is moving	*/
-
 		tipAngle = fmod(tipAngle, 3.141592);
 
 		int notAligned = 1;
@@ -1386,12 +1551,16 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 			/*	Loop until the tip is aligned with the base orientation	*/
 			changeAngle = 180.0*(fmod(jointAngle, 3.141592) - tipAngle) / 3.141592;
+			
 			/*	Correct for zero crossing in both directions	*/	
 			if (((jointAngle > 3.0*3.141592 / 2.0) && (tipAngle < 3.141592/2.0)) 
 				|| ((jointAngle < 0.0) && (tipAngle < 3.141592 / 2.0))) {
+
 				changeAngle = changeAngle - 360.0;
+			
 			} else if (((tipAngle > 3.0*3.141592 / 2.0) && (jointAngle < 3.141592 / 2.0))
 				|| ((tipAngle < 0.0) && (jointAngle < 3.141592 / 2.0))) {
+
 				changeAngle = changeAngle + 360.0;
 			}
 
@@ -1404,15 +1573,14 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 				#endif // DEBUG
 
 				move_joint_angle_vrep(info_ptr, move_ptr, 4, 0.8 * changeAngle, true);
-				for (int i = 0; i < 700; i++) {
-					; // delay and wait for the arm to move
-				}
+				Sleep(500);
 
 				/*	Determine the position fo Joint4, it can get stuck if it is at 0 or pi
 				*	Because the error switches between +-MaxError	*/
 				simxFloat joint4Angle;
 				int ret = simxGetJointPosition(info_ptr->clientID, info_ptr->jacoArmJointHandles[4 - 1], &joint4Angle, simx_opmode_blocking);
 				joint4Angle = fmodf(joint4Angle, 3.141592);
+
 				if (joint4Angle < 0.3 || joint4Angle > 6.0) {
 					/*	The arm is likely to be or is about to be stuck in correction
 					*	move the arm to a defined position and exit	*/
@@ -1425,6 +1593,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 				position[0] -= worldPosition[0];
 				position[1] -= worldPosition[1];
 				tipAngle = (double)(atan2f(position[1], position[0]));
+				
 				/*	Modulate the tip angle as it doesn't matter which frame it is in	*/
 				tipAngle = (3.141592 - tipAngle);
 
@@ -1442,7 +1611,6 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 				break;
 			}
 		}
-
 	}
 
 	/*	Display the current tip position	*/	
@@ -1450,12 +1618,14 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		printf("move_tip_vrep -> tip position: %f %f %f", position[0], position[1], position[2]);
 	#endif // DEBUG
 
+	/*	now action on the commands	*/
 	if (command == 'w') {
 		/*	Move tip radially outwards	*/
 
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
 		simxFloat hype = sqrtf(hype_2) + (0.02*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
+		
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
 		position[1] = hype * sinf(angle) - position[1];
@@ -1467,9 +1637,11 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		control_kinematics(info_ptr, move_ptr, position[0], position[1], 0);
 	}
 	else if (command == 's') {
+		
 		simxFloat hype_2 = (simxFloat)(position[0] * position[0] + position[1] * position[1]);
 		simxFloat hype = sqrtf(hype_2) - (0.02*duty);
 		simxFloat angle = atan2f(position[1], position[0]);
+		
 		/*	set new position	*/
 		position[0] = hype * cosf(angle) - position[0];
 		position[1] = hype * sinf(angle) - position[1];
@@ -1481,6 +1653,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 	}
 	else if (command == 'd') {
+		
 		#ifdef DEBUG
 			printf("Pivoting +\n");
 		#endif // DEBUG
@@ -1489,6 +1662,7 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 
 	}
 	else if (command == 'a') {
+		
 		#ifdef DEBUG
 			printf("Pivoting -\n");
 		#endif // DEBUG
@@ -1512,11 +1686,13 @@ void move_tip_vrep(info* info_ptr, move* move_ptr, char command, float duty) {
 		control_kinematics(info_ptr, move_ptr, 0, 0, -0.02*duty);
 
 	}
-
 }
 
 
-
+/*	Pauses the communication between the client program and V-REP
+*	Is used when wanting to send lots of commands at the same time
+*	Status is true when pausing communication and false when 
+*	returning to normal communication	*/
 void pause_communication_vrep(info* info_ptr, int status) {
 
 	if (status > 0) {
@@ -1525,11 +1701,11 @@ void pause_communication_vrep(info* info_ptr, int status) {
 	else {
 		simxPauseCommunication(info_ptr->clientID, 0);
 	}
-
 }
 
 
-
+/*	returns the currently stored angle of a given numbered joint
+*	Used when data-streaming and need mutex to receive a joint angle	*/
 double current_angle(move* move_ptr, int jointNum) {
 
 	double returnAngle = 0.0;

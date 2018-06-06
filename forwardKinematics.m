@@ -101,7 +101,7 @@ for m = 1:4
         
     end
 end
-
-A_up = vpa(subs(A, [q1,q2,q3,q4,q5,q6], [pi, pi/2, -pi/2, pi, pi, 0]));
+%%
+A_up = vpa(subs(A, [q1,q2,q3,q4,q5,q6], [pi, pi/2, -pi/2, 0, -pi, 0]));
 P = A_up * [0;0;0;1];
 %peter corke's toolbox has ready config qr = [3*pi/2 pi pi 0 0 0]

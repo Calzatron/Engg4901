@@ -1,3 +1,14 @@
+/*
+	METR4901		2018		UQ
+	Callum Rohweder
+	joystick.c
+
+	For handling communication with the Joystick process,
+	including it's creation, and checking that a joystick
+	is connected
+*/
+
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -11,22 +22,22 @@
 #include <time.h>
 #include <sys/types.h>
 
-#define BUFSIZE 4096 
+/*	Defines for buffer sizes	*/
+#define BUFSIZE 4096					// size of buffer for reading
+#define INPUT_BUFFER_SIZE 16			// size of buffer for input bytes
+#define OUTPUT_BUFFER_SIZE 255			// size of out buffer
 
+/*	Handles to mutexes and child process	*/
 HANDLE  bufferMutex;
-
 HANDLE g_hChildStd_IN_Rd = NULL;
 HANDLE g_hChildStd_IN_Wr = NULL;
 HANDLE g_hChildStd_OUT_Rd = NULL;
 HANDLE g_hChildStd_OUT_Wr = NULL;
-
 HANDLE g_hInputFile = NULL;
 
-#define OUTPUT_BUFFER_SIZE 255
+/*	Global variables - descriptions provided below	*/
 volatile uint8_t out_insert_pos;
 volatile uint8_t bytes_in_out_buffer;
-
-#define INPUT_BUFFER_SIZE 16
 volatile char input_buffer_cmd[INPUT_BUFFER_SIZE];		// to store a character representing the button pressed
 volatile int input_buffer_val[INPUT_BUFFER_SIZE];		// to store the value of the button pressed
 volatile uint8_t input_insert_pos;
@@ -39,6 +50,10 @@ volatile int lastJoystickValue;
 volatile char lastJoystickCmd;
 volatile uint8_t joystickCheck;
 volatile uint8_t joystickEn;
+volatile uint8_t access;
+
+
+/*	Function declarations	*/
 void interpret_joystick(char* buffer);
 void CreateChildProcess(void);
 int joystick_input_available(void);
@@ -47,10 +62,9 @@ void joystick_get_char(info* info_ptr);
 void add_to_buffer(void);
 uint8_t joystickEnabled(void);
 
-volatile uint8_t access;
 
 
-/*	Defines the buffer mutex	*/
+/*	Defines the cmd buffer mutex	*/
 extern void initialise_joystick_mutex(void) {
 	
 	bufferMutex = CreateMutex(NULL, FALSE, NULL);
@@ -63,27 +77,29 @@ extern void initialise_joystick_mutex(void) {
 
 
 /*
-* Initialise our buffers
+	Initialises the buffers used for storing joystick commands,
+	as well as information for getting whether or not a joystick
+	is connected. The joystick process is then created, this function
+	was mainly an example from MSDN.
 */
 void CreateChildProcess() {
 	
-	access = 0xFF;
-	out_insert_pos = 0;
-	bytes_in_out_buffer = 0;
-	input_insert_pos = 0;
-	bytes_in_input_buffer = 0;
-	input_overrun = 0;
-	joystickToggle = 0x00;
+	access = 0xFF;				// depricated, allowed access to variables before mutex's were discovered
+	out_insert_pos = 0;			// contains the insert position for added cmds to out buffer
+	bytes_in_out_buffer = 0;	// contains the number of commands being outputted to the child process
+	input_insert_pos = 0;		// contains the insert position for new commands being added to the buffer
+	bytes_in_input_buffer = 0;	// contains the number of cmds currently in the buffer
+	input_overrun = 0;			// represents the overflow of the cmd buffer
+	joystickToggle = 0x00;		// represents a new joystick movement
 	ltime = clock();			// returns ms as a long
 	delay = 200;				// 500 ms delay between writing to buffer
-	lastJoystickCmd = '\0';
-	lastJoystickValue = 0;
-	joystickCheck = 0x00;
-	joystickEn = 0xFF;
+	lastJoystickCmd = '\0';		// set the last command to 0
+	lastJoystickValue = 0;		// and the last value to 0
+	joystickCheck = 0x00;		// the joystick has not been checked yet
+	joystickEn = 0xFF;			// but until proven otherwise, it is assumed to be there
+
 	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
 	SECURITY_ATTRIBUTES saAttr;
-
-	//printf("\n->Start of parent execution.\n");
 
 	// Set the bInheritHandle flag so pipe handles are inherited. 
 
@@ -164,13 +180,17 @@ void CreateChildProcess() {
 }
 
 
+/*	Returns true when there are bytes in the buffer to be
+	interpreted by the main thread and acted on	*/
 int joystick_input_available(void) {
-	//printf("bytes: %d\n", bytes_in_input_buffer); fflush(stdout);
+
 	return (bytes_in_input_buffer != 0);
 }
 
 
-/* Just adjust our buffer data so it looks empty */
+/* Clears the input command buffer by
+	changing the insert position and number
+	of bytes in the buffer so it looks empty */
 void joystick_clear_input_buffer(void) {
 	
 	input_insert_pos = 0;
@@ -178,12 +198,18 @@ void joystick_clear_input_buffer(void) {
 }
 
 
-/* Wait until we've received a character */
+/*	Gets a cmd from the joystick input buffer. The command
+	is a movement, w/a/s/d, with a corresponding amount of ON.
+	Toggling on a joystick axis will return a signed 16-bit int,
+	this is contained in input_buffer_val, and the movement in
+	input_buffer_cmd. These will be extracted and placed into
+	info_ptr->response, so it can be processed as if it
+	was from a keyboard input.	*/
 void joystick_get_char(info* info_ptr) {
 	
 	while (bytes_in_input_buffer == 0) {
-		/* do nothing */
-		//printf(",,");
+		/* do nothing until a character is received */
+
 	}
 	int i = 0;
 	char c = 'l';
@@ -194,21 +220,28 @@ void joystick_get_char(info* info_ptr) {
 		printf("Mutex in indeterminate state");
 	}
 	else if (bufferWaitResult == WAIT_OBJECT_0) {
-		//while (!access) {
-		//	;
-		//}
-		//access = 0x00;
 
+		/*	check for buffer overflow	*/
 		if (input_insert_pos - bytes_in_input_buffer < 0) {
+			
 			/* Need to wrap around */
-			//printf(" / %c %c / ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer + INPUT_BUFFER_SIZE]);
+			#ifdef JOYSTICK_DEBUG
+				printf(" / %c %c / ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer + INPUT_BUFFER_SIZE]);
+			#endif
+
 			c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer
 				+ INPUT_BUFFER_SIZE];
 			i = input_buffer_val[input_insert_pos - bytes_in_input_buffer
 				+ INPUT_BUFFER_SIZE];
 		}
+		/*	the buffer didn't overflow, use the index determined by number
+			of bytes in the buffer and the inserting position	*/
 		else {
-			//printf(" ? %c %c ? ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer]);
+			
+			#ifdef JOYSTICK_DEBUG
+				printf(" ? %c %c ? ", input_buffer_cmd[0], input_buffer_cmd[input_insert_pos - bytes_in_input_buffer]);
+			#endif
+			
 			c = input_buffer_cmd[input_insert_pos - bytes_in_input_buffer];
 			i = input_buffer_val[input_insert_pos - bytes_in_input_buffer];
 		}
@@ -218,7 +251,7 @@ void joystick_get_char(info* info_ptr) {
 
 		access = 0xFF;
 		#ifdef DEBUG
-			printf("joystick.c: %c %d\n", c, i);									// this shows nothing for c
+			printf("joystick.c: %c %d\n", c, i);
 		#endif // DEBUG
 
 
@@ -239,8 +272,7 @@ void joystick_get_char(info* info_ptr) {
 }
 
 
-// Read from a file and write its contents to the pipe for the child's STDIN.
-// Stop when there is no more data. 
+/* Depreciated function for writing to STDIN of process */ 
 void WriteToPipe(void) {
 	
 
@@ -275,71 +307,104 @@ void WriteToPipe(void) {
 }
 
 
-// Read output from the child process's pipe for STDOUT
-// and write to the parent process's pipe for STDOUT. 
-// Stop when there is no more data. 
+/*	Read from STDOUT of the joystick process.
+	When data has been received, break it into 
+	lines for interpretting. The incomming commands
+	will describe the status of the joystick (connected
+	or disconnected), and the status of buttons and axis 
+	(of the two joysticks/toggle sticks of the gaming controller).
+	This thread will exit when there isnt a controller connected.	*/
 void ReadFromPipe() {
 
 	DWORD dwRead, dwWritten;
 	CHAR chBuf[BUFSIZE];
 	BOOL bSuccess = FALSE;
 	HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	
+	// prompt that the input type (joystick or keyboard) is being
+	// decided by the information that is returned by the process
 	printf("Input Type: "); fflush(stdout);
-	//printf("we made it here\n"); fflush(stdout);
+	
+	/*	forever check for inputs from the joystick process	*/
 	for (;;)
 	{
 		bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
-		if (!bSuccess || dwRead == 0) { printf("failed reading from child\n"); break; }
+		
+		// ensure there wasn't an error in reading
+		if (!bSuccess || dwRead == 0) { 
+			printf("failed reading from child\n"); 
+			break; 
+		}
 
-		//bSuccess = WriteFile(hParentStdOut, chBuf,dwRead, &dwWritten, NULL);
-
-		//printf("%ld %ld\n", delay + ltime, clock());
+		// ensure that the buffer is full
 		if (chBuf[0] != 0) {
+
+			// the buffer contained information, extract new-lines to a buffer that can
+			// be manipulated
 			char* fullBuffer = malloc(sizeof(char)*(strlen(chBuf) + 1));
 			strcpy(fullBuffer, chBuf);
 			char* line = strtok(fullBuffer, "\n");
+			
+			// until there isn't a new line to be interpreted
 			while (line != NULL) {
 
+				// copy the line to a buffer that can be interpreted
 				char* buffer = malloc(sizeof(char)*(strlen(line) + 1));
 				strcpy(buffer, line);
-				//fflush(stdout);
-				//printf("Buffer going in:	#%s#\n", buffer); fflush(stdout);
-				//buffer[strlen(line)] = '\0';
+				
+				#ifdef JOYSTICK_DEBUG
+					printf("Buffer going in:	#%s#\n", buffer); fflush(stdout);
+				#endif //JOYSTICK_DEBUG
+				
+				// handle interpretting the buffer
 				interpret_joystick(buffer);
 
+				// free the buffer so it can be created again next time information comes in
 				free(buffer);
 
+				// get the next line from the message received
 				line = strtok(NULL, "\n");
 			}
 			free(fullBuffer);
 			
 		}
+
+		// check if there was an error in communication
 		if (!bSuccess) { printf("failed reading from stdin\n"); break; }
+
+		// reset the buffer for next iteration
 		memset(chBuf, 0, BUFSIZE);
 
 	}
 }
 
 
+/*	Filters through a line given by the joystick process.
+	The line will provide information on button presses,
+	axis changes, or whether there is a joystick connected	*/
 void interpret_joystick(char* buffer) {
 
 	int wordCount = 1;
 	int isButton = 0;
 	int isAxis = 0;
 
+	/*	Check if we have checked that a joystick is attached	*/
 	if (!joystickCheck){
 
+		/*	Check for "No Joystick" in line	*/
 		if ((buffer[0] == 'N') && (buffer[1] == 'o') && (buffer[3] == 'J')){
+
 			/*	Joystick is not plugged in, look to command prompt for inputs	*/
-			joystickEn = 0x00;
-			joystickCheck = 0xFF;
+			joystickEn = 0x00;				// there is not a joystick attached
+			joystickCheck = 0xFF;			// joystick check is true
 			printf("Keyboard\n"); fflush(stdout);
-			ExitThread(1);
+			ExitThread(1);					// this thread should exit as there is not a joystick to read
 		}
 		else {
+
 			/*	Joystick is enabled and running as expected	*/
-			joystickCheck = 0xFF;
-			joystickEn = 0xFF;
+			joystickCheck = 0xFF;			// joystick check is true
+			joystickEn = 0xFF;				// joystick flag for connected set to high
 			printf("Joystick\n"); fflush(stdout);
 			
 		}
@@ -347,54 +412,72 @@ void interpret_joystick(char* buffer) {
 		return;
 	}
 
+	/*	Check the buffer for a button press or axis command	*/
 	for (int i = 0; i < (strlen(buffer)); i++) {
 
 		if (buffer[i] == ' ') {
 			++wordCount;
 		}
 		else if ((buffer[i] == 'v') && (buffer[i+1] == 'a') && (buffer[i + 2] == 'l')) {
-			//printf("isAxis: %s\n", buffer);
+			
+			#ifdef JOYSTICK_DEBUG
+				printf("isAxis: %s\n", buffer);
+			#endif //JOYSTICK_DEBUG
 			++isAxis;
 		}
 		else if ((buffer[i] == 'b') && (buffer[i + 1] == 'u') && (buffer[i + 2] == 't')) {
-			//printf("isbutton: %s\n", buffer);
+
+			#ifdef JOYSTICK_DEBUG
+						printf("isbutton: %s\n", buffer);
+			#endif //JOYSTICK_DEBUG
+
 			++isButton;
 		}
 	}
 
+	/*	check that a button press of axis status is given	*/
 	if ((isButton < 1) && (isAxis < 1)) {
-		//printf("returning\n");
+		// then something is received that isn't of interest
 		return;
 	}
 
-
-	//printf("is something\n"); fflush(stdout);
 		
 	int actuator;
 	char* token;
 	int value;
 	token = strtok(buffer, " ");
-	//printf("token1: %s\n", token); fflush(stdout);
-
+	
+	#ifdef JOYSTICK_DEBUG
+		printf("token1: %s\n", token); fflush(stdout);
+	#endif //JOYSTICK_DEBUG
+	
 	for (int words = 1; words < 7; words++) {
+		
 		if (token == NULL) {
+			// there isnt any more words to interpret
 			break;
 		}
 		
-		//printf("token %d: %s\n", words, token); fflush(stdout);
+		#ifdef JOYSTICK_DEBUG
+				printf("token %d: %s\n", words, token); fflush(stdout);
+		#endif //JOYSTICK_DEBUG
+		
 		if (words == 4) {
-			//printf("words=3 %s\n", token); fflush(stdout);
+
 			char* err;
 			actuator = strtol(token, &err, 10);
-			//printf("This is actuator: %s %d\n", token, actuator);
+
+		/*	check if it was an axis change	*/
 		} else if ((isAxis > 0) && (words == 6)) {
-			//printf("words=5 %s\n", token); fflush(stdout);
+
 			char* err;
 			value= strtol(token, &err, 10);
-			//printf("This is actuator: %s %d\n", token, value);
+
 		}
+		/*	check if it was a button press	*/
 		else if ((isButton > 0) && (words == 5)) {
-			//printf("############\n");
+
+			/*	check if the button was up or down	*/
 			if (strcmp(token, "up") > 0) {
 				value = 0;
 			}
@@ -407,15 +490,26 @@ void interpret_joystick(char* buffer) {
 
 	if (value == 0) {
 		joystickToggle = 0x00;
-		//printf("joysticktoggle OFF\n");
+		
+		#ifdef JOYSTICK_DEBUG
+				printf("joysticktoggle OFF\n");
+		#endif //JOYSTICK_DEBUG
+		
 		return;
 	}
 	else if (value != lastJoystickValue) {
-		//printf("joysticktoggle ON\n");
+		
+		#ifdef JOYSTICK_DEBUG
+				printf("joysticktoggle ON\n");
+		#endif //JOYSTICK_DEBUG
+		
 		joystickToggle = 0xFF;
 	}
 
-	//printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
+	#ifdef JOYSTICK_DEBUG
+		printf("Button: %d,	Axis: %d,	actuator: %d	value:	%d\n", isButton, isAxis, actuator, value); fflush(stdout);
+	#endif //JOYSTICK_DEBUG
+	
 	char cmd;
 	if (isButton > 0) {
 		switch (actuator) {
@@ -495,12 +589,8 @@ void interpret_joystick(char* buffer) {
 		* There is room in the input buffer
 		*/
 		if ((delay + ltime < clock()) || (value > 30000)) {
-			//while (!access) {
-				/*	The main thread is using the buffer, wait	*/
-			//	;
-			//}
+
 			/*	lock the buffer from other threads	*/
-			//access = 0x00;
 
 			DWORD bufferWaitResult = WaitForSingleObject(bufferMutex, INFINITE);  // no time-out interval
 
@@ -544,17 +634,18 @@ void interpret_joystick(char* buffer) {
 }
 
 
-/*	adds stuff to the buffer if the joystick is held	*/
+/*	adds commands to the buffer if the joystick is held
+	and a given amount of time as passed since updating	*/
 void add_to_buffer(void) {
 	
-	while (1) {
+	/*	Forever check if things need to be added to the buffer	*/
+	for (;;) {
+
+		/*	Check that time has passed, the joystick has been checked and is plugged in,
+			and whether the last command needs to be added	*/
 		if ((delay + 750 + ltime < clock()) && (joystickToggle) && (joystickCheck)) {
-			//while (!access) {
-				/*	Another thread is accessing the buffer, wait	*/
-			//	;
-			//}
+
 			/*	lock the buffer variables from other threads	*/
-			//access = 0x00;
 			DWORD bufferWaitResult = WaitForSingleObject(bufferMutex, INFINITE);  // no time-out interval
 
 			if (bufferWaitResult == WAIT_ABANDONED) {
@@ -563,25 +654,29 @@ void add_to_buffer(void) {
 			else if (bufferWaitResult == WAIT_OBJECT_0) {
 
 
-				
+				/*	ensure the commands are valid before adding them to the cmd buffer	*/
 				if ((lastJoystickCmd > 'a') && (lastJoystickCmd < 'z')) {
 
 					#ifdef DEBUG
 						printf("thread %d adding extra %c %d to buffer\n", GetCurrentThreadId(), lastJoystickCmd, lastJoystickValue);
 					#endif // DEBUG
 
+					/*	add the last added command to the buffer	*/
 					input_buffer_cmd[input_insert_pos] = lastJoystickCmd;
 					input_buffer_val[input_insert_pos] = lastJoystickValue;
+
+					/*	update position in bufffer	*/
 					input_insert_pos++;
 					bytes_in_input_buffer++;
+
 					if (input_insert_pos == INPUT_BUFFER_SIZE) {
 						/* Wrap around buffer pointer if necessary */
 						input_insert_pos = 0;
 					}
 
 				}
+
 				/*	Release the buffer and update delay clock	*/
-				//access = 0xFF;
 				ltime = clock();
 
 				if (!ReleaseMutex(bufferMutex))
@@ -595,10 +690,14 @@ void add_to_buffer(void) {
 			}
 		}
 
+		/*	Check that the joystick has been checked and it is not connected	*/
 		if ((joystickCheck) && (!joystickEn)) {
+
+			// then the thread needs to exit as it is not needed
 			ExitThread(1);
 		}
 
+		// block this thread before checking if need to add command again
 		Sleep(50);
 
 	}
@@ -608,7 +707,7 @@ void add_to_buffer(void) {
 
 
 /*	Returns whether there is a joystick plugged in
-*	and ready for use	*/
+	and ready for use	*/
 uint8_t joystickEnabled(void) {
 	
 	return joystickEn;

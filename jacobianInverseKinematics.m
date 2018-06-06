@@ -124,6 +124,15 @@ x = vpa([subbedA(1,4); subbedA(2,4); subbedA(3,4)]);
 
 % and given a small change in the vertical position (mm)
 desired_delta_x = [0; 0; 3; 0; 0; 0];
+delta_x  = [0; 0; 3; 0; 0; 0];
+
+x_data = []
+y_data = []
+z_data = []
+x_des = []
+y_des = []
+z_des = []
+iteration = []
 
 % Newton Raphson method for getting a better approximation
 for i = 1:50
@@ -143,6 +152,15 @@ for i = 1:50
     q_ = [ q_(1) + delta_angles(1), q_(2) + delta_angles(2), q_(3) + delta_angles(3), q_(4) + delta_angles(4), q_(5) + delta_angles(5), pi];
     Final = subs(A, [q1,q2,q3,q4,q5,q6], q_);
     delta_x = [x(1) + desired_delta_x(1) - Final(1,4); x(2) + desired_delta_x(2) - Final(2,4); x(3) + desired_delta_x(3) - Final(3,4); 0; 0; 0];
+
+    % prepare data for plotting
+    x_des(i) = x(1) + desired_delta_x(1);
+    y_des(i) = x(2) + desired_delta_x(2);
+    z_des(i) = x(3) + desired_delta_x(3);
+    x_data(i) = Final(1,4);
+    y_data(i) = Final(2,4);
+    z_data(i) = Final(3,4);
+    iteration(i) = i;
 end
 
 % and final position at V, which matches x + desired_delta_x
@@ -194,7 +212,8 @@ z = 1
 %   memory to compute the entire inverse symbolically.
 tic;
 
-q_ = [-8.84885925, 1.846790327, 10.28148573, 4.764735222, -0.0000006894989015, pi];%[ pi/4, pi/4, pi/4, pi/4, pi/4, pi/4];
+%q_ = [-8.84885925, 1.846790327, 10.28148573, 4.764735222, -0.0000006894989015, pi];%[ pi/4, pi/4, pi/4, pi/4, pi/4, pi/4];
+q_ = [-8.63938, 1.745808, 10.471746, 4.712385, 0.000001, pi]
 %inside = subs(Inside, [q1,q2,q3,q4,q5,q6], [ pi-(q_1), -pi/2 + (q_2+pi), pi/2 + (pi+q_3), q_4, -pi + q_5, pi])
 inside = subs(Inside, q, q_);
 
@@ -206,14 +225,15 @@ invs = simplify(invs);                  % simplified expression of (J*J^T)^(-1)
 
 z = 3
 
-subbedTransJ = subs(transJ, q, q_)
+% subbedTransJ = subs(transJ, q, q_)
 J_inv = invs * subbedTransJ;
 
 
 subbedA = subs(A, q, q_);
 x = vpa([subbedA(1,4); subbedA(2,4); subbedA(3,4)]);
 
-delta_x = [0; 0; 3];
+%delta_x = [0; 0; 3];
+delta_x  = [0; 0; 3; 0; 0; 0];
 
 delta_angles = J_inv * delta_x;
 delta_angles = vpa(delta_angles);
