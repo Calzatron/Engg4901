@@ -14,38 +14,38 @@
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {3.1}{\ignorespaces Feedback Control System with Disturbance}}{22}
 \contentsline {figure}{\numberline {3.2}{\ignorespaces Physical representation of D-H Parameters between two links}}{25}
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Revolute Joint Arm}}{27}
-\contentsline {figure}{\numberline {3.4}{\ignorespaces The Newton-Raphson Method applied to Inverse Kinematics}}{31}
-\contentsline {figure}{\numberline {3.5}{\ignorespaces The calculation method for Inverse Kinematics in V-REP}}{32}
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Revolute Joint Arm}}{28}
+\contentsline {figure}{\numberline {3.4}{\ignorespaces The Newton-Raphson Method applied to Inverse Kinematics}}{34}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Simple V-REP client program in Python Flow Chart}}{36}
-\contentsline {figure}{\numberline {4.2}{\ignorespaces V-REP Client Makefile}}{37}
-\contentsline {figure}{\numberline {4.3}{\ignorespaces Lua function in V-REP main for retrieving object names}}{38}
-\contentsline {figure}{\numberline {4.4}{\ignorespaces Example of a text file created by the V-REP client}}{39}
-\contentsline {figure}{\numberline {4.5}{\ignorespaces Client program in Forward Kinematics mode}}{47}
-\contentsline {figure}{\numberline {4.6}{\ignorespaces D-H Parameters axis for each joint on Jaco arm}}{48}
-\contentsline {figure}{\numberline {4.7}{\ignorespaces The Jaco arm in V-REP with joints set to IK mode, with a small error in target to tip position}}{48}
-\contentsline {figure}{\numberline {4.8}{\ignorespaces Left: the Jaco arm using the Pseudo Inverse Jacobian with 50 iterations. Right: the Jaco arm using DLS of damping 0.05 and 5 iterations}}{49}
-\contentsline {figure}{\numberline {4.9}{\ignorespaces An example of the terminal output of the joystick process when the left joystick is toggled on}}{49}
+\contentsline {figure}{\numberline {4.1}{\ignorespaces The Jaco arm in V-REP with joints set to IK mode, with a small error in target to tip position}}{43}
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Left: the Jaco arm using the Pseudo Inverse Jacobian with 50 iterations. Right: the Jaco arm using DLS of damping 0.05 and 5 iterations}}{44}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {5.1}{\ignorespaces Dimensions and angles of Jaco Arm}}{51}
-\contentsline {figure}{\numberline {5.2}{\ignorespaces Simplification of Jaco arm geometry}}{52}
-\contentsline {figure}{\numberline {5.3}{\ignorespaces Simplification of Jaco arm wrist geometry}}{53}
-\contentsline {figure}{\numberline {5.4}{\ignorespaces Control loop for approximating the joints angles to move the end-effector using the position of the fourth joint}}{54}
-\contentsline {figure}{\numberline {5.5}{\ignorespaces Response of Chosen Controller Given a Change in End-Effector Position Command (3mm in the x-y plane)}}{56}
-\contentsline {figure}{\numberline {5.6}{\ignorespaces Error being corrected in control loop}}{57}
-\contentsline {figure}{\numberline {5.7}{\ignorespaces The desired and actual positions of the end-effector with each joint under control}}{58}
-\contentsline {figure}{\numberline {5.8}{\ignorespaces The desired and actual angular positions of the end-effector}}{59}
-\contentsline {figure}{\numberline {5.9}{\ignorespaces Standard Regulator Block Diagram}}{59}
-\contentsline {figure}{\numberline {5.10}{\ignorespaces Block Diagram of integral action, giving the output (y) a reference input (r)}}{60}
-\contentsline {figure}{\numberline {5.11}{\ignorespaces Block Diagram of a Standard Cascade Regulator}}{60}
-\contentsline {figure}{\numberline {5.12}{\ignorespaces V-REP Client Program Control Loop Error}}{61}
-\contentsline {figure}{\numberline {5.13}{\ignorespaces Plot of using Jacobian Approximation to move the end-effector to a desired position }}{63}
-\contentsline {figure}{\numberline {5.14}{\ignorespaces Starting position of the Jaco arm when giving IK inputs to a FK scene }}{64}
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Dimensions and angles of Jaco Arm}}{49}
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Simplification of Jaco arm geometry}}{50}
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Simplification of Jaco arm wrist geometry}}{51}
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Control loop for approximating the joints angles to move the end-effector using the position of the fourth joint}}{53}
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Response of Chosen Controller Given a Change in End-Effector Position Command (3mm in the x-y plane)}}{54}
+\contentsline {figure}{\numberline {5.6}{\ignorespaces Error being corrected in control loop}}{56}
+\contentsline {figure}{\numberline {5.7}{\ignorespaces The desired and actual positions of the end-effector with each joint under control}}{57}
+\contentsline {figure}{\numberline {5.8}{\ignorespaces The desired and actual angular positions of the end-effector}}{58}
+\contentsline {figure}{\numberline {5.9}{\ignorespaces Standard Regulator Block Diagram}}{58}
+\contentsline {figure}{\numberline {5.10}{\ignorespaces Block Diagram of integral action, giving the output (y) a reference input (r)}}{59}
+\contentsline {figure}{\numberline {5.11}{\ignorespaces Block Diagram of a Standard Cascade Regulator}}{59}
+\contentsline {figure}{\numberline {5.12}{\ignorespaces Starting position of the Jaco arm when giving IK inputs to a FK scene }}{62}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {6.1}{\ignorespaces Client Program on Start-Up }}{67}
-\contentsline {figure}{\numberline {6.2}{\ignorespaces Client Program given incorrect arguments on start-up }}{68}
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Client Program on Start-Up }}{65}
+\contentsline {figure}{\numberline {6.2}{\ignorespaces Client Program given incorrect arguments on start-up }}{66}
 \addvspace {10\p@ }
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {A.1}{\ignorespaces Simple V-REP client program in Python Flow Chart}}{77}
+\contentsline {figure}{\numberline {A.2}{\ignorespaces V-REP Client Makefile}}{78}
+\contentsline {figure}{\numberline {A.3}{\ignorespaces Lua function in V-REP main script, for retrieving object names}}{78}
+\contentsline {figure}{\numberline {A.4}{\ignorespaces Example of a text file created by the V-REP client}}{79}
+\contentsline {figure}{\numberline {A.5}{\ignorespaces Client program in Forward Kinematics mode}}{80}
+\contentsline {figure}{\numberline {A.6}{\ignorespaces D-H Parameters axis for each joint on Jaco arm}}{81}
+\contentsline {figure}{\numberline {A.7}{\ignorespaces An example of the terminal output of the joystick process when the left joystick is toggled on}}{82}
+\contentsline {figure}{\numberline {A.8}{\ignorespaces The calculation method for Inverse Kinematics in V-REP}}{83}
+\contentsline {figure}{\numberline {A.9}{\ignorespaces V-REP Client Program Control Loop Error}}{84}
+\contentsline {figure}{\numberline {A.10}{\ignorespaces Plot of using Jacobian Approximation to move the end-effector to a desired position }}{85}
 \addvspace {10\p@ }
 \addvspace {10\p@ }

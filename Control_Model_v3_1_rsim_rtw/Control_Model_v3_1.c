@@ -9,7 +9,7 @@
  *
  * Model version              : 1.20
  * Simulink Coder version : 8.8 (R2015a) 09-Feb-2015
- * C source code generated on : Wed Apr 25 14:45:17 2018
+ * C source code generated on : Mon Jun 04 22:20:33 2018
  *
  * Target selection: rsim.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -163,9 +163,6 @@ real_T rt_hypotd_snf(real_T u0, real_T u1)
 /* Initial conditions for root system: '<Root>' */
 void MdlInitialize(void)
 {
-  /* InitializeConditions for Integrator: '<Root>/Integrator5' */
-  rtX.Integrator5_CSTATE = rtP.Integrator5_IC;
-
   /* InitializeConditions for Integrator: '<Root>/Integrator7' */
   rtX.Integrator7_CSTATE = rtP.Integrator7_IC;
 
@@ -179,6 +176,13 @@ void MdlInitialize(void)
   /* InitializeConditions for Derivative: '<Root>/Derivative3' */
   rtDW.TimeStampA_b = (rtInf);
   rtDW.TimeStampB_d = (rtInf);
+
+  /* InitializeConditions for Derivative: '<Root>/Derivative1' */
+  rtDW.TimeStampA_a = (rtInf);
+  rtDW.TimeStampB_dw = (rtInf);
+
+  /* InitializeConditions for Integrator: '<Root>/Integrator5' */
+  rtX.Integrator5_CSTATE = rtP.Integrator5_IC;
 
   /* InitializeConditions for Integrator: '<Root>/Integrator4' */
   rtX.Integrator4_CSTATE = rtP.Integrator4_IC;
@@ -206,6 +210,129 @@ void MdlInitialize(void)
 /* Start for root system: '<Root>' */
 void MdlStart(void)
 {
+  /* Start for Scope: '<Root>/Coordinate Error' */
+  {
+    RTWLogSignalInfo rt_ScopeSignalInfo;
+    static int_T rt_ScopeSignalWidths[] = { 2, 2 };
+
+    static int_T rt_ScopeSignalNumDimensions[] = { 1, 1 };
+
+    static int_T rt_ScopeSignalDimensions[] = { 2, 2 };
+
+    static void *rt_ScopeCurrSigDims[] = { (NULL), (NULL) };
+
+    static int_T rt_ScopeCurrSigDimsSize[] = { 4, 4 };
+
+    static const char_T *rt_ScopeSignalLabels[] = { "",
+      "" };
+
+    static char_T rt_ScopeSignalTitles[] = "";
+    static int_T rt_ScopeSignalTitleLengths[] = { 0, 0 };
+
+    static boolean_T rt_ScopeSignalIsVarDims[] = { 0, 0 };
+
+    static int_T rt_ScopeSignalPlotStyles[] = { 1, 0, 1, 0 };
+
+    BuiltInDTypeId dTypes[2] = { SS_DOUBLE, SS_DOUBLE };
+
+    static char_T rt_ScopeBlockName[] = "Control_Model_v3_1/Coordinate Error";
+    rt_ScopeSignalInfo.numSignals = 2;
+    rt_ScopeSignalInfo.numCols = rt_ScopeSignalWidths;
+    rt_ScopeSignalInfo.numDims = rt_ScopeSignalNumDimensions;
+    rt_ScopeSignalInfo.dims = rt_ScopeSignalDimensions;
+    rt_ScopeSignalInfo.isVarDims = rt_ScopeSignalIsVarDims;
+    rt_ScopeSignalInfo.currSigDims = rt_ScopeCurrSigDims;
+    rt_ScopeSignalInfo.currSigDimsSize = rt_ScopeCurrSigDimsSize;
+    rt_ScopeSignalInfo.dataTypes = dTypes;
+    rt_ScopeSignalInfo.complexSignals = (NULL);
+    rt_ScopeSignalInfo.frameData = (NULL);
+    rt_ScopeSignalInfo.labels.cptr = rt_ScopeSignalLabels;
+    rt_ScopeSignalInfo.titles = rt_ScopeSignalTitles;
+    rt_ScopeSignalInfo.titleLengths = rt_ScopeSignalTitleLengths;
+    rt_ScopeSignalInfo.plotStyles = rt_ScopeSignalPlotStyles;
+    rt_ScopeSignalInfo.blockNames.cptr = (NULL);
+    rt_ScopeSignalInfo.stateNames.cptr = (NULL);
+    rt_ScopeSignalInfo.crossMdlRef = (NULL);
+    rt_ScopeSignalInfo.dataTypeConvert = (NULL);
+    rtDW.CoordinateError_PWORK.LoggedData = rt_CreateStructLogVar(
+      ssGetRTWLogInfo(rtS),
+      0.0,
+      ssGetTFinal(rtS),
+      ssGetStepSize(rtS),
+      (&ssGetErrorStatus(rtS)),
+      "error",
+      1,
+      0,
+      1,
+      0.002,
+      &rt_ScopeSignalInfo,
+      rt_ScopeBlockName);
+    if (rtDW.CoordinateError_PWORK.LoggedData == (NULL))
+      return;
+  }
+
+  /* Start for Scope: '<Root>/Position Comparison' */
+  {
+    RTWLogSignalInfo rt_ScopeSignalInfo;
+    static int_T rt_ScopeSignalWidths[] = { 2, 2, 2 };
+
+    static int_T rt_ScopeSignalNumDimensions[] = { 1, 1, 1 };
+
+    static int_T rt_ScopeSignalDimensions[] = { 2, 2, 2 };
+
+    static void *rt_ScopeCurrSigDims[] = { (NULL), (NULL), (NULL) };
+
+    static int_T rt_ScopeCurrSigDimsSize[] = { 4, 4, 4 };
+
+    static const char_T *rt_ScopeSignalLabels[] = { "",
+      "",
+      "" };
+
+    static char_T rt_ScopeSignalTitles[] = "";
+    static int_T rt_ScopeSignalTitleLengths[] = { 0, 0, 0 };
+
+    static boolean_T rt_ScopeSignalIsVarDims[] = { 0, 0, 0 };
+
+    static int_T rt_ScopeSignalPlotStyles[] = { 1, 0, 1, 0, 1, 0 };
+
+    BuiltInDTypeId dTypes[3] = { SS_DOUBLE, SS_DOUBLE, SS_DOUBLE };
+
+    static char_T rt_ScopeBlockName[] = "Control_Model_v3_1/Position Comparison";
+    rt_ScopeSignalInfo.numSignals = 3;
+    rt_ScopeSignalInfo.numCols = rt_ScopeSignalWidths;
+    rt_ScopeSignalInfo.numDims = rt_ScopeSignalNumDimensions;
+    rt_ScopeSignalInfo.dims = rt_ScopeSignalDimensions;
+    rt_ScopeSignalInfo.isVarDims = rt_ScopeSignalIsVarDims;
+    rt_ScopeSignalInfo.currSigDims = rt_ScopeCurrSigDims;
+    rt_ScopeSignalInfo.currSigDimsSize = rt_ScopeCurrSigDimsSize;
+    rt_ScopeSignalInfo.dataTypes = dTypes;
+    rt_ScopeSignalInfo.complexSignals = (NULL);
+    rt_ScopeSignalInfo.frameData = (NULL);
+    rt_ScopeSignalInfo.labels.cptr = rt_ScopeSignalLabels;
+    rt_ScopeSignalInfo.titles = rt_ScopeSignalTitles;
+    rt_ScopeSignalInfo.titleLengths = rt_ScopeSignalTitleLengths;
+    rt_ScopeSignalInfo.plotStyles = rt_ScopeSignalPlotStyles;
+    rt_ScopeSignalInfo.blockNames.cptr = (NULL);
+    rt_ScopeSignalInfo.stateNames.cptr = (NULL);
+    rt_ScopeSignalInfo.crossMdlRef = (NULL);
+    rt_ScopeSignalInfo.dataTypeConvert = (NULL);
+    rtDW.PositionComparison_PWORK.LoggedData = rt_CreateStructLogVar(
+      ssGetRTWLogInfo(rtS),
+      0.0,
+      ssGetTFinal(rtS),
+      ssGetStepSize(rtS),
+      (&ssGetErrorStatus(rtS)),
+      "Position",
+      1,
+      0,
+      1,
+      0.002,
+      &rt_ScopeSignalInfo,
+      rt_ScopeBlockName);
+    if (rtDW.PositionComparison_PWORK.LoggedData == (NULL))
+      return;
+  }
+
   MdlInitialize();
 }
 
@@ -217,9 +344,9 @@ void MdlOutputs(int_T tid)
   real_T rtb_Add12;
   real_T rtb_Add11;
   real_T *lastU;
-  real_T lastTime;
   real_T rtb_Derivative2;
   real_T rtb_Derivative3;
+  real_T rtb_Integrator2;
   real_T rtb_q_2;
   real_T rtb_q_3;
   if (ssIsSampleHit(rtS, 1, 0)) {
@@ -274,15 +401,6 @@ void MdlOutputs(int_T tid)
       asin(9.8 / sqrt(rtb_Add13 * rtb_Add13 + rtb_Add12 * rtb_Add12)));
   }
 
-  /* Gain: '<Root>/Gain21' incorporates:
-   *  Integrator: '<Root>/Integrator5'
-   */
-  rtB.Gain21 = rtP.Gain21_Gain * rtX.Integrator5_CSTATE;
-  if (ssIsSampleHit(rtS, 1, 0)) {
-    /* Trigonometry: '<Root>/Trigonometric Function' */
-    rtB.TrigonometricFunction = rt_atan2d_snf(rtb_Add12, rtb_Add13);
-  }
-
   /* Integrator: '<Root>/Integrator7' */
   rtB.Integrator7 = rtX.Integrator7_CSTATE;
 
@@ -290,21 +408,22 @@ void MdlOutputs(int_T tid)
   if ((rtDW.TimeStampA >= ssGetT(rtS)) && (rtDW.TimeStampB >= ssGetT(rtS))) {
     rtb_Derivative2 = 0.0;
   } else {
-    lastTime = rtDW.TimeStampA;
+    rtb_Integrator2 = rtDW.TimeStampA;
     lastU = &rtDW.LastUAtTimeA;
     if (rtDW.TimeStampA < rtDW.TimeStampB) {
       if (rtDW.TimeStampB < ssGetT(rtS)) {
-        lastTime = rtDW.TimeStampB;
+        rtb_Integrator2 = rtDW.TimeStampB;
         lastU = &rtDW.LastUAtTimeB;
       }
     } else {
       if (rtDW.TimeStampA >= ssGetT(rtS)) {
-        lastTime = rtDW.TimeStampB;
+        rtb_Integrator2 = rtDW.TimeStampB;
         lastU = &rtDW.LastUAtTimeB;
       }
     }
 
-    rtb_Derivative2 = (rtB.Integrator7 - *lastU) / (ssGetT(rtS) - lastTime);
+    rtb_Derivative2 = (rtB.Integrator7 - *lastU) / (ssGetT(rtS) -
+      rtb_Integrator2);
   }
 
   /* End of Derivative: '<Root>/Derivative2' */
@@ -317,27 +436,65 @@ void MdlOutputs(int_T tid)
   {
     rtb_Derivative3 = 0.0;
   } else {
-    lastTime = rtDW.TimeStampA_b;
+    rtb_Integrator2 = rtDW.TimeStampA_b;
     lastU = &rtDW.LastUAtTimeA_k;
     if (rtDW.TimeStampA_b < rtDW.TimeStampB_d) {
       if (rtDW.TimeStampB_d < ssGetT(rtS)) {
-        lastTime = rtDW.TimeStampB_d;
+        rtb_Integrator2 = rtDW.TimeStampB_d;
         lastU = &rtDW.LastUAtTimeB_n;
       }
     } else {
       if (rtDW.TimeStampA_b >= ssGetT(rtS)) {
-        lastTime = rtDW.TimeStampB_d;
+        rtb_Integrator2 = rtDW.TimeStampB_d;
         lastU = &rtDW.LastUAtTimeB_n;
       }
     }
 
-    rtb_Derivative3 = (rtB.Integrator8 - *lastU) / (ssGetT(rtS) - lastTime);
+    rtb_Derivative3 = (rtB.Integrator8 - *lastU) / (ssGetT(rtS) -
+      rtb_Integrator2);
   }
 
   /* End of Derivative: '<Root>/Derivative3' */
 
   /* Trigonometry: '<Root>/Trigonometric Function2' */
   rtB.TrigonometricFunction2 = rt_atan2d_snf(rtb_Derivative2, rtb_Derivative3);
+
+  /* Derivative: '<Root>/Derivative1' */
+  if ((rtDW.TimeStampA_a >= ssGetT(rtS)) && (rtDW.TimeStampB_dw >= ssGetT(rtS)))
+  {
+    rtb_Integrator2 = 0.0;
+  } else {
+    rtb_Integrator2 = rtDW.TimeStampA_a;
+    lastU = &rtDW.LastUAtTimeA_i;
+    if (rtDW.TimeStampA_a < rtDW.TimeStampB_dw) {
+      if (rtDW.TimeStampB_dw < ssGetT(rtS)) {
+        rtb_Integrator2 = rtDW.TimeStampB_dw;
+        lastU = &rtDW.LastUAtTimeB_g;
+      }
+    } else {
+      if (rtDW.TimeStampA_a >= ssGetT(rtS)) {
+        rtb_Integrator2 = rtDW.TimeStampB_dw;
+        lastU = &rtDW.LastUAtTimeB_g;
+      }
+    }
+
+    rtb_Integrator2 = (rtB.TrigonometricFunction2 - *lastU) / (ssGetT(rtS) -
+      rtb_Integrator2);
+  }
+
+  /* End of Derivative: '<Root>/Derivative1' */
+
+  /* Gain: '<Root>/Gain15' */
+  rtB.Gain15 = rtP.Gain15_Gain * rtb_Integrator2;
+
+  /* Gain: '<Root>/Gain21' incorporates:
+   *  Integrator: '<Root>/Integrator5'
+   */
+  rtB.Gain21 = rtP.Gain21_Gain * rtX.Integrator5_CSTATE;
+  if (ssIsSampleHit(rtS, 1, 0)) {
+    /* Trigonometry: '<Root>/Trigonometric Function' */
+    rtB.TrigonometricFunction = rt_atan2d_snf(rtb_Add12, rtb_Add13);
+  }
 
   /* Sum: '<Root>/Add8' */
   rtB.Add8 = rtB.TrigonometricFunction - rtB.TrigonometricFunction2;
@@ -350,8 +507,8 @@ void MdlOutputs(int_T tid)
    *  Math: '<Root>/Math Function1'
    *  Sum: '<Root>/Add7'
    */
-  rtB.Add17 = rt_modd_snf(rtB.Gain21 + rtB.Gain8, rtP.Constant2_Value) +
-    rtB.Add14;
+  rtB.Add17 = rt_modd_snf((rtB.Gain21 - rtB.Gain15) + rtB.Gain8,
+    rtP.Constant2_Value) + rtB.Add14;
   if (ssIsSampleHit(rtS, 1, 0)) {
     /* Sum: '<Root>/Add15' incorporates:
      *  Constant: '<Root>/Constant6'
@@ -371,23 +528,24 @@ void MdlOutputs(int_T tid)
   /* Derivative: '<Root>/Derivative' */
   if ((rtDW.TimeStampA_f >= ssGetT(rtS)) && (rtDW.TimeStampB_dj >= ssGetT(rtS)))
   {
-    rtb_q_2 = 0.0;
+    rtb_Integrator2 = 0.0;
   } else {
-    lastTime = rtDW.TimeStampA_f;
+    rtb_Integrator2 = rtDW.TimeStampA_f;
     lastU = &rtDW.LastUAtTimeA_l;
     if (rtDW.TimeStampA_f < rtDW.TimeStampB_dj) {
       if (rtDW.TimeStampB_dj < ssGetT(rtS)) {
-        lastTime = rtDW.TimeStampB_dj;
+        rtb_Integrator2 = rtDW.TimeStampB_dj;
         lastU = &rtDW.LastUAtTimeB_l;
       }
     } else {
       if (rtDW.TimeStampA_f >= ssGetT(rtS)) {
-        lastTime = rtDW.TimeStampB_dj;
+        rtb_Integrator2 = rtDW.TimeStampB_dj;
         lastU = &rtDW.LastUAtTimeB_l;
       }
     }
 
-    rtb_q_2 = (rtB.Integrator4 - *lastU) / (ssGetT(rtS) - lastTime);
+    rtb_Integrator2 = (rtB.Integrator4 - *lastU) / (ssGetT(rtS) -
+      rtb_Integrator2);
   }
 
   /* End of Derivative: '<Root>/Derivative' */
@@ -395,7 +553,7 @@ void MdlOutputs(int_T tid)
   /* Trigonometry: '<Root>/Trigonometric Function3' incorporates:
    *  Math: '<Root>/Math Function2'
    */
-  rtB.TrigonometricFunction3 = rt_atan2d_snf(rtb_q_2, rt_hypotd_snf
+  rtB.TrigonometricFunction3 = rt_atan2d_snf(rtb_Integrator2, rt_hypotd_snf
     (rtb_Derivative2, rtb_Derivative3));
 
   /* Sum: '<Root>/Add3' */
@@ -522,6 +680,70 @@ void MdlOutputs(int_T tid)
 
   /* y = u; */
   if (ssIsSampleHit(rtS, 1, 0)) {
+    /* Scope: '<Root>/Coordinate Error' */
+    {
+      StructLogVar *svar = (StructLogVar *)rtDW.CoordinateError_PWORK.LoggedData;
+      LogVar *var = svar->signals.values;
+
+      /* time */
+      {
+        double locTime = ssGetTaskTime(rtS,1);
+        rt_UpdateLogVar((LogVar *)svar->time, &locTime, 0);
+      }
+
+      /* signals */
+      {
+        real_T up0[2];
+        up0[0] = rtB.TrigonometricFunction;
+        up0[1] = rtB.TrigonometricFunction2;
+        rt_UpdateLogVar((LogVar *)var, up0, 0);
+        var = var->next;
+      }
+
+      {
+        real_T up1[2];
+        up1[0] = rtB.TrigonometricFunction1;
+        up1[1] = rtB.TrigonometricFunction3;
+        rt_UpdateLogVar((LogVar *)var, up1, 0);
+      }
+    }
+
+    /* Scope: '<Root>/Position Comparison' */
+    {
+      StructLogVar *svar = (StructLogVar *)
+        rtDW.PositionComparison_PWORK.LoggedData;
+      LogVar *var = svar->signals.values;
+
+      /* time */
+      {
+        double locTime = ssGetTaskTime(rtS,1);
+        rt_UpdateLogVar((LogVar *)svar->time, &locTime, 0);
+      }
+
+      /* signals */
+      {
+        real_T up0[2];
+        up0[0] = rtb_Add13;
+        up0[1] = rtB.x_a;
+        rt_UpdateLogVar((LogVar *)var, up0, 0);
+        var = var->next;
+      }
+
+      {
+        real_T up1[2];
+        up1[0] = rtb_Add12;
+        up1[1] = rtB.y_a;
+        rt_UpdateLogVar((LogVar *)var, up1, 0);
+        var = var->next;
+      }
+
+      {
+        real_T up2[2];
+        up2[0] = rtb_Add11;
+        up2[1] = rtB.z_a;
+        rt_UpdateLogVar((LogVar *)var, up2, 0);
+      }
+    }
   }
 
   UNUSED_PARAMETER(tid);
@@ -570,6 +792,25 @@ void MdlUpdate(int_T tid)
 
   /* End of Update for Derivative: '<Root>/Derivative3' */
 
+  /* Update for Derivative: '<Root>/Derivative1' */
+  if (rtDW.TimeStampA_a == (rtInf)) {
+    rtDW.TimeStampA_a = ssGetT(rtS);
+    lastU = &rtDW.LastUAtTimeA_i;
+  } else if (rtDW.TimeStampB_dw == (rtInf)) {
+    rtDW.TimeStampB_dw = ssGetT(rtS);
+    lastU = &rtDW.LastUAtTimeB_g;
+  } else if (rtDW.TimeStampA_a < rtDW.TimeStampB_dw) {
+    rtDW.TimeStampA_a = ssGetT(rtS);
+    lastU = &rtDW.LastUAtTimeA_i;
+  } else {
+    rtDW.TimeStampB_dw = ssGetT(rtS);
+    lastU = &rtDW.LastUAtTimeB_g;
+  }
+
+  *lastU = rtB.TrigonometricFunction2;
+
+  /* End of Update for Derivative: '<Root>/Derivative1' */
+
   /* Update for Derivative: '<Root>/Derivative' */
   if (rtDW.TimeStampA_f == (rtInf)) {
     rtDW.TimeStampA_f = ssGetT(rtS);
@@ -597,14 +838,14 @@ void MdlDerivatives(void)
   XDot *_rtXdot;
   _rtXdot = ((XDot *) ssGetdX(rtS));
 
-  /* Derivatives for Integrator: '<Root>/Integrator5' */
-  _rtXdot->Integrator5_CSTATE = rtB.Add8;
-
   /* Derivatives for Integrator: '<Root>/Integrator7' */
   _rtXdot->Integrator7_CSTATE = rtB.y_a;
 
   /* Derivatives for Integrator: '<Root>/Integrator8' */
   _rtXdot->Integrator8_CSTATE = rtB.x_a;
+
+  /* Derivatives for Integrator: '<Root>/Integrator5' */
+  _rtXdot->Integrator5_CSTATE = rtB.Add8;
 
   /* Derivatives for Integrator: '<Root>/Integrator4' */
   _rtXdot->Integrator4_CSTATE = rtB.z_a;
@@ -644,9 +885,9 @@ void MdlInitializeSizes(void)
   ssSetNumU(rtS, 0);                   /* Number of model inputs */
   ssSetDirectFeedThrough(rtS, 0);      /* The model is not direct feedthrough */
   ssSetNumSampleTimes(rtS, 2);         /* Number of sample times */
-  ssSetNumBlocks(rtS, 80);             /* Number of blocks */
-  ssSetNumBlockIO(rtS, 26);            /* Number of block outputs */
-  ssSetNumBlockParams(rtS, 34);        /* Sum of parameter "widths" */
+  ssSetNumBlocks(rtS, 82);             /* Number of blocks */
+  ssSetNumBlockIO(rtS, 27);            /* Number of block outputs */
+  ssSetNumBlockParams(rtS, 35);        /* Sum of parameter "widths" */
 }
 
 /* Function to initialize sample times. */
@@ -752,7 +993,7 @@ SimStruct * Control_Model_v3_1(void)
   ssSetModelName(rtS, "Control_Model_v3_1");
   ssSetPath(rtS, "Control_Model_v3_1");
   ssSetTStart(rtS, 0.0);
-  ssSetTFinal(rtS, 60.0);
+  ssSetTFinal(rtS, 40.0);
   ssSetStepSize(rtS, 0.002);
   ssSetFixedStepSize(rtS, 0.002);
 
@@ -788,9 +1029,9 @@ SimStruct * Control_Model_v3_1(void)
     ssSetPeriodicStatesInfo(rtS, &periodicStatesInfo);
   }
 
-  ssSetChecksumVal(rtS, 0, 3910472307U);
-  ssSetChecksumVal(rtS, 1, 753431464U);
-  ssSetChecksumVal(rtS, 2, 480093289U);
-  ssSetChecksumVal(rtS, 3, 848141543U);
+  ssSetChecksumVal(rtS, 0, 643900393U);
+  ssSetChecksumVal(rtS, 1, 2894886596U);
+  ssSetChecksumVal(rtS, 2, 384836073U);
+  ssSetChecksumVal(rtS, 3, 2726858516U);
   return rtS;
 }

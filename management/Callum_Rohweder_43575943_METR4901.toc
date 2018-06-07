@@ -9,7 +9,7 @@
 \contentsline {subsection}{\numberline {2.1.2}Robotic Arm Models}{7}
 \contentsline {subsection}{\numberline {2.1.3}Adaptive Neuro-Fuzzy Inference System}{9}
 \contentsline {section}{\numberline {2.2}Programmed Robotic Arms}{10}
-\contentsline {section}{\numberline {2.3}Simulation Platforms and Physics Engines}{12}
+\contentsline {section}{\numberline {2.3}Simulation Platforms and Physics Engines}{13}
 \contentsline {subsection}{\numberline {2.3.1}V-REP}{13}
 \contentsline {subsubsection}{Communication}{14}
 \contentsline {subsubsection}{V-REP Features}{16}
@@ -24,49 +24,50 @@
 \contentsline {section}{\numberline {3.1}Child Processes and Multi-Threading}{20}
 \contentsline {section}{\numberline {3.2}Regulators}{22}
 \contentsline {section}{\numberline {3.3}Forward Kinematics}{24}
-\contentsline {section}{\numberline {3.4}Inverse Kinematics}{26}
-\contentsline {subsection}{\numberline {3.4.1}By Matrix Manipulation Approach}{26}
-\contentsline {subsection}{\numberline {3.4.2}Analytical Approach}{27}
-\contentsline {subsection}{\numberline {3.4.3}Jacobian}{28}
-\contentsline {subsection}{\numberline {3.4.4}Damped Least Squares}{30}
-\contentsline {subsection}{\numberline {3.4.5}Newton-Raphson Method}{30}
-\contentsline {chapter}{\numberline {4}Design Approach}{33}
-\contentsline {section}{\numberline {4.1}Client Program Functionality Requirements and Design}{33}
-\contentsline {section}{\numberline {4.2}Project Development}{35}
-\contentsline {subsection}{\numberline {4.2.1}Set Up}{35}
-\contentsline {subsection}{\numberline {4.2.2}Forward Kinematics Implementation}{39}
-\contentsline {subsection}{\numberline {4.2.3}V-REP Inverse Kinematics}{41}
-\contentsline {subsection}{\numberline {4.2.4}Joystick Integration}{43}
-\contentsline {chapter}{\numberline {5}Kinematics Approach}{50}
-\contentsline {section}{\numberline {5.1}Forward Kinematics}{50}
-\contentsline {section}{\numberline {5.2}Inverse my Matrix Manipulation}{50}
-\contentsline {section}{\numberline {5.3}Inverse by Analytical Approach}{51}
+\contentsline {section}{\numberline {3.4}Inverse Kinematics}{27}
+\contentsline {subsection}{\numberline {3.4.1}By Matrix Manipulation Approach}{27}
+\contentsline {subsection}{\numberline {3.4.2}Analytical Approach}{28}
+\contentsline {subsection}{\numberline {3.4.3}Jacobian}{30}
+\contentsline {subsection}{\numberline {3.4.4}Damped Least Squares}{32}
+\contentsline {subsection}{\numberline {3.4.5}Newton-Raphson Method}{33}
+\contentsline {chapter}{\numberline {4}Design Approach}{36}
+\contentsline {section}{\numberline {4.1}Client Program Functionality Requirements and Design}{36}
+\contentsline {section}{\numberline {4.2}Project Development}{38}
+\contentsline {subsection}{\numberline {4.2.1}Set Up}{38}
+\contentsline {subsection}{\numberline {4.2.2}Forward Kinematics Implementation}{40}
+\contentsline {subsection}{\numberline {4.2.3}V-REP Inverse Kinematics}{42}
+\contentsline {subsection}{\numberline {4.2.4}Joystick Integration}{45}
+\contentsline {chapter}{\numberline {5}Kinematics Approach}{48}
+\contentsline {section}{\numberline {5.1}Forward Kinematics}{48}
+\contentsline {section}{\numberline {5.2}Inverse my Matrix Manipulation}{48}
+\contentsline {section}{\numberline {5.3}Inverse by Analytical Approach}{49}
 \contentsline {section}{\numberline {5.4}Inverse by Control Loops}{55}
 \contentsline {section}{\numberline {5.5}Inverse by Jacobian}{60}
-\contentsline {chapter}{\numberline {6}Results Summary and Discussion}{66}
-\contentsline {section}{\numberline {6.1}Jaco Arm Control}{66}
-\contentsline {section}{\numberline {6.2}Joystick Implementation and Processing Time}{68}
-\contentsline {section}{\numberline {6.3}Client Program Inverse Kinematics}{69}
-\contentsline {section}{\numberline {6.4}Client Program Jacobian}{70}
-\contentsline {section}{\numberline {6.5}Kinova SDK}{71}
-\contentsline {section}{\numberline {6.6}Data Streaming Implementation}{71}
-\contentsline {chapter}{\numberline {7}Conclusions}{73}
-\contentsline {section}{\numberline {7.1}Summary and Conclusions}{73}
-\contentsline {section}{\numberline {7.2}Developed Files}{74}
-\contentsline {section}{\numberline {7.3}Possible Future Work}{75}
-\contentsline {part}{Appendices}{77}
-\contentsline {chapter}{\numberline {A}Appendix}{78}
-\contentsline {section}{\numberline {A.1}Joystick Applications}{78}
-\contentsline {subsection}{\numberline {A.1.1}Objectives}{78}
-\contentsline {subsection}{\numberline {A.1.2}Windows API}{78}
-\contentsline {subsection}{\numberline {A.1.3}HTML5 Gamepad API}{79}
-\contentsline {subsection}{\numberline {A.1.4}Libusb and xusb.c}{79}
-\contentsline {subsection}{\numberline {A.1.5}Simple Direct Layer (SDL) Source Code}{80}
-\contentsline {section}{\numberline {A.2}Alternate Inverse Kinematics Solutions}{80}
-\contentsline {section}{\numberline {A.3}Appendices notes}{81}
-\contentsline {chapter}{\numberline {B}Program listings}{82}
-\contentsline {section}{\numberline {B.1}First program}{82}
-\contentsline {section}{\numberline {B.2}Second program}{82}
-\contentsline {section}{\numberline {B.3}Etc.}{82}
-\contentsline {chapter}{\numberline {C}Companion disk}{83}
-\contentsline {chapter}{Bibliography}{85}
+\contentsline {chapter}{\numberline {6}Results Summary and Discussion}{64}
+\contentsline {section}{\numberline {6.1}Jaco Arm Control}{64}
+\contentsline {section}{\numberline {6.2}Joystick Implementation and Processing Time}{66}
+\contentsline {section}{\numberline {6.3}Client Program Inverse Kinematics}{67}
+\contentsline {section}{\numberline {6.4}Client Program Jacobian}{68}
+\contentsline {section}{\numberline {6.5}Kinova SDK}{69}
+\contentsline {section}{\numberline {6.6}Data Streaming Implementation}{69}
+\contentsline {section}{\numberline {6.7}Communication}{70}
+\contentsline {chapter}{\numberline {7}Conclusions}{72}
+\contentsline {section}{\numberline {7.1}Summary and Conclusions}{72}
+\contentsline {section}{\numberline {7.2}Developed Files}{73}
+\contentsline {section}{\numberline {7.3}Possible Future Work}{74}
+\contentsline {part}{Appendices}{76}
+\contentsline {chapter}{\numberline {A}Tables and Figures}{77}
+\contentsline {chapter}{\numberline {B}Additional Findings}{86}
+\contentsline {section}{\numberline {B.1}Joystick Applications}{86}
+\contentsline {subsection}{\numberline {B.1.1}Objectives}{86}
+\contentsline {subsection}{\numberline {B.1.2}Windows API}{86}
+\contentsline {subsection}{\numberline {B.1.3}HTML5 Gamepad API}{87}
+\contentsline {subsection}{\numberline {B.1.4}Libusb and xusb.c}{87}
+\contentsline {subsection}{\numberline {B.1.5}Simple Direct Layer (SDL) Source Code}{88}
+\contentsline {section}{\numberline {B.2}Alternate Inverse Kinematics Solutions}{88}
+\contentsline {chapter}{\numberline {C}Program Listings}{90}
+\contentsline {section}{\numberline {C.1}V-REP Client Program}{90}
+\contentsline {section}{\numberline {C.2}SDL}{90}
+\contentsline {section}{\numberline {C.3}MATLAB}{91}
+\contentsline {section}{\numberline {C.4}Additional Files on Disk}{91}
+\contentsline {chapter}{Bibliography}{93}

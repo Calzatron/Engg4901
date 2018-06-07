@@ -9,7 +9,7 @@
  *
  * Model version              : 1.20
  * Simulink Coder version : 8.8 (R2015a) 09-Feb-2015
- * C source code generated on : Wed Apr 25 14:45:17 2018
+ * C source code generated on : Mon Jun 04 22:20:33 2018
  *
  * Target selection: rsim.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -22,9 +22,9 @@
 
 #ifndef RTW_HEADER_Control_Model_v3_1_h_
 #define RTW_HEADER_Control_Model_v3_1_h_
+#include <stddef.h>
 #include <float.h>
 #include <math.h>
-#include <stddef.h>
 #include <string.h>
 #ifndef Control_Model_v3_1_COMMON_INCLUDES_
 # define Control_Model_v3_1_COMMON_INCLUDES_
@@ -48,7 +48,7 @@
 #define NSAMPLE_TIMES                  (2)                       /* Number of sample times */
 #define NINPUTS                        (0)                       /* Number of model inputs */
 #define NOUTPUTS                       (0)                       /* Number of model outputs */
-#define NBLOCKIO                       (26)                      /* Number of data output port signals */
+#define NBLOCKIO                       (27)                      /* Number of data output port signals */
 #define NUM_ZC_EVENTS                  (0)                       /* Number of zero-crossing events */
 #ifndef NCSTATES
 # define NCSTATES                      (9)                       /* Number of continuous states */
@@ -67,11 +67,12 @@
 /* Block signals (auto storage) */
 typedef struct {
   real_T Add14;                        /* '<Root>/Add14' */
-  real_T Gain21;                       /* '<Root>/Gain21' */
-  real_T TrigonometricFunction;        /* '<Root>/Trigonometric Function' */
   real_T Integrator7;                  /* '<Root>/Integrator7' */
   real_T Integrator8;                  /* '<Root>/Integrator8' */
   real_T TrigonometricFunction2;       /* '<Root>/Trigonometric Function2' */
+  real_T Gain15;                       /* '<Root>/Gain15' */
+  real_T Gain21;                       /* '<Root>/Gain21' */
+  real_T TrigonometricFunction;        /* '<Root>/Trigonometric Function' */
   real_T Add8;                         /* '<Root>/Add8' */
   real_T Gain8;                        /* '<Root>/Gain8' */
   real_T Add17;                        /* '<Root>/Add17' */
@@ -104,6 +105,10 @@ typedef struct {
   real_T LastUAtTimeA_k;               /* '<Root>/Derivative3' */
   real_T TimeStampB_d;                 /* '<Root>/Derivative3' */
   real_T LastUAtTimeB_n;               /* '<Root>/Derivative3' */
+  real_T TimeStampA_a;                 /* '<Root>/Derivative1' */
+  real_T LastUAtTimeA_i;               /* '<Root>/Derivative1' */
+  real_T TimeStampB_dw;                /* '<Root>/Derivative1' */
+  real_T LastUAtTimeB_g;               /* '<Root>/Derivative1' */
   real_T TimeStampA_f;                 /* '<Root>/Derivative' */
   real_T LastUAtTimeA_l;               /* '<Root>/Derivative' */
   real_T TimeStampB_dj;                /* '<Root>/Derivative' */
@@ -159,9 +164,9 @@ typedef struct {
 
 /* Continuous states (auto storage) */
 typedef struct {
-  real_T Integrator5_CSTATE;           /* '<Root>/Integrator5' */
   real_T Integrator7_CSTATE;           /* '<Root>/Integrator7' */
   real_T Integrator8_CSTATE;           /* '<Root>/Integrator8' */
+  real_T Integrator5_CSTATE;           /* '<Root>/Integrator5' */
   real_T Integrator4_CSTATE;           /* '<Root>/Integrator4' */
   real_T Integrator6_CSTATE;           /* '<Root>/Integrator6' */
   real_T Integrator3_CSTATE;           /* '<Root>/Integrator3' */
@@ -172,9 +177,9 @@ typedef struct {
 
 /* State derivatives (auto storage) */
 typedef struct {
-  real_T Integrator5_CSTATE;           /* '<Root>/Integrator5' */
   real_T Integrator7_CSTATE;           /* '<Root>/Integrator7' */
   real_T Integrator8_CSTATE;           /* '<Root>/Integrator8' */
+  real_T Integrator5_CSTATE;           /* '<Root>/Integrator5' */
   real_T Integrator4_CSTATE;           /* '<Root>/Integrator4' */
   real_T Integrator6_CSTATE;           /* '<Root>/Integrator6' */
   real_T Integrator3_CSTATE;           /* '<Root>/Integrator3' */
@@ -185,9 +190,9 @@ typedef struct {
 
 /* State disabled  */
 typedef struct {
-  boolean_T Integrator5_CSTATE;        /* '<Root>/Integrator5' */
   boolean_T Integrator7_CSTATE;        /* '<Root>/Integrator7' */
   boolean_T Integrator8_CSTATE;        /* '<Root>/Integrator8' */
+  boolean_T Integrator5_CSTATE;        /* '<Root>/Integrator5' */
   boolean_T Integrator4_CSTATE;        /* '<Root>/Integrator4' */
   boolean_T Integrator6_CSTATE;        /* '<Root>/Integrator6' */
   boolean_T Integrator3_CSTATE;        /* '<Root>/Integrator3' */
@@ -210,17 +215,20 @@ struct P_ {
   real_T Constant4_Value;              /* Expression: 750
                                         * Referenced by: '<Root>/Constant4'
                                         */
-  real_T Integrator5_IC;               /* Expression: 0
-                                        * Referenced by: '<Root>/Integrator5'
-                                        */
-  real_T Gain21_Gain;                  /* Expression: 0.85
-                                        * Referenced by: '<Root>/Gain21'
-                                        */
   real_T Integrator7_IC;               /* Expression: 0
                                         * Referenced by: '<Root>/Integrator7'
                                         */
   real_T Integrator8_IC;               /* Expression: 0
                                         * Referenced by: '<Root>/Integrator8'
+                                        */
+  real_T Gain15_Gain;                  /* Expression: 0.0005
+                                        * Referenced by: '<Root>/Gain15'
+                                        */
+  real_T Integrator5_IC;               /* Expression: 0
+                                        * Referenced by: '<Root>/Integrator5'
+                                        */
+  real_T Gain21_Gain;                  /* Expression: 0.85
+                                        * Referenced by: '<Root>/Gain21'
                                         */
   real_T Gain8_Gain;                   /* Expression: 0.01
                                         * Referenced by: '<Root>/Gain8'

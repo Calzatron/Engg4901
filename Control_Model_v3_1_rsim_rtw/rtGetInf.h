@@ -9,7 +9,7 @@
  *
  * Model version              : 1.20
  * Simulink Coder version : 8.8 (R2015a) 09-Feb-2015
- * C source code generated on : Wed Apr 25 14:45:17 2018
+ * C source code generated on : Mon Jun 04 22:20:33 2018
  *
  * Target selection: rsim.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping

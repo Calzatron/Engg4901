@@ -9,7 +9,7 @@
  *
  * Model version              : 1.20
  * Simulink Coder version : 8.8 (R2015a) 09-Feb-2015
- * C source code generated on : Wed Apr 25 14:45:17 2018
+ * C source code generated on : Mon Jun 04 22:20:33 2018
  *
  * Target selection: rsim.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -58,10 +58,10 @@ static const char_T * rtDataTypeNames[] = {
 
 /* data type transitions for block I/O structure */
 static DataTypeTransition rtBTransitions[] = {
-  { (char_T *)(&rtB.Add14), 0, 0, 26 }
+  { (char_T *)(&rtB.Add14), 0, 0, 27 }
   ,
 
-  { (char_T *)(&rtDW.TimeStampA), 0, 0, 12 },
+  { (char_T *)(&rtDW.TimeStampA), 0, 0, 16 },
 
   { (char_T *)(&rtDW.ActualPosition_PWORK.LoggedData), 11, 0, 12 }
 };
@@ -74,7 +74,7 @@ static DataTypeTransitionTable rtBTransTable = {
 
 /* data type transitions for Parameters structure */
 static DataTypeTransition rtPTransitions[] = {
-  { (char_T *)(&rtP.Constant5_Value), 0, 0, 34 }
+  { (char_T *)(&rtP.Constant5_Value), 0, 0, 35 }
 };
 
 /* data type transition table for Parameters structure */

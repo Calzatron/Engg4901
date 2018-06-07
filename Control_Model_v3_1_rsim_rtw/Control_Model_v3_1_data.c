@@ -9,7 +9,7 @@
  *
  * Model version              : 1.20
  * Simulink Coder version : 8.8 (R2015a) 09-Feb-2015
- * C source code generated on : Wed Apr 25 14:45:17 2018
+ * C source code generated on : Mon Jun 04 22:20:33 2018
  *
  * Target selection: rsim.tlc
  * Note: GRT includes extra infrastructure and instrumentation for prototyping
@@ -38,16 +38,19 @@ P rtP = {
                                         * Referenced by: '<Root>/Constant4'
                                         */
   0.0,                                 /* Expression: 0
-                                        * Referenced by: '<Root>/Integrator5'
-                                        */
-  0.85,                                /* Expression: 0.85
-                                        * Referenced by: '<Root>/Gain21'
-                                        */
-  0.0,                                 /* Expression: 0
                                         * Referenced by: '<Root>/Integrator7'
                                         */
   0.0,                                 /* Expression: 0
                                         * Referenced by: '<Root>/Integrator8'
+                                        */
+  0.0005,                              /* Expression: 0.0005
+                                        * Referenced by: '<Root>/Gain15'
+                                        */
+  0.0,                                 /* Expression: 0
+                                        * Referenced by: '<Root>/Integrator5'
+                                        */
+  0.85,                                /* Expression: 0.85
+                                        * Referenced by: '<Root>/Gain21'
                                         */
   0.01,                                /* Expression: 0.01
                                         * Referenced by: '<Root>/Gain8'

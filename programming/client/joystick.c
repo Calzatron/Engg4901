@@ -21,6 +21,7 @@
 #include "project.h"
 #include <time.h>
 #include <sys/types.h>
+#include <direct.h>
 
 /*	Defines for buffer sizes	*/
 #define BUFSIZE 4096					// size of buffer for reading
@@ -131,8 +132,23 @@ void CreateChildProcess() {
 		exit(6);
 	}
 
-	/*	Spawn Process	*/
+	
+	char* cwd = _getcwd(NULL, 0);			// get the current working directory
+
+	/*	construct the file path	*/
+	char* joystickPath = malloc(sizeof(char)*(strlen(cwd) + strlen("/programming/SDL2-2.0.7/VisualC/Win32/Debug/testjoystick") + 5));
+	strcpy(joystickPath, cwd);
+	strcat(joystickPath, "\\..\\..\\..\\");
+	strcat(joystickPath, "SDL2-2.0.7\\VisualC\\Win32\\Debug\\testjoystick");
+
+	#ifdef JOYSTICK_DEBUG
+		printf("\n%s\n\n", joystickPath);
+	#endif // JOYSTICK_DEBUG
+
+	
 	TCHAR szCmdline[] = TEXT("C:/Users/Callum/Documents/2017/METR4901/programming/SDL2-2.0.7/VisualC/Win32/Debug/testjoystick");
+	//TCHAR szCmdline[] = joystickPath;//TEXT(joystickPath);
+	/*	Spawn Process	*/
 	TCHAR szCurrentDirectory[] = TEXT("");
 	PROCESS_INFORMATION piProcInfo;
 	STARTUPINFO siStartInfo;
@@ -155,7 +171,7 @@ void CreateChildProcess() {
 	// Create the child process. 
 
 	bSuccess = CreateProcess(NULL,
-		szCmdline,     // command line 
+		joystickPath,	// command line 
 		NULL,          // process security attributes 
 		NULL,          // primary thread security attributes 
 		TRUE,          // handles are inherited 
@@ -167,7 +183,8 @@ void CreateChildProcess() {
 
 					   // If an error occurs, exit the application. 
 	if (!bSuccess) {
-		printf("Creating Process not a success"); fflush(stdout); exit(8);
+		printf("Creating Process not a success");
+			printf("%s\n", joystickPath); fflush(stdout); exit(8);
 	}
 	else {
 		// Close handles to the child process and its primary thread.
