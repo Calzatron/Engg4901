@@ -1,0 +1,187 @@
+\begin{thebibliography}{10}
+
+\bibitem{robotacademy1}
+P.~P. Corke, ``Robot academy master class: Inverse kinematics and robot
+  motion.''
+  \url{https://robotacademy.net.au/masterclass/inverse-kinematics-and-robot-motion/?lesson=301},
+  2018.
+\newblock Accessed on 2018-03-20.
+
+\bibitem{MatlabCAD}
+``Matlab documentation: Import a robotic arm cad model.''
+  \url{https://au.mathworks.com/help/physmod/sm/ug/import-robot-arm-model.html},
+  2018.
+\newblock Accessed on 2018-04-05.
+
+\bibitem{MatlabPI}
+``Matlab documentation: Multi-loop pi control of a robotic arm.''
+  \url{https://au.mathworks.com/help/control/examples/multi-loop-pid-control-of-a-robot-arm.html?searchHighlight=robotic%20arm&s_tid=doc_srchtitle},
+  2018.
+\newblock Accessed on 2018-04-05.
+
+\bibitem{MatlabIK}
+``Matlab documentation: Modeling inverse kinematics in a robotic arm.''
+  \url{https://au.mathworks.com/help/fuzzy/modeling-inverse-kinematics-in-a-robotic-arm.html?searchHighlight=robotic\%20arm&s_tid=doc_srchtitlel},
+  2018.
+\newblock Accessed on 2018-03-20.
+
+\bibitem{software-IK7DOF}
+R.~G.Shanmugasundar, ``Software development for an inverse kinematics of
+  seven-degrees of freedom newly designed articulated inspection robot,'' {\em
+  International Journal of Computer Applications (0975-8887)}, vol.~58,
+  November 2012.
+\newblock Accessed on 2018-04-06.
+
+\bibitem{software-IK9DOF}
+A.~C.~T. Rocco, ``Development and testing of a new c-based algorithm to control
+  a 9-degree-of-freedom wheelchair-mounted-robotic-arm system,'' graduate
+  thesis, University of South Florida, 2010.
+\newblock Accessed on 2018-05-08.
+
+\bibitem{ROSTech}
+V.~Mayoral, ``Ros documentation.''
+  \url{http://wiki.ros.org/ROS/Technical%20Overview}, 2014.
+\newblock Accessed on 2017-10-02.
+
+\bibitem{kinova-ros}
+Kinova, ``Github: Official ros packages for kinova robotic arms.''
+  \url{https://github.com/Kinovarobotics/kinova-ros}, 2018.
+\newblock Accessed on 2017-10-10.
+
+\bibitem{models}
+T.~L. . A. S. . M. V. . B. E. .~T. Bock, ``Modeling and operating robotic
+  environments using gazebo/ros,'' {\em Proceedings of the 28th ISARC, Seoul,
+  Korea}, vol.~28, pp.~957--962, 2011.
+\newblock Accessed on 2018-05-30.
+
+\bibitem{robotacademy2}
+P.~P. Corke, ``Robot academy master class: Inverting the jacobian matrix.''
+  \url{https://robotacademy.net.au/lesson/inverting-the-jacobian-matrix-2/},
+  2018.
+\newblock Accessed on 2018-03-20.
+
+\bibitem{smashingRobotics}
+S.~Robotics, ``Most advanced robotics simulation software overview.''
+  \url{https://www.smashingrobotics.com/most-advanced-and-used-robotics-simulation-software/},
+  March 2016.
+\newblock Accessed on 2018-05-30.
+
+\bibitem{survey}
+S.~Ivaldi, V.~Padois, and F.~Nori, ``Tools for dynamics simulation of robots: a
+  survey based on user feedback,'' {\em CoRR}, vol.~abs/1402.7050, 2014.
+
+\bibitem{Nogueira2014ComparativeAB}
+L.~L. Nogueira, ``Comparative analysis between gazebo and v-rep robotic
+  simulators,'' 2014.
+\newblock Accessed on 2018-05-30.
+
+\bibitem{CodeVREP}
+C.~Robotics, ``Writing code in and around v-rep.''
+  \url{http://www.coppeliarobotics.com/helpFiles/en/writingCode.htm#sixMethodshttp://www.coppeliarobotics.com/helpFiles/en/writingCode.htm#sixMethods}.
+\newblock Accessed on 2017-09-29.
+
+\bibitem{functionsVREP}
+C.~Robotics, ``Remote api functions (c/c++).''
+  \url{http://www.coppeliarobotics.com/helpFiles/en/remoteApiFunctions.htm}.
+\newblock Accessed on 2017-09-29.
+
+\bibitem{modelVREP}
+C.~Robotics, ``Building a clean model tutorial.''
+  \url{http://www.coppeliarobotics.com/helpFiles/en/buildingAModelTutorial.htm}.
+\newblock Accessed on 2017-09-29.
+
+\bibitem{webotsArticle}
+O.~Michel, ``Cyberbotics ltd. webotstm: Professional mobile robot simulation,''
+  {\em International Journal of Advanced Robotic Systems}, vol.~1, no.~1,
+  pp.~39--42, 2004.
+
+\bibitem{comparisonVREP}
+``V-rep, gazebo or argos? a robot simulators comparison.''
+  \url{http://lenkaspace.net/blog/show/120}, January 2018.
+\newblock Accessed on 2018-05-28.
+
+\bibitem{fork}
+``Fork - linux man page.'' \url{https://linux.die.net/man/2/fork}.
+\newblock Accessed on 2018-05-28.
+
+\bibitem{MSDNmessages}
+Microsoft, ``Window messages.''
+  \url{https://msdn.microsoft.com/en-us/library/windows/desktop/ff381405(v=vs.85).aspx},
+  2010.
+\newblock Accessed on 2018-03-10.
+
+\bibitem{Nise}
+N.~S. Nise, {\em Control Systems Engineering}, p.~356.
+\newblock John Wiley and Sons Inc, 2011.
+
+\bibitem{Spong}
+S.~H. Mark W.~Spong and M.~Vidyasagar, {\em Robot Modeling and Control},
+  pp.~61--97.
+\newblock John Wiley and Sons Inc.
+
+\bibitem{tsai1999robot}
+L.~Tsai, {\em Robot Analysis: The Mechanics of Serial and Parallel
+  Manipulators}.
+\newblock A Wiley-Interscience publication, Wiley, 1999.
+
+\bibitem{jacobian}
+S.~Buss, ``Introduction to inverse kinematics with jacobian transpose,
+  pseudoinverse and damped least squares methods,'' vol.~17, 05 2004.
+
+\bibitem{iKineBasic}
+L.~Barinka and R.~Berka, ``Inverse kinematics - basic methods,'' 05 2004.
+
+\bibitem{numericalMeth}
+P.~K. Lynch, ``Mathematics department, the university of british columbia.''
+  \url{http://www.math.ubc.ca/~anstee/math104/newtonmethod.pdf}, 2018.
+\newblock Accessed on 2018-04-20.
+
+\bibitem{numericalMethodsVid}
+P.~K. Lynch, ``Modern robotics, course 2: Robot kinematics.''
+  \url{https://www.coursera.org/learn/modernrobotics-course2/lecture/EBBuh/numerical-inverse-kinematics-chapter-6-2-part-1-of-2},
+  2018.
+\newblock Accessed on 2018-04-20.
+
+\bibitem{specificationGuide}
+N.~Tremblay, ``Jaco 2 6 dof advanced specification guide,'' March 2017.
+\newblock Kinova Robotics.
+
+\bibitem{SDL}
+S.~D. Layer. \url{https://www.libsdl.org/license.php}, 2018.
+\newblock Accessed on 2018-02-18.
+
+\bibitem{MSDNprocess}
+Microsoft, ``Createprocess function.''
+  \url{https://msdn.microsoft.com/en-us/library/windows/desktop/ms682425(v=vs.85).aspx},
+  2010.
+\newblock Accessed on 2018-03-10.
+
+\bibitem{invMatrix}
+C.~P. to~find Inverse~of Matrix.
+  \url{http://www.ccodechamp.com/c-program-to-find-inverse-of-matrix/},
+  September 2012.
+\newblock Accessed on 2018-04-12.
+
+\bibitem{doubles}
+N.~Q. Hung, ``Double precision floating-point format.''
+  \url{http://www.cse.hcmut.edu.vn/~hungnq/courses/501120/docthem/Double%20precision%20floating-point%20format%20-%20Wikipedia.pdf}.
+\newblock Accessed on 2018-04-07.
+
+\bibitem{MatlabFloat}
+``Matlab documentation: Floating-point numbers.''
+  \url{https://au.mathworks.com/help/matlab/matlab_prog/floating-point-numbers.html#f2-98739},
+  2018.
+\newblock Accessed on 2018-04-07.
+
+\bibitem{MatlabDet}
+``Matlab documentation: Determinant.''
+  \url{https://au.mathworks.com/help/matlab/ref/det.html}, 2018.
+\newblock Accessed on 2018-04-07.
+
+\bibitem{codeLU}
+``C program for lu factorization.''
+  \url{https://www.codewithc.com/c-program-for-lu-factorization/}, March, 31
+  2014.
+\newblock Accessed on 2018-04-07.
+
+\end{thebibliography}

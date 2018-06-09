@@ -25,7 +25,6 @@ move* move_ptr;
 void define_classic_parameters(move* move_ptr);
 void fk_classic(move* move_ptr, info* info_ptr);
 void fk_mod(move* move_ptr);
-int forward_xy_a(move* move_ptr);
 void ik_RRR_arm(move* move_ptr, char* plane);
 int inverse_kinematics(move* move_ptr, info* info_ptr, float* position, double* angles);
 void control_kinematics(info* info_ptr, move* move_ptr, float x, float y, float z);
@@ -543,10 +542,9 @@ void get_position_from_angles(double* angles, double* positionVect) {
 			use, for moving forwards/backwards or up/down
 
 	@param: struct containing scene information, struct containing Jaco arm information,
-				a change in x,y,z coorinates of the end-effector, and a mode (0 for Z control,
-				1 for XY control)
+				a change in x,y,z coorinates of the end-effector
 */
-void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y, float z, int mode) {
+void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y, float z) {
 
 	double pi = 3.141592;
 
@@ -618,15 +616,20 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 	angles[0] = -pi - current_angle(move_ptr, 0);
 	angles[1] = -(pi / 2.0) + (current_angle(move_ptr, 1) + pi);
 	angles[2] = (pi / 2.0) + (current_angle(move_ptr, 2) + pi);
+	angles[3] = current_angle(move_ptr, 3);
+	angles[4] = -pi + current_angle(move_ptr, 4);
+	angles[5] = pi;
 
-	printf("proposed angles are:	%f %f %f\n", angles[0], angles[1], angles[2]);
+	#ifdef DEBUG
+		printf("proposed angles are:	%f %f %f\n", angles[0], angles[1], angles[2]);
 
-	printf("desired angles:		XY: %f	Z: %f\n", desiredAngXY, desiredAngZ);
+		printf("desired angles:		XY: %f	Z: %f\n", desiredAngXY, desiredAngZ);
 
+	#endif
 	/*	Setup file for writing control loop data	*/
-	///////////////////// 
-	/*
-	FILE* object_fp = fopen("pid_data.txt", "w+");
+	/*/////////////////// 
+	
+	FILE* object_fp = fopen("pid_data_extreme.txt", "w+");
 	if (object_fp == NULL) {
 		fprintf(stdout, "Failed to generate file\n");
 		exit(1);
@@ -636,79 +639,48 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 	char line1[256];
 	sprintf(line1, "errorXY, errorZ, posX, posY, posZ, q_1, q_2, q_3, q_4, q_5, q_6\n");
 	fputs(line1, object_fp);
-
-	//*/ /////////////////////
-
-
+	*/
 
 	clock_t start = clock();
 
 	/*	begin control sequence for 400 iterations	*/
-	for (int loop = 0; loop < 400; loop++) {
+	for (int loop = 0; loop < 150; loop++) {
 
 		/*	Calculate error in X and Y, and XY and Z planes	*/
 		double errorAngXY = desiredAngXY - actAngXY;
 		double errorAngZ = desiredAngZ - actAngZ;
 		double q_1, q_2, q_3;
-		/*	Calculate the angles to input	*/
 		
-		if (mode) {		// high XY control
-			/*	joint 1	*/
-			error[0] = errorAngXY * 0.05;							//0.08; //*0.01
-			accumError[0] = (accumError[0] + errorAngXY) * 0.99;	//0.95;//1.25; //1.1;//0.85;
+		/*	Calculate the angles to input	*/
+		/*	joint 1	*/
+		error[0] = errorAngXY * 0.03;
+		accumError[0] = (accumError[0] + errorAngXY) * 0.99;
 
-			q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
+		q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
 
-			/*	joint 2	*/
-			error[1] = 0.65 * (0.25 * errorAngXY + 0.75 * errorAngZ);
-			accumError[1] = (accumError[1] + (0.25 * errorAngXY + 0.75 * errorAngZ)) * 0.55;
+		/*	joint 2	*/
+		error[1] = 0.55 * errorAngZ;
+		accumError[1] = (accumError[1] + errorAngZ) * 0.51;
 
-			q_2 = error[1] + accumError[1] + angles[1];
+		q_2 = error[1] + accumError[1] + angles[1];
 
-			/*	joint 3	*/
-			error[2] = 1.17 * (0.25 * errorAngXY + 0.75 * errorAngZ);
-			accumError[2] = (accumError[2] + (0.25 * errorAngXY + 0.75 * errorAngZ)) * 1.11;
+		/*	joint 3	*/
+		error[2] = 1.10 * errorAngZ;
+		accumError[2] = (accumError[2] + errorAngZ) * 1.01;
 
-			q_3 = error[2] + accumError[2] + angles[2];
-		}
-		else {		// high Z control
-
-			/*	Calculate the angles to input	*/
-			/*	joint 1	*/
-			error[0] = errorAngXY * 0.03;
-			accumError[0] = (accumError[0] + errorAngXY) * 0.99;
-
-			q_1 = fmod(error[0] + accumError[0], 2.0 * pi) + angles[0];
-
-			/*	joint 2	*/
-			error[1] = 0.55 * errorAngZ;
-			accumError[1] = (accumError[1] + errorAngZ) * 0.51;
-
-			q_2 = error[1] + accumError[1] + angles[1];
-
-			/*	joint 3	*/
-			error[2] = 1.10 * errorAngZ;
-			accumError[2] = (accumError[2] + errorAngZ) * 1.01;
-
-			q_3 = error[2] + accumError[2] + angles[2];
-
-		}
+		q_3 = error[2] + accumError[2] + angles[2];
 
 		/*	joint 4	*/
 		error[3] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.1;
 		accumError[3] = (accumError[3] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.02;
 
-		double q_4 = error[3] + accumError[3] + current_angle(move_ptr, 3);
+		double q_4 = error[3] + accumError[3] + angles[3];
 
 		/*	joint 5	*/
 		error[4] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
 		accumError[4] = (accumError[4] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.150;
-		double q_5 = error[4] + accumError[4] + current_angle(move_ptr, 4) - pi;
+		double q_5 = error[4] + accumError[4] + angles[4];
 
-		/*	joint 6	*/
-		error[5] = (0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
-		accumError[5] = (accumError[5] + 0.05 * errorAngXY + 0.05 * errorAngZ) * 0.15;
-		double q_6 = error[5] + accumError[5] + 0;//current_angle(move_ptr, 5);
 
 		/*	Calculate new position from angles	*/
 		angles1[0] = q_1;
@@ -716,7 +688,7 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 		angles1[2] = q_3;
 		angles1[3] = q_4;
 		angles1[4] = q_5;
-		angles1[5] = q_6;
+		angles1[5] = move_ptr->currAng[5];
 		
 		get_position_from_angles(angles1, actualPos);
 
@@ -728,8 +700,8 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 
 		#ifdef DEBUG
 			if (!(loop % 40)) {
-				//printf("%f %f	%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
-				//printf("%f  %f  %f  %f  %f\n", q_1, q_2, q_3, q_4, q_5);
+				printf("%f %f	%f %f %f\n", errorAngXY, errorAngZ, actualPos[0], actualPos[1], actualPos[2]);
+				printf("%f  %f  %f  %f  %f\n", q_1, q_2, q_3, q_4, q_5);
 				printf("Act:	%f %f	Q_3 Error	%f	Accum	%f\n", actAngXY, actAngZ, error[2], accumError[2]);
 			}
 			/*	Write the loop data/information to a file	*/
@@ -753,8 +725,6 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 	*/
 
 	clock_t end = clock();
-	printf("Calculated new pos in %ld ms:	%f %f %f\n", end - start, actualPos[0], actualPos[1], actualPos[2]);
-	printf("Final angles:		XY: %f	Z: %f\n", actAngXY, actAngZ);
 	
 	for (int ang = 0; ang < 6; ang++) {
 		if (angles1[ang] > 2 * 3.141592) {
@@ -765,9 +735,10 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 		}
 	}
 
+	#ifdef DEBUG
+		printf("\nChange Ang: %f %f %f %f %f %f\n", angles[0] - angles1[0], angles[1] - angles1[1], angles[2] - angles1[2], angles[3] - angles1[3], angles[4] - angles1[4], angles[5] - angles1[5]);
+	#endif
 	
-	// pi is added to angles that are not 4 or 5
-
 	/*	Got angles, move the arm	*/
 	pause_communication_vrep(info_ptr, 1);
 	set_joint_angle_vrep(info_ptr, move_ptr, 1, -angles1[0] - pi);					// -2 * pi);	//(3.141592 / 2.0) - 3.141592);
@@ -775,9 +746,7 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 	set_joint_angle_vrep(info_ptr, move_ptr, 3, angles1[2] -3.0*pi / 2.0);			// -pi - pi / 2.0);//(3.0 * pi / 2.0));
 	set_joint_angle_vrep(info_ptr, move_ptr, 4, angles1[3]);						//angles1[3]);
 	set_joint_angle_vrep(info_ptr, move_ptr, 5, angles1[4] +pi);
-	set_joint_angle_vrep(info_ptr, move_ptr, 6, angles1[5] +pi - pi);
 	pause_communication_vrep(info_ptr, 0);
-
 
 }
 
@@ -789,18 +758,8 @@ void control_kinematics_v2_loop(info* info_ptr, move* move_ptr, float x, float y
 */
 void control_kinematics_v2(info* info_ptr, move* move_ptr, float x, float y, float z) {
 
-
-	if (z) {
-		// only move in the z
-		control_kinematics_v2_loop(info_ptr, move_ptr, x, y, z, false);
-	}
-	else {
-		// move in the xy
-		control_kinematics_v2_loop(info_ptr, move_ptr, x, y, 0, true);
-		
-		// then move in the z
-		control_kinematics_v2_loop(info_ptr, move_ptr, 0, 0, -0.023, false);
-	}
+	// This loop can be run numerious times to increase moving distance
+	control_kinematics_v2_loop(info_ptr, move_ptr, x, y, z);
 }
 
 

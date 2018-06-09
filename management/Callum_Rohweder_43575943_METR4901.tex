@@ -1,6 +1,12 @@
 \documentclass[12pt,openany,a4paper]{book}
 \usepackage{graphicx}	% if you want encapsulated PS figures.
 \usepackage[section]{placeins}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{wrapfig}
+\usepackage{lscape}
+\usepackage{rotating}
+\usepackage{epstopdf}
 % If you use a macro file called macros.tex :
 % \input{macros}
 % Note: The present document has its macros built in.
@@ -226,8 +232,8 @@ institution.
 
 I specifically would like to thank my fellow students in the school of ITEE for assisting me during this project; for listening to the software issues I faced and giving useful insight and direction.
 
-The product developed for this thesis was created in complete self-sufficiency, with functionality specified by my supervisor.
-
+%The product developed for this thesis was created in complete self-sufficiency, with %functionality specified by my supervisor.
+The great success in developing this thesis would not have been possible without my Supervisor. I would like to thank Dr Singh for his extensive effort in providing feedback on the development of the product, providing insight into unfamiliar concepts, and guidance with thesis assessment.
 %Acknowledge your supervisor, preferably with a few short and specific
 %statements about his/her contribution to the content and direction of
 %the project.  If you collaborated with another student, acknowledge
@@ -387,7 +393,7 @@ Matlab provides an extraordinary amount of support for calculating the important
 
 \subsection{Robotics Toolbox}
 %https://robotacademy.net.au/masterclass/inverse-kinematics-and-robot-motion/?lesson=301
-Professor Peter Corke, the Director of the Australian Centre for Robotic Vision (ACRV), has designed a MATLAB specific toolbox for computing the mechanics associated with robotic manipulators. Included is easy to use functions for creating robotic arms, and calculating parameters such as forward and inverse kinematics, trajectory generation and control systems for motor control. Within the Queensland University of Technology's Robot Academy is 'Master Classes' on using the toolbox through examples of simple manipulators and the theory behind the complex calculus being performed.\\
+Professor Peter Corke, the Director of the Australian Centre for Robotic Vision (ACRV), has designed a MATLAB specific toolbox for computing the mechanics associated with robotic manipulators \cite{robotacademy1}. Included is easy to use functions for creating robotic arms, and calculating parameters such as forward and inverse kinematics, trajectory generation and control systems for motor control. Within the Queensland University of Technology's Robot Academy is 'Master Classes' on using the toolbox through examples of simple manipulators and the theory behind the complex calculus being performed.\\
 
 There are dozens of object files containing the parameters of robotic manipulators; including the 6 DOF puma560 and limited information on the 6DOF Kinova Jaco arm. The parameters within these files contain the link times of the arm, the Denavit-Hartenberg parameters (DH parameters - theory section of this report), and can contain inertial and angle properties for each link. These properties are helpful in computing the forward kinematics, inverse kinematics, and dynamic equations that represent the motion and torques on the arm.
 
@@ -417,7 +423,7 @@ The change in angle required by each joint when moving the end-effector from one
 \subsection{Robotic Arm Models}
 %https://au.mathworks.com/help/physmod/sm/ug/import-robot-arm-model.html
 %https://au.mathworks.com/help/control/examples/multi-loop-pid-control-of-a-robot-arm.html?searchHighlight=robotic%20arm&s_tid=doc_srchtitle
-Separate to the custom designed toolbox of Professor Corke, MATLAB has its own robot manipulator modelling sub-program and alternative methods of control. Simscape allows the creation of physical systems within MATLAB's simulation tool Simulink. An example of 6 DOF robotic arm is presented in Figure 2.1, below; the base of the arm represents the origin, and the lines span out from this with rigid bodies followed by links. Each rigid body can be shaped within MATLAB or imported from a CAD model to produce a replica of the real robotic arm; where properties such as material and inertia can be defined.
+Separate to the custom designed toolbox of Professor Corke, MATLAB has its own robot manipulator modelling sub-program and alternative methods of control \cite{MatlabCAD}. Simscape allows the creation of physical systems within MATLAB's simulation tool Simulink. An example of 6 DOF robotic arm is presented in Figure 2.1, below; the base of the arm represents the origin, and the lines span out from this with rigid bodies followed by links \cite{MatlabPI}. Each rigid body can be shaped within MATLAB or imported from a CAD model to produce a replica of the real robotic arm; where properties such as material and inertia can be defined.
 
 \begin{center}
 \begin{figure}[htb]
@@ -461,17 +467,17 @@ It will be seen that VREP operates in the same way, as it enables the importing 
 
 \subsection{Adaptive Neuro-Fuzzy Inference System}
 %https://au.mathworks.com/help/fuzzy/modeling-inverse-kinematics-in-a-robotic-arm.html?searchHighlight=robotic%20arm&s_tid=doc_srchtitle
-An Adaptive Neuro-Fuzzy Inference System (ANFIS) network can be used to deduce the joint angles required for an arm's end-effector to reach a desired 3-D position. Calculating the required angles analytically for an arm of greater than 4 DOF can become challenging and result in infinitely many solutions. Like any neural network, with a sufficiently large dataset the internal weights will learn what angles will result in the desired end-effector position. Thus, in training an ANFIS to control each joint for a training dataset, it is able to interpolate angles to sufficient accuracy and move the joints to reach a desired end-effector position.
+An Adaptive Neuro-Fuzzy Inference System (ANFIS) network can be used to deduce the joint angles required for an arm's end-effector to reach a desired 3-D position \cite{MatlabIK}. Calculating the required angles analytically for an arm of greater than 4 DOF can become challenging and result in infinitely many solutions. Like any neural network, with a sufficiently large dataset the internal weights will learn what angles will result in the desired end-effector position. Thus, in training an ANFIS to control each joint for a training dataset, it is able to interpolate angles to sufficient accuracy and move the joints to reach a desired end-effector position.
 
 To train the network, input to output mapping data is required. Thus, given the forward kinematics for a robotic manipulator is known, a dataset of angles to end-effector position can be created over the space that it is desired for the end-effector to move. After the network gains its own understanding of the mapping, any point within the testing region can be given and the network return the required joint angles. In a MATLAB example, each joint is given its own network to be trained such that for each joint an angle will be provided given a desired position. Outside the range of training, the manipulator will not respond promisingly, and thus for a large control range, a sufficiently large dataset is required. Overall neural networks respond quickly to providing results once trained, however the training process can be time consuming.
 
 \section{Programmed Robotic Arms}
 %https://pdfs.semanticscholar.org/75f2/fa10a66e35bd6b5b5d695b31be51df78303e.pdf
-Volume 58 of the 2012 International Journal of Computer Applications, titled Software Development for an Inverse Kinematics of Seven-Degrees of Freedon Newly Designed Articulated Inspection Robot, details on previous software development tools used to control robotic manipulators. It is detailed that the inverse kinematics can be solved using an Adaptive Neuro Fuzzy Network (ANFIS), a neural network trained to reduce error in end effector position, non-linear optimization methods, geometric approaches, and through the manipulation of the transformation matrices. In the ANFIS approach, it was noted that MATLAB was used, however C / C++ programming has been used to develop programs that compute the more mathematics based inverse kinematics methods. A program is proposed in this paper which uses Visual-Basic to allow the calculation of forward and inverse kinematics, and trajectory planning.\\
+Volume 58 of the 2012 International Journal of Computer Applications, titled Software Development for an Inverse Kinematics of Seven-Degrees of Freedon Newly Designed Articulated Inspection Robot, details on previous software development tools used to control robotic manipulators \cite{software-IK7DOF}. It is detailed that the inverse kinematics can be solved using an Adaptive Neuro Fuzzy Network (ANFIS), a neural network trained to reduce error in end effector position, non-linear optimization methods, geometric approaches, and through the manipulation of the transformation matrices. In the ANFIS approach, it was noted that MATLAB was used, however C / C++ programming has been used to develop programs that compute the more mathematics based inverse kinematics methods. A program is proposed in this paper which uses Visual-Basic to allow the calculation of forward and inverse kinematics, and trajectory planning.\\
 
 
 %http://scholarcommons.usf.edu/cgi/viewcontent.cgi?article=2791&context=etd
-A thesis paper from the University of South Florida comments on the fact that programming in a low level language such as C is closer to the hardware level which reduces computation time in processing and communicating with external systems (sensors and motors). High-level languages, such as MATLAB, provide an user-friendly interface for solving complex maths operations, however lack capabilities found in C / C++ such has multi-threading and easy communication between concurrently running processes. It is explained that the complexity in configuring MATLAB to communicate with a separate C++ program lead to failure of the wheel-chair mounted robotic arm's program on multiple occasions. The software system in this paper refers to using a C++ program used to communicate with sensors and other hardware, whilst using MATLAB for the control algorithm computations, and simulation. Due to the aforementioned advantages of C++, a new C++ program, with an external library for matrix manipulation, was created to replace the MATLAB program. The concluding results being that the new software system reduced delays in the control of the robotic arm, leading to better stability and control.\\
+A thesis paper from the University of South Florida comments on the fact that programming in a low level language such as C is closer to the hardware level which reduces computation time in processing and communicating with external systems (sensors and motors)\cite{software-IK9DOF}. High-level languages, such as MATLAB, provide an user-friendly interface for solving complex maths operations, however lack capabilities found in C / C++ such has multi-threading and easy communication between concurrently running processes. It is explained that the complexity in configuring MATLAB to communicate with a separate C++ program lead to failure of the wheel-chair mounted robotic arm's program on multiple occasions. The software system in this paper refers to using a C++ program used to communicate with sensors and other hardware, whilst using MATLAB for the control algorithm computations, and simulation. Due to the aforementioned advantages of C++, a new C++ program, with an external library for matrix manipulation, was created to replace the MATLAB program. The concluding results being that the new software system reduced delays in the control of the robotic arm, leading to better stability and control.\\
 The primary purpose of using MATLAB in this experiment was to simulate a virtual model of the robotic arm, and using the angles of this to control the physical robotic arm through the C++ platform. The complexity and delay produced by MATLAB lead to slow and unreliable control.\\
 
 
@@ -481,15 +487,16 @@ Controlling the robotic arm in this way however, means the arm needs to be compl
 
 
 % I really don't know much about ROS... RVIZ?
-%http://wiki.ros.org/ROS/Introduction
-%https://github.com/Kinovarobotics/kinova-ros
-The Robot Operating System (ROS) is a modular collection of commonly used software in low-level device control, hardware abstraction and functionality seen in robotics. ROS can be used in Python, C++ and Lisp programming languages to build a framework around robotic software kits that directly control a robotic actuator. Thus, it has already been used as a cover of the Kinova SDK for the Jaco arm. Further, simulation platforms such as Gazebo and MoveIt can be controlled using ROS, with the software for controlling a Jaco arm in Gazebo being available. Together, ROS can be used to control a virtual model of the Jaco arm in Gazebo, as well as the physical arm through the Kinova SDK. Control of robotic manipulators in VREP is also available using ROS through the VREP remote API.\\
+%http://wiki.ros.org/ROS/Introduction %\cite{ROSTech}
+%https://github.com/Kinovarobotics/kinova-ros	%\cite{kinova-ros}
+The Robot Operating System (ROS) is a modular collection of commonly used software in low-level device control, hardware abstraction and functionality seen in robotics \cite{ROSTech}. ROS can be used in Python, C++ and Lisp programming languages to build a framework around robotic software kits that directly control a robotic actuator. Thus, it has already been used as a cover of the Kinova SDK for the Jaco arm \cite{kinova-ros}. Further, simulation platforms such as Gazebo and MoveIt can be controlled using ROS, with the software for controlling a Jaco arm in Gazebo being available. Together, ROS can be used to control a virtual model of the Jaco arm in Gazebo, as well as the physical arm through the Kinova SDK. Control of robotic manipulators in VREP is also available using ROS through the VREP remote API \cite{models}.\\
 %https://pdfs.semanticscholar.org/2600/e3b018b5fa77035dab558f783919c9d46d35.pdf
 ROS offers a package called Rvis, which provides a method of interacting with imported models in 3D. Similar to a robotics simulation package, Rvis can provide information about the centre of mass of objects, collisions, and joints of robotic manipulators and objects in a scene. It however lacks the real-world modelling that comes with simulation programs such as V-REP or Gazebo (running a physics engine). Thus, it is typically used as a wrapper for these programs, such that the user can retrieve key information about objects in a scene whilst simulating properties such as gravity and friction.
 
 
 %https://robotacademy.net.au/lesson/inverting-the-jacobian-matrix-2/
-In Professor Peter Corke's Robot Academy series, he goes through an intuitive explanation for programming robotic arms using the arm's Jacobian matrix (referenced in Theory). As the Jacobian is a function of joint angles, it only provides a truthful reflection of the small change in angles required for a small change in end effector position, local to the current arm configuration. Thus, the Jacobian matrix can give a solution for small angle changes, but after the arm moves to this new position, it must be recalculated. This can be done in programming using discrete time steps as outlined in Figure 2.6. Unfortunately, as this is an approximation technique, if any of the spacial or time parameters are too large, the result will no longer hold, and thus it should be used with caution.
+%\cite{robotacademy2}
+In Professor Peter Corke's Robot Academy series, he goes through an intuitive explanation for programming robotic arms using the arm's Jacobian matrix (referenced in Theory) \cite{robotacademy2}. As the Jacobian is a function of joint angles, it only provides a truthful reflection of the small change in angles required for a small change in end effector position, local to the current arm configuration. Thus, the Jacobian matrix can give a solution for small angle changes, but after the arm moves to this new position, it must be recalculated. This can be done in programming using discrete time steps as outlined in Figure 2.6. Unfortunately, as this is an approximation technique, if any of the spacial or time parameters are too large, the result will no longer hold, and thus it should be used with caution.
 
 \begin{center}
 \begin{figure}[htb]
@@ -502,14 +509,15 @@ A similar technique that can reduce the error between the end effector's positio
 
 
 \section{Simulation Platforms and Physics Engines}
+%\cite{smashingRobotics}
 %https://www.smashingrobotics.com/most-advanced-and-used-robotics-simulation-software/
-There are numerous platforms available for simulating the dynamics and interactions of robot's with a scene. V-REP is particularly useful for this thesis due to its ability to remotely control the simulation and the objects within, whilst providing a realistic environment for said interactions. Other popular robotic platforms have similar functionality, but may come at a cost, include Webots, Robot Studio, ARGoS, labVIEW, Visual Components, Virtual Robotics Toolkit, Gazebo, Actin Simulation and Workspace. Although the objective of these platforms is to simulate a robotic manipulator in a scene, they are customized in the robots that can be simulated, the physics engine they use to simulate the dynamics, and the requirements by the users using the product. A good example of this is the Robot Virtual Worlds platform, which has comprehensive capabilities in simulating and programming LEGO robotics. On the contary, Workspace is used for simulating industrial production lines with multiple robotic manipulators acting together; and is used by large companies such as ABB and Mitsubishi. The scope of this thesis focuses on the use of free simulators that provide realistic and programmable simulations for educational use. Thus, simulation platforms such as Webots, Gazebo and V-REP are of particular interest as they equally provide the required features to meet the objectives. 
+There are numerous platforms available for simulating the dynamics and interactions of robot's with a scene. V-REP is particularly useful for this thesis due to its ability to remotely control the simulation and the objects within, whilst providing a realistic environment for said interactions. Other popular robotic platforms have similar functionality, but may come at a cost, include Webots, Robot Studio, ARGoS, labVIEW, Visual Components, Virtual Robotics Toolkit, Gazebo, Actin Simulation and Workspace \cite{smashingRobotics}. Although the objective of these platforms is to simulate a robotic manipulator in a scene, they are customized in the robots that can be simulated, the physics engine they use to simulate the dynamics, and the requirements by the users using the product. A good example of this is the Robot Virtual Worlds platform, which has comprehensive capabilities in simulating and programming LEGO robotics. On the contary, Workspace is used for simulating industrial production lines with multiple robotic manipulators acting together; and is used by large companies such as ABB and Mitsubishi. The scope of this thesis focuses on the use of free simulators that provide realistic and programmable simulations for educational use. Thus, simulation platforms such as Webots, Gazebo and V-REP are of particular interest as they equally provide the required features to meet the objectives. 
 
 %https://arxiv.org/pdf/1402.7050.pdf
-An online survey was conducted by researchers Serena Ivaldi, Vincent Padois and Franceso Nori to determine which simulation platform and dynamics solver was most preferred. The survey was completed by 119 participants with 62\% possessing a PhD, and of the remaining, 32\% had a university level degree. It was found that 39\% of the participants hadn't heard of V-REP, compared to 27\% and 15\% for Webots and Gazebo respectively. However, it was found that V-REP was the best rated for usability, documentation and set-up guides, whereas Gazebo was the most used. From the findings, it was noted that V-REP was the most likely for applicants to try, and keep using, compared to Webots and Gazebo.
+An online survey was conducted by researchers Serena Ivaldi, Vincent Padois and Franceso Nori to determine which simulation platform and dynamics solver was most preferred \cite{survey}. The survey was completed by 119 participants with 62\% possessing a PhD, and of the remaining, 32\% had a university level degree. It was found that 39\% of the participants hadn't heard of V-REP, compared to 27\% and 15\% for Webots and Gazebo respectively. However, it was found that V-REP was the best rated for usability, documentation and set-up guides, whereas Gazebo was the most used. From the findings, it was noted that V-REP was the most likely for applicants to try, and keep using, compared to Webots and Gazebo.
 
 %http://www.dca.fee.unicamp.br/~gudwin/courses/IA889/2014/IA889-02.pdf
-A full comparison between Gazebo and V-REP was conducted by Lucas Noguira from the Universidade de Campinas. This article goes through implementing features common to both platforms and the process required for setting them up to do a given task; i.e. connect a sensor to a robot and read it through ROS. It was found that V-REP offered a much better interface for adding components, and used less computation time when compared. 
+A full comparison between Gazebo and V-REP was conducted by Lucas Noguira from the Universidade de Campinas \cite{Nogueira2014ComparativeAB}. This article goes through implementing features common to both platforms and the process required for setting them up to do a given task; i.e. connect a sensor to a robot and read it through ROS. It was found that V-REP offered a much better interface for adding components, and used less computation time when compared. 
 
 \subsection{V-REP}
 % Introduce V-REP
@@ -525,7 +533,7 @@ The robotics simulation platform used in this thesis is the Virtual Robotics Exp
 \subsubsection{Communication}
 %Introduce a means of communicating with V-REP
 %http://www.coppeliarobotics.com/helpFiles/en/writingCode.htm#sixMethods
-Fortunately, the parameters within these scripts and objects within the scene can be controlled using the remote API, which is available for C/C++, Python, Java, Matlab, Octava, Lua and Urbi. The documentation for the remote API contains extensive descriptions of over 100 functions, where the usage is available for all supported languages. In addition to the remote API and internal Lua scripts, there are 4 other methods of controlling a scene in V-REP. The most obvious is plugins, which can provide custom Lua commands for interacting with the internal Lua scripts, it is effectively an external library of functions. Similarly, ROS can provide a wrapper of V-REP, enabling control from any ROS supported coding language, and further can enable the control of an external robot through a ROS node, using the information from V-REP; which is the aim of this thesis to a large extent.\\
+Fortunately, the parameters within these scripts and objects within the scene can be controlled using the remote API, which is available for C/C++, Python, Java, Matlab, Octava, Lua and Urbi \cite{CodeVREP}. The documentation for the remote API contains extensive descriptions of over 100 functions, where the usage is available for all supported languages. In addition to the remote API and internal Lua scripts, there are 4 other methods of controlling a scene in V-REP. The most obvious is plugins, which can provide custom Lua commands for interacting with the internal Lua scripts, it is effectively an external library of functions. Similarly, ROS can provide a wrapper of V-REP, enabling control from any ROS supported coding language, and further can enable the control of an external robot through a ROS node, using the information from V-REP; which is the aim of this thesis to a large extent.\\
 There is no limitations to utilizing V-REP's capabilities between using a remote API client and a ROS node, as seen in the connection methods table on the V-REP website; both will contain lag due to communication over the internet through a socket connection. Other methods of controlling V-REP include through the use of an add-on, or a BlueZero node.
 
 %Introduce the methods of communication with V-REP remote API
@@ -538,7 +546,7 @@ Communication using the remote API is through a socket connection between the cl
 \end{figure}
 \end{center}
 %http://www.coppeliarobotics.com/helpFiles/en/remoteApiFunctions.htm
-On the client side, connecting to V-REP waits for a given length of time for a client identification number. Once this number is obtained, the number is used for all communication thereafter in a manner noted by Coppelia for the language chosen. As an example, the functions could return parameters such as joint angles, velocity and sensor outputs, alternatively the functions could also be used to set or change these parameters.
+On the client side, connecting to V-REP waits for a given length of time for a client identification number \cite{functionsVREP}. Once this number is obtained, the number is used for all communication thereafter in a manner noted by Coppelia for the language chosen. As an example, the functions could return parameters such as joint angles, velocity and sensor outputs, alternatively the functions could also be used to set or change these parameters.
 % need to discuss at some stage that communication isn't guaranteed between different networks, i.e. home verse uni<< done
 
 Communication between the client program and V-REP is undertaken in four different modes; blocking function calls, non-blocking function calls, data streaming and synchronous operation. A description of these is presented in Table 2.1.
@@ -564,7 +572,7 @@ To be able to interact with a particular object in V-REP, one must refer to it i
 
 \subsubsection{V-REP Features}
 %http://www.coppeliarobotics.com/helpFiles/en/buildingAModelTutorial.htm
-Models can be imported into V-REP as a mesh (.stl) from any 3D modelling software (such as AutoDesk). The models can either be static objects to be placed in the scene, or make up parts of a robotic manipulator. When importing models, it is important to consider the amount of triangles used to create the component, when this is too large (more than 20,000), manipulating the object in V-REP will come with noticeable lag. When building a robotic arm from a CAD drawing, the entire model can be imported, and then subdivided to form an interaction `group` of meshes. When the Denavit-Hartenberg parameters of the arm are known, these can be used to form the relationship between the joints. The interactions between parts can be made by adding translational and/or rotational relationships, with parameters such as maximum angle and starting position specified. All of the objects in the scene can be modified out of simulation to be dynamic or static (be influenced by external forces), and responsive or non-responsive (have a reaction when a collision with the object occurs). It should be noted that the object doesn't need to be part of a robot, but can be an object in the scene either as a feature or an interactable object.\\
+Models can be imported into V-REP as a mesh (.stl) from any 3D modelling software (such as AutoDesk) \cite{modelVREP}. The models can either be static objects to be placed in the scene, or make up parts of a robotic manipulator. When importing models, it is important to consider the amount of triangles used to create the component, when this is too large (more than 20,000), manipulating the object in V-REP will come with noticeable lag. When building a robotic arm from a CAD drawing, the entire model can be imported, and then subdivided to form an interaction `group` of meshes. When the Denavit-Hartenberg parameters of the arm are known, these can be used to form the relationship between the joints. The interactions between parts can be made by adding translational and/or rotational relationships, with parameters such as maximum angle and starting position specified. All of the objects in the scene can be modified out of simulation to be dynamic or static (be influenced by external forces), and responsive or non-responsive (have a reaction when a collision with the object occurs). It should be noted that the object doesn't need to be part of a robot, but can be an object in the scene either as a feature or an interactable object.\\
 
 
 On start-up, V-REP comes with 21 pre-assembled non-mobile robotic manipulators (arms), including the Kinova Jaco and Mico arms. Other V-REP supported models can be loaded into a scene, given the appropriate .ttm format. The model browser also includes a selection of pre-made models, such as arm grippers, sensors, furniture, household appliances, people, vehicles and mobile robots. Using the model browser alone, it is possible to replicate a room or scene that a real robot would interact with. The robots can also be placed on any surface in the scene, and be provided a given trajectory or motion path for interacting with objects.\\
@@ -582,22 +590,22 @@ The `Scene Object Properties` for the dummy objects depict the kinematics mode a
 
 \subsubsection{Webots}
 %http://journals.sagepub.com/doi/pdf/10.5772/5618
-Webots is a robotics platform that allows the simulation of popular robot models, that can be interacted with using external software scripts, of which can be then programmed onto real robots; given they are compatible. Similar to V-REP, one can communicate with the simulation using TCP/IP from a program written in C/C++, MATLAB, Python or Java. The simulation also utilises Open Dynamics Engine (ODE) to give a realistic representation of physical interactions between objects. Motors and sensors can be placed in the scene or within robots, and tuned to mimic their real-time capabilities; maximum torque, PI control of servos, and sampling of sensors to name a few parameters that can be varied. There is little information on the comparison between this platform and V-REP, but from the information found on Webots and in the survey outlined above, it appears to have equivalent functionality, if not less, as it relies only on one physics engine whereas V-REP offers four.
+Webots is a robotics platform that allows the simulation of popular robot models, that can be interacted with using external software scripts, of which can be then programmed onto real robots; given they are compatible \cite{webotsArticle}. Similar to V-REP, one can communicate with the simulation using TCP/IP from a program written in C/C++, MATLAB, Python or Java. The simulation also utilises Open Dynamics Engine (ODE) to give a realistic representation of physical interactions between objects. Motors and sensors can be placed in the scene or within robots, and tuned to mimic their real-time capabilities; maximum torque, PI control of servos, and sampling of sensors to name a few parameters that can be varied. There is little information on the comparison between this platform and V-REP, but from the information found on Webots and in the survey outlined above, it appears to have equivalent functionality, if not less, as it relies only on one physics engine whereas V-REP offers four.
 Webots could be used for this thesis, as it provides a means of real-time (or even speed-up) interaction with a scene and the objects within. The use of ODE is no downfall, as outlined in the ODE section, it provides a realistic rendering of collisions within a scene.
 
 \subsubsection{Gazebo}
 %http://lenkaspace.net/blog/show/120
-Gazebo offers a very similar platform to V-REP, where a model can be placed in a scene and have the simulation controlled by a remote API. As an open source platform, full integration with ROS has been created, where the internal parameters of a simulation can be controlled with ROS. It is offered on any OS with a command line interface to help control simulations. Simulations are saved to an .xml script, which can be edited, and rerun; a feature V-REP lacks with it's .ttt saving format. A thorough comparison was made between Gazebo, V-REP and ARGoS, which demonstrates that they all contain the key features required for this thesis. It can be seen however, that V-REP has more positive features when compared to the other two. Gazebo on start-up is built with ODE, however can be built from source with any physics engine.
+Gazebo offers a very similar platform to V-REP, where a model can be placed in a scene and have the simulation controlled by a remote API \cite{comparisonVREP}. As an open source platform, full integration with ROS has been created, where the internal parameters of a simulation can be controlled with ROS. It is offered on any OS with a command line interface to help control simulations. Simulations are saved to an .xml script, which can be edited, and rerun; a feature V-REP lacks with it's .ttt saving format. A thorough comparison was made between Gazebo, V-REP and ARGoS, which demonstrates that they all contain the key features required for this thesis. It can be seen however, that V-REP has more positive features when compared to the other two. Gazebo on start-up is built with ODE, however can be built from source with any physics engine.
 
-\subsubsection{Bullet Physics Library}
+%\subsubsection{Bullet Physics Library}
+%
+%\subsubsection{Open Dynamics Engine}
+%
+%\subsubsection{Vortex Dynamics}
+%
+%\subsubsection{Newton Dynamics}
 
-\subsubsection{Open Dynamics Engine}
-
-\subsubsection{Vortex Dynamics}
-
-\subsubsection{Newton Dynamics}
-
-
+\cleardoublepage
 
 \chapter{Theory}
 In order to ensure the client program can function responsively, control the robotic arm in real-time and not over-use the computer's CPU, a variety of theory had to be researched before commencing the project. In particular, the theory examined covered three main areas; the mathematics associated with the dynamics of non-linear systems, control theory, and software development. As this is a Mechatronics thesis, key theory of these topics will be explained for the interest of the reader.
@@ -608,7 +616,7 @@ Processes have their own memory-space and are are completely separate to one ano
 
 Typically, when developing an application in a coding language such as Python, MATLAB and C, the flow of code is singular as there is one process and one thread. The main thread in a program can create other threads, which are given a unique thread identification. In the same way, a process can spawn another process with a unique process identification number, however obtains a parent process's identification number. In this way, the parent process can monitor the status of the child process, and send signals, similar to threads. \\
 %https://linux.die.net/man/2/fork
-In Linux, the child process is created by duplicating the parent, and giving the new process it's own resources such as memory-space and timers. The processes can communicate through reading and writing to files in memory and signalling that messages are ready; this is called piping, where an output from one process serves as in input to another. When using the Windows API however, the set-up is slightly different, in that everything is a `Window`, and Windows send messages to other Windows. The intuition behind this is that a Window can be interacted with by the user at any time, with key strokes or mouse clicks, and from operating system events. Thus, when a Window is created, it is set-up to receive signals through a queue that will hold messages, so it is ready when these different events occur, enabling it to react accordingly. Between operating systems, the overall outcome and the way processes interact is in essence the same, however when programming these differences become noticeable as each has their own checks, structure and signalling.\\
+In Linux, the child process is created by duplicating the parent, and giving the new process it's own resources such as memory-space and timers \cite{fork}. The processes can communicate through reading and writing to files in memory and signalling that messages are ready; this is called piping, where an output from one process serves as in input to another. When using the Windows API however, the set-up is slightly different, in that everything is a `Window`, and Windows send messages to other Windows \cite{MSDNmessages}. The intuition behind this is that a Window can be interacted with by the user at any time, with key strokes or mouse clicks, and from operating system events. Thus, when a Window is created, it is set-up to receive signals through a queue that will hold messages, so it is ready when these different events occur, enabling it to react accordingly. Between operating systems, the overall outcome and the way processes interact is in essence the same, however when programming these differences become noticeable as each has their own checks, structure and signalling.\\
 %https://msdn.microsoft.com/en-us/library/windows/desktop/ff381405(v=vs.85).aspx
 
 The CPU is a shared resource between processes, where the CPU usage for a given process is calculated as a percentage of the amount of clock cycles dedicated to running a particular task/thread. As aforementioned, threads can be allocated priorities, and thus if the threads of a process are constantly requiring run-time, say being stuck in an infinite loop, the CPU will be held servicing the one process given no task of higher priority is scheduled, thus consuming 100\% of the CPU usage. On a program level, if tasks are of equal priority and in no way get suspended, the CPU will schedule the run-time of the tasks equally between them.\\
@@ -617,7 +625,7 @@ Threads can be suspended in programs typically by a function called sleep, which
 
 
 \section{Regulators}
-The fundamental definition of a linear system is a system that when given a harmonic input, produces a harmonic output. Due to the frequency characteristics of the system, the output may be scaled and phase shifted, however the harmonic remains. In this sense, the input shapes the output. Regulators are a class of control scheme that use this property to shape a desired output given a reference input, with the use of feedback and a compensator.
+The fundamental definition of a linear system is a system that when given a harmonic input, produces a harmonic output. Due to the frequency characteristics of the system, the output may be scaled and phase shifted, however the harmonic remains. In this sense, the input shapes the output. Regulators are a class of control scheme that use this property to shape a desired output given a reference input, with the use of feedback and a compensator \cite{Nise}.
 \\
 \begin{center}
 \begin{figure}[htb]
@@ -625,8 +633,9 @@ The fundamental definition of a linear system is a system that when given a harm
 \caption{Feedback Control System with Disturbance}
 \end{figure}
 \end{center}
+
 %% Reference from p356 of Nise Control Systems textbook
- Presented in the figure above is a simple control system which contains a plant that takes input from a controller, which is driven by an input defined by the reference input R(s) and output C(s); although the laplace notation is used in this figure, R and C could the state vectors of the system. Ignoring the disturbance at this the system in this thesis is virtual, it is known that the gain for this type of system is defined as;
+ Presented in the Figure 3.1 is a simple control system which contains a plant that takes input from a controller, which is driven by an input defined by the reference input R(s) and output C(s); although the laplace notation is used in this figure, R and C could the state vectors of the system. Ignoring the disturbance at this the system in this thesis is virtual, it is known that the gain for this type of system is defined as;
 
 \vspace{\baselineskip}
 \begin{center}
@@ -687,7 +696,7 @@ As previously mentioned, the forward kinematics of a robotic chain is mathematic
 \end{equation}
 
 \vspace{\baselineskip}
-where $\vec{P}$ is the position vector of the end-effector relative to the base of the arm and $\vec{q}$ is a vector of joint angles $\theta_i$ or prismatic joint displacements $d_i$.
+where $\vec{P}$ is the position vector of the end-effector relative to the base of the arm and $\vec{q}$ is a vector of joint angles $\theta_i$ or prismatic joint displacements $d_i$ \cite{Spong}.
 
 This function, $f(\vec{q})$, is found by the translational components of the transformation matrix, $T$, that describes the sequence of twists, rotations and displacements between end-effector position and base of the chain. $T$ can be found by multiplying the transformation between the base link and the next due to $q_1$, by the transformation between the next link and that after due to $q_2$, and so on until the end of the arm, denoted as link number $n$, such that;
 
@@ -697,7 +706,7 @@ T = A_{0}^i = A_{0}^{1} A_{1}^{2} ... A_{n-1}^n
 \end{equation}
 
 \vspace{\baselineskip}
-The homogenous transformation between two links, $A_{i}^{i+1}$, is created using the product of the rotational transformation about the (rotation axis) z-axis, the translation transform along the z-axis a displacement $d_i$ (the offset in the z-axis from one link to another), the translation transform along the x-axis a displacement $a_i$, and finally the rotational transformation describing the rotation from one x-axis of first joint to the same of the next by an angle denoted $\alpha_i$. These terms are the Denavit-Hartenberg Parameters for the robotic chain, and can be further understood in Figure 3.2, provided by Mark W. Spong's Robot Modeling and Control textbook;
+The homogenous transformation between two links, $A_{i}^{i+1}$, is created using the product of the rotational transformation about the (rotation axis) z-axis, the translation transform along the z-axis a displacement $d_i$ (the offset in the z-axis from one link to another), the translation transform along the x-axis a displacement $a_i$, and finally the rotational transformation describing the rotation from one x-axis of first joint to the same of the next by an angle denoted $\alpha_i$. These terms are the Denavit-Hartenberg Parameters for the robotic chain, and can be further understood in Figure 3.2, provided by Mark W. Spong's Robot Modeling and Control textbook \cite{Spong};
 
 \begin{center}
 \begin{figure}[htb]
@@ -799,7 +808,7 @@ In the Introduction to Robotics: Analysis, Systems, Applications textbook by Sae
 
 \subsection{Analytical Approach}
 
-A popular approach to solving the inverse kinematics of simple serial chains is by analytically solving the relationship between joints, from the base to the end-effector. This is easiest seen through example by considering the 3 revolute joint arm in Figure 3.3, provided by Lung-Wen Tsai's Robot Analysis textbook.
+A popular approach to solving the inverse kinematics of simple serial chains is by analytically solving the relationship between joints, from the base to the end-effector. This is easiest seen through example by considering the 3 revolute joint arm in Figure 3.3, provided by Lung-Wen Tsai's Robot Analysis textbook \cite{tsai1999robot}.
 
 \begin{center}
 \begin{figure}[htb]
@@ -869,7 +878,7 @@ Using the desired end-effector position Q, the third angle can thus be solved fr
 
 % what is the jacobian!?!?!?!
 \subsection{Jacobian}
-The Jacobian is a linearised representation of the dynamics of a system for a particular set of states. For example, the system for a robotic arm can be computed by Lagrange Equations, to have the form;
+The Jacobian is a linearised representation of the dynamics of a system for a particular set of states \cite{robotacademy2}. For example, the system for a robotic arm can be computed by Lagrange Equations, to have the form;
 
 \vspace{\baselineskip}
 \begin{center}
@@ -960,7 +969,7 @@ and the change in end-effector position that results from a change of angles is;
 \end{equation}
 
 \vspace{\baselineskip}
-In the case that the Jacobian isn't invertible the Pseudo Inverse Jacobian can be used; when one of the angular velocities doesn't change with angle, which occurs when there are less than 6 DOF in the arm. Thus, the objective of this method is to make the Jacobian full rank, by multiplying the Jacobian by its transpose, resulting in;
+In the case that the Jacobian isn't invertible the Pseudo Inverse Jacobian can be used; when one of the angular velocities doesn't change with angle, which occurs when there are less than 6 DOF in the arm \cite{jacobian}. Thus, the objective of this method is to make the Jacobian full rank, by multiplying the Jacobian by its transpose, resulting in;
 
 \vspace{\baselineskip}
 \begin{equation}
@@ -970,7 +979,7 @@ In the case that the Jacobian isn't invertible the Pseudo Inverse Jacobian can b
 \vspace{\baselineskip}
 \subsection{Damped Least Squares}
 %http://graphics.cs.cmu.edu/nsp/course/15464-s17/lectures/iksurvey.pdf
-The damped least squares method provides a more stable set of change in angles required for small errors in end-effector position close to arm singularities, however takes longer to compute. This method looks to minimize this error by the following quantity;
+The damped least squares method provides a more stable set of change in angles required for small errors in end-effector position close to arm singularities, however takes longer to compute \cite{jacobian}. This method looks to minimize this error by the following quantity;
 
 \vspace{\baselineskip}
 \begin{equation}
@@ -986,7 +995,7 @@ given a non-zero damping constant $\lambda$. There are numerous methods for find
 %http://old.cescg.org/CESCG-2002/LBarinka/paper.pdf
 %http://graphics.cs.cmu.edu/nsp/course/15464-s17/lectures/iksurvey.pdf
 \subsection{Newton-Raphson Method}
-The Newton-Raphson method is a numerical methods technique on homing-down on a better approximation than one given. It was found that, once an approximation gives a result with small error from the expected, a better solution can be made by reusing formula with the result of the original guess, where convergence on an accurate solution can be retrieved given enough iterations in the local space to the original guess.
+The Newton-Raphson method is a numerical methods technique on homing-down on a better approximation than one given \cite{iKineBasic}. It was found that, once an approximation gives a result with small error from the expected, a better solution can be made by reusing formula with the result of the original guess, where convergence on an accurate solution can be retrieved given enough iterations in the local space to the original guess \cite{numericalMeth}.
 
 from the Taylor Series, it is known that the true position x can be given by a previous position $x_0$ plus $h$, for small changes in position $h$, ;
 
@@ -1057,7 +1066,7 @@ $x_d - f(\theta^k) = J(\theta^k) \Delta \theta$
 \end{equation}
 
 \vspace{\baselineskip}
-Thus, this matches the form used in the Newton-Raphson method, and the iteration method can be used to create a better approximation of $\Delta X$ given a better approximation of $\Delta \theta$. This process is described in the figure below;
+Thus, this matches the form used in the Newton-Raphson method, and the iteration method can be used to create a better approximation of $\Delta X$ given a better approximation of $\Delta \theta$ \cite{numericalMethodsVid}. This process is described in the figure below;
 
 \begin{center}
 \begin{figure}[htb]
@@ -1195,7 +1204,7 @@ From this, it was important to ensure the forward kinematics can be calculated, 
 
 \subsection{Forward Kinematics Implementation}
 % forward kinematics
-Kinova Robotics supplied documentation that assisted with the forward kinematics of the arm. In their $JACO^2$ 6 DOF Advanced Specification Guide, is the D-H parameters, joint lengths and offset angles for the robotic arm. Expressed in the table below are the numerical values for the D-H parameters, for the given axis positions along the arm. It can be seen that the axis for joint 4 isn't at the physical motor position, rather at the angled point in the link, this is to simplify the parameters as is at the bend, pointing towards joint 3, and is merely powered by the motor at joint 4. This occurs again at joint 5, where links 4 and 5 have a bend of 60 degrees, moving the axis of rotation away from the joints. The parameters used in this case are the 'Classical D-H Parameters' from the Kinova documentation, illustrated in Appendix A, Figure A.6. There are other sets of parameters for the Jaco arm; for instance, the zeroth axis can be turned such that $\alpha_0$ is 0, and similarly for $\alpha_3$, where $\alpha_2$ and $\alpha_4$ can be $-pi/2$. The classical parameters were used as it matches the Jaco documentation, Peter Corke's Robotic Toolbox, and the set of angles to make the arm stand straight up could be easily determined. Table 4.1 presents the Classical D-H parameters for the Jaco 2, 6 DOF Kinova arm.
+Kinova Robotics supplied documentation that assisted with the forward kinematics of the arm. In their $JACO^2$ 6 DOF Advanced Specification Guide, is the D-H parameters, joint lengths and offset angles for the robotic arm. Expressed in the table below are the numerical values for the D-H parameters, for the given axis positions along the arm. It can be seen that the axis for joint 4 isn't at the physical motor position, rather at the angled point in the link, this is to simplify the parameters as is at the bend, pointing towards joint 3, and is merely powered by the motor at joint 4. This occurs again at joint 5, where links 4 and 5 have a bend of 60 degrees, moving the axis of rotation away from the joints. The parameters used in this case are the 'Classical D-H Parameters' from the Kinova documentation, illustrated in Appendix A, Figure A.6. There are other sets of parameters for the Jaco arm; for instance, the zeroth axis can be turned such that $\alpha_0$ is 0, and similarly for $\alpha_3$, where $\alpha_2$ and $\alpha_4$ can be $-pi/2$. The classical parameters were used as it matches the Jaco documentation, Peter Corke's Robotic Toolbox, and the set of angles to make the arm stand straight up could be easily determined. Table 4.1 presents the Classical D-H parameters for the Jaco 2, 6 DOF Kinova arm \cite{specificationGuide}.
 
 \vspace{\baselineskip}
 
@@ -1343,7 +1352,7 @@ It was found that the program could seamlessly control the target in V-REP,and t
 The next objective was to add a joystick as an input source for moving the end-effector. It was assumed that the physical Jaco arm would be set-up to a Windows computer in the Robotics Design Lab at UQ, and as a port is necessary for creating a processes from the client program to read the joystick, it was decided that the client program was required to be developed on a Windows computer; rather than a virtual machine were it cannot directly access USB ports. The task of moving to Windows was time consuming, Linux compilers were first downloaded to Windows such that the program can compile in command-line. Unfortunately the networking on Windows is different to Linux, and so there wasn't libraries for converting Linux network code to a form understandable by Windows. It was decided that a new client program should be created in Visual Studio, and then the client program's custom files have the code copied over.
 
 %https://www.libsdl.org/download-2.0.php
-Only Windows has the ability to control the Human Interface Drivers, however the Windows API allows one to communicate with this via functions such as GetRawInputData(); available with hidsdi.h. Unfortunately a program using Windows API can only communicate with another Window through Window messaging (queues). The client program was a console application, which had the ability to communicate with other applications through a method similar to piping in Linux. Given it was desirable to find an existing joystick interface as an executable which can easily be run by a creating a child process, many platforms were tested to determine the easiest to interface with. The notes taken during this time is provided in the appendix, where Windows API, HTML Gamepad API, LibUSB, and Simple Directmedia Layer (SDL) source code were tested. It was found that SDL provided the best means in interfacing with the Joystick, as the library offered the source code that was editable from Visual Studio. Initially the project, testjoystick, was designed to display information about the joystick, and show which buttons were being pressed in a Window. It was also discovered that the application had it's own handle to the console, using SDL\_log to print to terminal. This meant that usual handles to the terminal such as stdout and stdin had no effect on the console window. Thus, changes were made to the program (it should be noted that SDL is open-source as long as it's referenced and changes made are commented on);
+Only Windows has the ability to control the Human Interface Drivers, however the Windows API allows one to communicate with this via functions such as GetRawInputData(); available with hidsdi.h. Unfortunately a program using Windows API can only communicate with another Window through Window messaging (queues). The client program was a console application, which had the ability to communicate with other applications through a method similar to piping in Linux. Given it was desirable to find an existing joystick interface as an executable which can easily be run by a creating a child process, many platforms were tested to determine the easiest to interface with. The notes taken during this time is provided in the appendix, where Windows API, HTML Gamepad API, LibUSB, and Simple Directmedia Layer (SDL) source code were tested. It was found that SDL provided the best means in interfacing with the Joystick, as the library offered the source code that was editable from Visual Studio \cite{SDL}. Initially the project, testjoystick, was designed to display information about the joystick, and show which buttons were being pressed in a Window. It was also discovered that the application had it's own handle to the console, using SDL\_log to print to terminal. This meant that usual handles to the terminal such as stdout and stdin had no effect on the console window. Thus, changes were made to the program (it should be noted that SDL is open-source as long as it's referenced and changes made are commented on);
 
 \begin{itemize}
 	\item The code that created and controlled the window was removed; so the application only printed to the control via SDL\_log
@@ -1352,7 +1361,7 @@ Only Windows has the ability to control the Human Interface Drivers, however the
 \end{itemize}
 
 %https://msdn.microsoft.com/en-us/library/windows/desktop/ms682425(v=vs.85).aspx
-A new project was made to attempt to spawn a child process using the Microsoft Developer Network (MSDN); libraries accessible from Visual Studio. With reference to the example code on the CreateProcess function, information successfully flowed between the testjoystick application and the new project file. This code was then copied into the client program, in the file joystick.c. This file was used to store all code relevant to the joystick, such as creating the process, reading from the process, interpreting the button presses and joystick positions, adding the relevant information to the input buffer, and the handing of passing commands from the buffer to the main client thread. A total of 3 threads were used, with two made to service the commands of the joystick; these are detailed in Appendix B, Table B.1.
+A new project was made to attempt to spawn a child process using the Microsoft Developer Network (MSDN); libraries accessible from Visual Studio. With reference to the example code on the CreateProcess function, information successfully flowed between the testjoystick application and the new project file \cite{MSDNprocess}. This code was then copied into the client program, in the file joystick.c. This file was used to store all code relevant to the joystick, such as creating the process, reading from the process, interpreting the button presses and joystick positions, adding the relevant information to the input buffer, and the handing of passing commands from the buffer to the main client thread. A total of 3 threads were used, with two made to service the commands of the joystick; these are detailed in Appendix B, Table B.1.
 
 %\begin{center}
 %\begin{table}[htb]
@@ -1569,7 +1578,7 @@ The success in the former section called for a trial of using control loops to g
 
 It is known that $q_1$ does not effect the $z$ coordinate of the end-effector position, and is the largest contributor to motion in the x-y plane. The dominant response was desired to be the elimination of error $\theta_z$, where $\theta_{xy}$ will be corrected thereafter. To control $q_1$, a high integral gain was used, such that the end-effector position will slowly be regulated for steady-state error in the x-y plane. 
 
-The error inputs to the PI controllers for each joint was determined by the amount of which the joint would contribute in that angle. For instance, joints 4 and 5 equally contribute to the error of $\theta_z$ and $\theta_{xy}$, thus the error into the controller is the summation of these errors. Angles $q_2$ and $q_3$ were given the largest proportional gains, as it is desired that these joints move the most.
+The error inputs to the PI controllers for each joint was determined by the amount of which the joint would contribute in that angle. For instance, joints 4 and 5 equally contribute to the error of $\theta_z$ and $\theta_{xy}$, thus the error into the controller is the summation of these errors. Angles $q_2$ and $q_3$ were given the largest proportional gains, as it is desired that these joints move the most; the results of this can be seen in Figure A.12 in Appendix A.
 
 It was quickly found that the system could become unstable given the incorrect parameters for one of the controllers, but the design process itself was a good starting point.
 \clearpage
@@ -1619,7 +1628,17 @@ A separate method to achieving the desired response would be to have a cascade l
 \end{figure}
 \end{center}
 
-The proposed control system was incorporated into the V-REP client program, and the parameters further tuned by exporting the position of the end-effector to a spread sheet, which allowed plotting of the responses. Provided in Appendix A, Figure A.9, is a graph showing the error of the controller that was designed within the client program, where an increase in radial distance of the end-effector by 3 mm was desired. It can be seen that steady-state error occurs in $\theta_z$, as found in the simulation, however $\theta_{xy}$ reaches and stays at exactly 0.
+The proposed control system was incorporated into the V-REP client program, and the parameters further tuned by exporting the position of the end-effector to a spread sheet (attached with this paper, and an example in Appendix D, Figure D.2), which allowed plotting of the responses. Provided in Appendix A, Figure A.9, is a graph showing the error of the controller that was designed within the client program, where an increase in radial distance of the end-effector by 3 mm was desired. It can be seen that the controller was optimized to reduce stead-state error and setting time; 0.0001 radians of steady-state error occurs in $\theta_z$, replicating the findings in the simulation, however $\theta_{xy}$ reaches and stays at exactly 0. 
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=\linewidth]{control_loop_position.jpg}
+\caption{ End-effector position after implemented control scheme }
+\end{figure}
+\end{center}
+
+Figure 5.12 shows the results of the command to increase the radial distance of the end-effector from the base of the arm by 3mm. The calculated end-effector position in the X and Y are changed as per the command, with the effect of the height decreasing significantly; where the height wasn't meant to change. Therefore, as found in Figure A.9, the error was minimized by moving the arm into an undesirable configuration.
+
 
 %\clearpage
 
@@ -1702,7 +1721,7 @@ $\Delta q = [0.0001232, -0.0024076, -0.00240756, 0.000061, 0.00020, 0]^T$
 
 Therefore, it was found that this provided an adequate solution to the inverse kinematics problem, that could be recreated in the client program; MATLAB can convert expressions to C code given they are simple enough. From this, the symbolic representation of $J J^T$ was copied into the client program as a 2-D array of doubles. 
 
-When the client program is working with a forward kinematics scene, it moves the Jaco arm into a configuration without singularities; this configuration is presented in Figure 5.12.
+When the client program is working with a forward kinematics scene, it moves the Jaco arm into a configuration without singularities; this configuration is presented in Figure 5.13.
 
 \begin{center}
 \begin{figure}[htb]
@@ -1734,10 +1753,11 @@ $
 \end{center}
 \vspace{\baselineskip}
 %http://www.ccodechamp.com/c-program-to-find-inverse-of-matrix/
-As per the theory, the next step is to inverse $J J^T$, and then multiply this by J, resulting in $J (J J^T)^{-1}$. The inverse of this matrix is computed by calculating the matrix of minors, matrix cofactors, adjugate, and then dividing through by $1/det(JJ^T)$; the general process for calculating the inverse of a nxn matrix in C. Before starting this, the determinant of $J J^T$ is calculated to ensure the matrix is invertible.
+As per the theory, the next step is to inverse $J J^T$, and then multiply this by J, resulting in $J (J J^T)^{-1}$. The inverse of this matrix is computed by calculating the matrix of minors, matrix cofactors, adjugate, and then dividing through by $1/det(JJ^T)$; the general process for calculating the inverse of a nxn matrix in C \cite{invMatrix}. Before starting this, the determinant of $J J^T$ is calculated to ensure the matrix is invertible.
 
 In the V-REP client program, the determinant is calculated to be -1.723682e-29 for the starting configuration of the arm. For this same position, MATLAB calculates the determinant to be -6.90106775e-43, thus the calculations are off by a power of -13 before the inverse is calculated. As the determinant is not equal to 0, the inverse was calculated, resulting in a matrix with coefficients magnitudes different to that computed in MATLAB for the same angles. Occasionally, the determinant is calculated in the client program to be $-inf$ despite the arm not being moved. This leads to the belief that the smallest of variances in angles can lead to incorrect results; a direct result of the precision in calculations between MATLAB and C. In the client program, the code has been written for this implementation, but was found to be unsuccessful when it came to computing the inverse of the Pseudo Jacobian, and thus was unable to be used; the client program can enter the functions for these calculations, and display the results, when receiving IK inputs and 'Mode 3' is active.
 
+\cleardoublepage
 
 \chapter{Results Summary and Discussion}
 \section{Jaco Arm Control}
@@ -1770,9 +1790,9 @@ When an input argument to the client specifies that the 'scene' (Jaco arm in V-R
 \end{center}
 
 \section{Joystick Implementation and Processing Time}
-Several methods of getting the commands from the joystick were trialled before the SDL solution was found. A comparison of these is found in the appendix, although it is believed that this method provided the best solution as it was a console based application which was easily modifiable in Visual Studio. This program was changed to send only the information necessary for moving the end-effector to the V-REP client program, which communicated through stdin and stdout. It was found that the application wouldn't exit if there wasn't a joystick available. Thus, the application was made to send whether or not there is a joystick to connect to on start up, and exiting if there isn't, allowing the client program to take inputs from keyboard instead of joystick. The joystick application originally used 17\% CPU usage when reading form the joystick. Upon closer inspection, it was found that the program was continuously searching for events on the joystick; it wasn't going to sleep to allow other programs to run more often. MSDN has a function called 'sleep' which will set the thread to wait state, which was used for 50ms within this application. It was found that this figure reduced the CPU usage to below 1\% whilst not taking away from the responsiveness of the application to joystick events.
+Several methods of getting the commands from the joystick were trialled before the SDL solution was found. A comparison of these is found in the appendix, although it is believed that this method provided the best solution as it was a console based application which was easily modifiable in Visual Studio. This program was changed to send only the information necessary for moving the end-effector to the V-REP client program, which communicated through stdin and stdout. It was found that the application wouldn't exit if there wasn't a joystick available. Thus, the application was made to send whether or not there is a joystick to connect to on start up, and exiting if there isn't, allowing the client program to take inputs from keyboard instead of joystick. The joystick application originally used 17\% CPU usage when reading form the joystick. Upon closer inspection, it was found that the program was continuously searching for events on the joystick; it wasn't going to sleep to allow other programs to run more often. MSDN has a function called 'sleep' which will set the thread to wait state, which was used for 50 ms within this application. It was found that this figure reduced the CPU usage to below 1\% whilst not taking away from the responsiveness of the application to joystick events.
 
-Upon further inspection of the CPU usage whilst using the V-REP client, it was found that the client program consumed 25\% of the CPU on average. Considering it consisted of one thread for calculations and communication with V-REP, one for reading and interpreting from the joystick process, and one for adding to the buffer when the joystick hasn't been moved and the last log was non-zero, this figure was understandable, however unnecessary. The latter thread hangs in a loop until 750 ms (varies computer to computer depending on CPU speed, but this number was found to be good for the computer this thesis was constructed on) has passed, where it checks the buffer and adds a new command if needed. Thus, it was desirable to make this thread terminate if there isn't a joystick to read from, and when there is, sleep for 50ms to allow other threads to run (meaning a new command is added every 750 - 800 ms, which is an unnoticeable change for the user. A similar outcome was made for the thread that communicates with the joystick process. The main thread was also put into wait state, for 20ms, when it's held waiting for an input command. Overall, it was found that these implementations decreased the CPU usage to around 1\%. It was also evident that the inverse kinematics calculations were performed at around 500 ms (depends on computer CPU), as opposed to the prior average of 750 ms; these results can be seen in the inverse kinematics spread-sheets. Thus, adding waiting delays within the threads allowed the important computations happen quicker, which led to a faster client program.
+Upon further inspection of the CPU usage whilst using the V-REP client, it was found that the client program consumed 25\% of the CPU on average. Considering it consisted of one thread for calculations and communication with V-REP, one for reading and interpreting from the joystick process, and one for adding to the buffer when the joystick hasn't been moved and the last log was non-zero, this figure was understandable, however unnecessary. The latter thread hangs in a loop until 750 ms (varies computer to computer depending on CPU speed, but this number was found to be good for the computer this thesis was constructed on) has passed, where it checks the buffer and adds a new command if needed. Thus, it was desirable to make this thread terminate if there isn't a joystick to read from, and when there is, sleep for 50ms to allow other threads to run (meaning a new command is added every 750 - 800 ms, which is an unnoticeable change for the user. A similar outcome was made for the thread that communicates with the joystick process. The main thread was also put into wait state, for 20ms, when it's held waiting for an input command. Overall, it was found that these implementations decreased the CPU usage to around 1\%. It was also evident that the inverse kinematics calculations were performed at around 580 ms (depends on computer CPU), as opposed to the prior average of 680 ms; these results can be seen in the inverse kinematics spread-sheet, 'mode1\_computation\_time.xlsx', and Appendix A, Figure A.11. Thus, adding waiting delays within the threads allowed the important computations happen quicker, which led to a faster client program.
 
 
 \section{Client Program Inverse Kinematics}
@@ -1791,7 +1811,7 @@ Extracting data from the control loops to a spread-sheet allowed the tuning of t
 %%https://au.mathworks.com/help/matlab/ref/lu.html
 %%https://www.codewithc.com/c-program-for-lu-factorization/
 %%https://s-mat-pcs.oulu.fi/~mpa/matreng/eem3_4-3.htm
-As found in the Kinematics Approach section, the Jacobian inverse kinematics method was unsuccessfully implemented. In the client program, the determinant of $JJ^T$ would equal 0 when using double-precision floating point numbers, and would equal an incorrect value when using standard floats. For double-precision, the spacing, or error in rounding to a representable number, can be found to be $2^{n-52}$, for a number between $2^n$ and $2^{n+1}$, giving a maximum possible error of $2^{-53}$, which rounds to $1.11022e-16$. Thus, the differences in answers is a consequence of rounding between the finite values available with floating point numbers, and thus is also dependent on the order of arithmetic. An example of this error is shown in the calculations below;
+As found in the Kinematics Approach section, the Jacobian inverse kinematics method was unsuccessfully implemented. In the client program, the determinant of $JJ^T$ would equal 0 when using double-precision floating point numbers, and would equal an incorrect value when using standard floats. For double-precision, the spacing, or error in rounding to a representable number, can be found to be $2^{n-52}$, for a number between $2^n$ and $2^{n+1}$, giving a maximum possible error of $2^{-53}$, which rounds to $1.11022e-16$ \cite{doubles}. Thus, the differences in answers is a consequence of rounding between the finite values available with floating point numbers, and thus is also dependent on the order of arithmetic. An example of this error is shown in the calculations below \cite{MatlabFloat};
 
 $e = 1 - 3*(4/3 - 1)$
 
@@ -1799,7 +1819,7 @@ results in
  
 $e =  2.2204e-16$
 
-which is evidently twice 1.11022e-16, and is not equal to 0 as it is supposed to. For the computation of the determinant, MATLAB uses the product of diagonals of the matrices from the LU decomposition; where the LU decomposition matrices are calculated by Gaussian elimination. In the documentation for MATLAB's lu function (calculates the lower and upper triangle matrices such that A = L $\times$ U), it is noted that factorisation is a key step in obtaining the determinant, for reasons described above. Both, an LU decomposition method and a standard algebraic way of solving smaller determinants within the matrix, were implemented into the client program to solve for the determinant, with results either approaching -$inf$ or 0. Even when comparing the LU matrices from the client, they are different to that from MATLAB, leading to the conclusion that MATLAB's implementation is structured to minimise the error in calculations, which is lacking in the client program.
+which is evidently twice 1.11022e-16, and is not equal to 0 as it is supposed to. For the computation of the determinant, MATLAB uses the product of diagonals of the matrices from the LU decomposition \cite{MatlabDet}; where the LU decomposition matrices are calculated by Gaussian elimination \cite{MatlabDet}. In the documentation for MATLAB's LU function (calculates the lower and upper triangle matrices such that A = L $\times$ U), it is noted that factorisation is a key step in obtaining the determinant, for reasons described above. Both, an LU decomposition method and a standard algebraic way of solving smaller determinants within the matrix, were implemented into the client program to solve for the determinant, with results either approaching -$inf$ or 0 \cite{codeLU}. Even when comparing the LU matrices from the client, they are different to that from MATLAB, leading to the conclusion that MATLAB's implementation is structured to minimise the error in calculations, which is lacking in the client program.
 
 
 \section{Kinova SDK}
@@ -1919,12 +1939,17 @@ Data-streaming was proven to be successful, however V-REP became slow with commu
 
 With these developments, and the current state of the client program, it is believed that the application for controlling the physical Jaco arm can be created.
 
+%\clearpage
+%\clearpage
+%\cleardoublepage
+%\newpage
+
 \appendix
 
 % Chapters after the \appendix command are lettered, not numbered.
 % Setting apart the appendices in the table of contents is awkward:
 
-\newpage
+%\newpage
 \addcontentsline{toc}{part}{Appendices}
 \mbox{}
 \newpage
@@ -1946,41 +1971,52 @@ With these developments, and the current state of the client program, it is beli
 \end{figure}
 \end{center}
 
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=1.1\linewidth]{makefile.jpg}
-\caption{V-REP Client Makefile}
+\caption{V-REP Client Makefile in Linux}
 \end{figure}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=0.8\linewidth]{object_names.jpg}
-\caption{Lua function in V-REP main script, for retrieving object names}
+\caption{Lua function in V-REP main script, returns object names for the Client Program}
 \end{figure}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=0.4\linewidth]{text_file_example.jpg}
-\caption{Example of a text file created by the V-REP client}
+\caption{Example of a text file created by the V-REP client, containing the object handles and object names}
 \end{figure}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=\linewidth]{client_fk.jpg}
-\caption{Client program in Forward Kinematics mode}
+\caption{Client program in Forward Kinematics mode Flow Chart}
 \end{figure}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=0.7\linewidth]{jaco_axis.jpg}
-\caption{D-H Parameters axis for each joint on Jaco arm}
+\caption{Classical D-H Parameters Diagram, showing each rotational axis of the Jaco arm \cite{specificationGuide}}
 \end{figure}
 \end{center}
+
+
 
 \begin{center}
 \begin{table}[htb]
@@ -2001,9 +2037,11 @@ With these developments, and the current state of the client program, it is beli
      '+' & 3 mm & change in height of the tip upwards \\ 
      \hline
     \end{tabular}
-    \caption{Client program IK input commands}
+    \caption{Client program IK input commands and descriptions}
 \end{table}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{table}[htb]
@@ -2017,16 +2055,20 @@ With these developments, and the current state of the client program, it is beli
      Joystick Interpretation & Reads from stdout of the joystick process, interprets the information, and adds a (w/s/d/a/-/+) command to the joystick command buffer with decimal value corresponding to the amount that the joystick was pushed for that command (0 for no press, 1 for 100\% pressed).\\
      \hline
      Joystick Add Command & This task keeps track of the last command to be added to the buffer, when the push value is greater than 0, and 750ms has passed, a copy of the last command is added to the buffer as the joystick is still pressed down. \\ \hline
+     \hline
+     Streaming Data & Six threads can optionally be created to stream joint angles from V-REP and store them in the client's information struct. Without this mode, the client program will block and retrieve joint angles when they are required.
+     \\ \hline
     \end{tabular}
-    \caption{Client program IK input commands}
+    \caption{Client program Threads}
 \end{table}
 \end{center}
 
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=0.9\linewidth]{joystick_cmdline.jpg}
-\caption{An example of the terminal output of the joystick process when the left joystick is toggled on}
+\caption{An example of the terminal output of the joystick process when the left joystick is toggled on and off}
 \end{figure}
 \end{center}
 
@@ -2034,17 +2076,20 @@ With these developments, and the current state of the client program, it is beli
 \begin{center}
 \begin{figure}[htb]
   \includegraphics[width=0.5\linewidth]{VREP_ik_dialog.jpg}
-\caption{The calculation method for Inverse Kinematics in V-REP}
+\caption{The Inverse Kinematics settings in V-REP}
 \end{figure}
 \end{center}
 
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
-  \includegraphics[width=1\linewidth]{control_loop_error.jpg}
-\caption{V-REP Client Program Control Loop Error}
+  \includegraphics[width=1\linewidth]{control_loop_error_best.jpg}
+\caption{V-REP Client Program Inverse Kinematics (mode 2) Control Loop Error}
 \end{figure}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{table}[htb]
@@ -2052,16 +2097,18 @@ With these developments, and the current state of the client program, it is beli
 \begin{tabular}{| p{1.2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} |}
     \hline
     Joint & $K_p$ & $K_I$ & \% XY & \% Z & Arm Length & Angle Correction \\ \hline
-     1 & 0.05	& 0.99	& 100	& 0		& 197.13 &	-$q_1 - \pi$ \\ \hline
-     2 & 0.65	& 0.55	& 25	& 75	& 410 	&	$q_2 - \frac{\pi}{2}$  \\ \hline
-     3 & 1.17	& 1.11	& 25	& 75	& 207.3 &	$q_3 + \frac{3 \pi}{2}$ \\ \hline
+     1 & 0.03	& 0.99	& 100	& 0		& 197.13 &	-$q_1 - \pi$ \\ \hline
+     2 & 0.55	& 0.51	& 25	& 75	& 410 	&	$q_2 - \frac{\pi}{2}$  \\ \hline
+     3 & 1.10	& 1.01	& 25	& 75	& 207.3 &	$q_3 + \frac{3 \pi}{2}$ \\ \hline
      4 & 0.1	& 0.02	& 50	& 50	& 74.1	& $q_4$ \\ \hline
      5 & 0.15	& 0.15	& 50	& 50 	& 74.1	& $q_5 - \pi$ \\ \hline
      6 & 0.15	& 0.15	& 0		& 0 	& 160 	& $q_6$ \\ \hline
     \end{tabular}
-    \caption{Chosen controller coefficients for each joint}
+    \caption{Client Program's chosen controller coefficients for each joint (mode 2)}
 \end{table}
 \end{center}
+
+\vspace{\baselineskip}
 
 \begin{center}
 \begin{figure}[htb]
@@ -2070,6 +2117,24 @@ With these developments, and the current state of the client program, it is beli
 \end{figure}
 \end{center}
 
+\vspace{\baselineskip}
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{computation_results_threads.jpg}
+\caption{ The time taken to calculate the inverse kinematics with and without waiting threads }
+\end{figure}
+\end{center}
+
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{control_loop_angles.jpg}
+\caption{ V-REP Client Program Inverse Kinematics (mode 2) Final Control Loop Coefficients - Change in Angles }
+\end{figure}
+\end{center}
+
+\cleardoublepage
 
 \chapter{Additional Findings}
 
@@ -2168,13 +2233,108 @@ Similarly if the IK scene was to be used, then the fk/FK are replaced with ik/IK
 %files can be downloaded.
 
 \cleardoublepage
+%\cite{latexcompanion}
 
-\begin{thebibliography}{99}
+%\begin{thebibliography}{99}
+
+%\end{thebibliography}
+%
 \addcontentsline{toc}{chapter}{Bibliography}
-\bibitem{lamport} L.~Lamport, \emph{\LaTeX: A Document Preparation
-System}, 2nd ed. (Addison-Wesley, 1994).
-\bibitem{LABEL2} REFERENCE 2
-\bibitem{ETC.} Etc.
-\end{thebibliography}
+
+\bibliography{Callum_Rohweder_43575943_METR4901}{}
+\bibliographystyle{IEEEtr}
+%\bibitem{lamport} L.~Lamport, \emph{\LaTeX: A Document Preparation
+%System}, 2nd ed. (Addison-Wesley, 1994).
+%\bibitem{LABEL2} REFERENCE 2
+%\bibitem{ETC.} Etc.
+%
+
+\clearpage
+
+\chapter{Additional Figures}
+\begin{center}
+\begin{table}[htb]
+
+    \begin{tabular}{| p{5cm} | p{5cm} |}
+     \hline
+     Link Label & Length  \\ 
+     \hline
+     $D_1$ & 275.5 \\ 
+     \hline
+     $D_2$ & 410  \\ 
+     \hline
+     $D_3$ & 207.3 \\ 				 \hline
+     $D_4$ & 74.1 \\ 
+     \hline
+     $D_5$ & 74.1 \\ 
+     \hline
+     $D_6$ & 160 \\ 
+     \hline
+     $e_2$ & 9.8 \\
+     \hline
+    \end{tabular}
+    \caption{ Kinova Jaco 2 Documentation: Link lengths}
+\end{table}
+\end{center}
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=0.6\linewidth]{jaco_joint_lengths.jpg}
+\caption{ Kinova Jaco 2 Documentation: Joint Lengths Sketch \cite{specificationGuide} }
+\end{figure}
+\end{center}
+
+
+\vspace{\baselineskip}
+
+\begin{center}
+\begin{figure}[htb]
+  \includegraphics[width=1\linewidth]{control_loop_error.jpg}
+\caption{V-REP Client Program Inverse Kinematics (mode 2) Control Loop with High Steady State Error in Z - Higher XY gain}
+\end{figure}
+\end{center}
+
+\begin{center}
+\begin{table}[htb]
+
+\begin{tabular}{| p{1.2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} | p{2cm} |}
+    \hline
+    Joint & $K_p$ & $K_I$ & \% XY & \% Z & Arm Length & Angle Correction \\ \hline
+     1 & 0.05	& 0.99	& 100	& 0		& 197.13 &	-$q_1 - \pi$ \\ \hline
+     2 & 0.65	& 0.55	& 25	& 75	& 410 	&	$q_2 - \frac{\pi}{2}$  \\ \hline
+     3 & 1.17	& 1.11	& 25	& 75	& 207.3 &	$q_3 + \frac{3 \pi}{2}$ \\ \hline
+     4 & 0.1	& 0.02	& 50	& 50	& 74.1	& $q_4$ \\ \hline
+     5 & 0.15	& 0.15	& 50	& 50 	& 74.1	& $q_5 - \pi$ \\ \hline
+     6 & 0.15	& 0.15	& 0		& 0 	& 160 	& $q_6$ \\ \hline
+    \end{tabular}
+    \caption{Client Program's chosen controller coefficients for each joint (mode 2) with high steady-state error in Z}
+\end{table}
+\end{center}
+
+
+
+
+
+\clearpage
+
+\begin{sidewaysfigure}[htb]
+  \includegraphics[width=1\linewidth]{client_flow_pt1.jpg}
+\caption{Simplified Client Software Diagram Pt1}
+\label{fig:PropProf}
+\end{sidewaysfigure}
+
+\begin{sidewaysfigure}[htb]
+  \includegraphics[width=1\linewidth]{client_flow_pt2.jpg}
+\caption{Simplified Client Software Diagram Pt2}
+\label{fig:PropProf}
+\end{sidewaysfigure}
+
+
+
+
+
+
+
+
 
 \end{document}
